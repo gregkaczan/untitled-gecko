@@ -127,6 +127,7 @@ var _grab_n := Vector2.ZERO    # Normal of the surface the gecko is turning onto
 var _dbg := ""
 
 var _debug_layer: Node2D
+var _under: Node2D             # Drawn beneath the body: the tongue, so it emerges from the snout
 var _last_probe := {}
 var _block_normal := Vector2.ZERO
 var _tick := 0
@@ -143,6 +144,10 @@ func _ready() -> void:
 			f.end = end
 			f.side = side
 			feet.append(f)
+	_under = Node2D.new()
+	_under.z_index = -2
+	_under.draw.connect(_draw_under)
+	add_child(_under)
 	_debug_layer = Node2D.new()
 	_debug_layer.z_index = 14
 	_debug_layer.draw.connect(_draw_debug)
@@ -208,6 +213,7 @@ func _physics_process(dt: float) -> void:
 			up.x, up.y, _last_probe.get("dist", -1.0), speed_along, "cling" if clinging else "air"], _dbg)
 	_push_blobs()
 	queue_redraw()
+	_under.queue_redraw()
 	_debug_layer.queue_redraw()
 
 
@@ -832,11 +838,14 @@ func _draw() -> void:
 	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
 	if chewing:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
-	if tongue_out:
-		draw_line(_mouth(), tongue_tip, TONGUE_COLOR, 2.5)
-		draw_circle(tongue_tip, 2.5, TONGUE_COLOR)
 	for sp in spits:
 		draw_circle(sp[0], 3.0, SPIT_COLOR)
+
+
+func _draw_under() -> void:
+	if tongue_out:
+		_under.draw_line(_mouth(), tongue_tip, TONGUE_COLOR, 2.5)
+		_under.draw_circle(tongue_tip, 2.5, TONGUE_COLOR)
 
 
 func _draw_debug() -> void:
