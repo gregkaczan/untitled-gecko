@@ -114,6 +114,7 @@ var _bite := Vector2.ZERO
 var swimming := false
 var tongue_out := false
 var tongue_anchored := false
+var tongue_retracting := false
 var tongue_tip := Vector2.ZERO
 var tongue_dir := Vector2.ZERO
 var spits: Array = []          # [position, velocity] per spit in flight
@@ -159,7 +160,9 @@ func spawn(at: Vector2) -> void:
 	feet_short = 0.0
 	look = Vector2.RIGHT
 	swimming = false
-	_release_tongue()
+	tongue_out = false
+	tongue_anchored = false
+	tongue_retracting = false
 	spits.clear()
 	_n_target = Vector2.UP
 	_grab_n = Vector2.ZERO
@@ -393,22 +396,24 @@ func _update_mouse(dt: float) -> void:
 			_spit()
 		_mouse_held = -1.0
 		_tongue_spent = false
-		if tongue_out:
+		if tongue_out and not tongue_retracting:
 			_release_tongue()
 
 
 func _shoot_tongue() -> void:
 	tongue_out = true
 	tongue_anchored = false
+	tongue_retracting = false
 	tongue_tip = _mouth()
 	tongue_dir = (_cursor() - tongue_tip).normalized()
 	if tongue_dir == Vector2.ZERO:
 		tongue_dir = look
 
 
+# Letting go: the tip flies back to the mouth before the tongue is gone.
 func _release_tongue() -> void:
-	tongue_out = false
 	tongue_anchored = false
+	tongue_retracting = tongue_out
 	_tongue_spent = true
 
 
@@ -416,6 +421,15 @@ func _release_tongue() -> void:
 # tongue. An anchor whose rock gets destroyed lets go.
 func _update_tongue(dt: float) -> void:
 	if not tongue_out:
+		return
+	if tongue_retracting:
+		var mouth := _mouth()
+		var step := TONGUE_SPEED * dt
+		if tongue_tip.distance_to(mouth) <= step + 3.0:
+			tongue_out = false
+			tongue_retracting = false
+		else:
+			tongue_tip += (mouth - tongue_tip).normalized() * step
 		return
 	if tongue_anchored:
 		if not map.solid_near(tongue_tip, 1):
