@@ -23,7 +23,7 @@ SCENES = os.path.join(ROOT, "tests", "scenes.json")
 
 # Thresholds
 WALK_STEP = 130.0 / 60.0   # px per tick at walk speed
-DRAW_JUMP = 3.5            # drawn body centre, px per tick while clinging
+DRAW_JUMP = 4.0            # drawn body centre, px per tick while clinging (walk is 2.2; a corner sweep reaches 3.5)
 BODY_JUMP = 3.5            # physics centre (informational)
 HEAD_JUMP = 6.0            # px per tick of the head in the body's frame (a corner wrap swings it by design)
 UP_FLIP = 0.35             # rad in one tick outside a committed grab
@@ -58,7 +58,11 @@ def vec(s):
 
 
 def parse(path):
+    """The trace's ticks. A tick number that does not follow the last one
+    means two processes wrote the file (or a line was cut): the run is
+    marked corrupt rather than scored."""
     ticks = []
+    parse.corrupt = 0
     with open(path) as f:
         for line in f:
             if not line.startswith("t"):
@@ -72,8 +76,11 @@ def parse(path):
             for kv in parts[1:]:
                 k, _, v = kv.partition("=")
                 d[k] = v
-            if "pos" not in d:
+            if "pos" not in d or "feet" not in d:
+                parse.corrupt += 1
                 continue
+            if ticks and n != ticks[-1]["tick"] + 1:
+                parse.corrupt += 1
             feet = []
             for ft in d.get("feet", "").split(";"):
                 if not ft:
@@ -162,13 +169,15 @@ def metrics(ticks):
                     ev["foot_jump"].append((t, round(df, 2), "foot %d" % k))
     # Windows
     n = len(ticks)
-    # State flicker: two or more state changes inside FLICK_WIN
+    # State flicker: back to an earlier state inside FLICK_WIN (cling, air,
+    # cling). A progression (cling, air, swim: walking into water) is not.
     changes = [i for i in range(1, n) if ticks[i]["state"] != ticks[i - 1]["state"]]
     last_flag = -FLICK_WIN
     for j in range(1, len(changes)):
-        if changes[j] - changes[j - 1] < FLICK_WIN and changes[j] - last_flag >= FLICK_WIN:
-            ev["state_flicker"].append((ticks[changes[j]]["tick"], changes[j] - changes[j - 1]))
-            last_flag = changes[j]
+        i, k = changes[j - 1], changes[j]
+        if k - i < FLICK_WIN and ticks[k]["state"] == ticks[i - 1]["state"] and k - last_flag >= FLICK_WIN:
+            ev["state_flicker"].append((ticks[k]["tick"], k - i))
+            last_flag = k
     # Dance: sign changes of along-surface motion under a held input
     along = [0.0] * n
     for i in range(1, n):
@@ -298,6 +307,8 @@ def analyze(runs_dir, baseline_path=None):
         ev = metrics(ticks)
         allow = set(scene.get("allow", []))
         oc = outcome(ticks, scene)
+        if parse.corrupt:
+            oc = {"ok": False, "why": "corrupt trace (%d bad lines): re-run it" % parse.corrupt}
         failing = [m for m in SCORED if ev[m] and m not in allow]
         results[spec] = {
             "ticks": len(ticks),

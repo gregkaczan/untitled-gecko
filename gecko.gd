@@ -77,6 +77,10 @@ const NORMAL_SMOOTH_FINE := 0.12  # The blend for small changes: rough walls wob
 const NORMAL_FINE_DOT := 0.985 # A change under ~10 degrees counts as small
 const AWAY_LOOK := 200.0       # How far along a steep surface the away rule looks for its inside corner
 const HEAD_RECOVER := 180.0    # Speed the snout comes forward again after a wall held it back (px/s)
+const HEAD_RETRACT := 270.0    # Speed the snout draws back at a wall (px/s); the push-out covers the rest
+const FLIP_CONFIRM := 4        # Ticks a big change of surface normal must persist before the body follows it
+const FLIP_DOT := 0.7          # A normal this far from the target (cosine, ~45 degrees) is a big change
+const HOLD_AFTER_GRAB := 15    # Ticks after a grab lands during which big changes of normal are ignored
 const LEG_BLOB_GAP := 4.5      # Largest spacing of the blobs along a leg, so a stretched leg stays one shape
 const HOLD_TIME := 0.12        # Mouse held longer than this shoots the tongue; a shorter press spits
 const TONGUE_SPEED := 900.0
@@ -159,7 +163,12 @@ var _n_dbg := Vector2.ZERO     # This tick's chosen surface normal (trace)
 var _jumped := false           # This tick began a jump (trace)
 var _lift_ticks := 0           # Ticks spent lifting over the same low obstacle
 var _s_dead := false           # The input scalar is in its dead band (hysteresis, so it does not flicker)
+var _away_s := 0.0             # The away rule's choice of direction, held while the input holds
+var _last_inp := Vector2.ZERO  # Last tick's input, to tell a held press from a new one
+var _press_stop := false       # The held press ran against itself on a bulge: stopped until it changes
 var _head_back := 0.0          # How far the snout is held back from its lead by a wall
+var _flip_ticks := 0           # Consecutive ticks the surface normal has disagreed with the target by a lot
+var _hold_ticks := 0           # Ticks left of holding the surface a grab just landed on
 var _up_rate := 0.0            # Radians the up vector turned last tick
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _tick := 0
@@ -414,18 +423,49 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	var tangent := _tangent()
 	var s := 0.0
 	if inp.length() > 0.2:
-		s = clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
-		# The dead band has hysteresis, so an input near its edge on a
-		# surface that wobbles a degree or two does not start and stop
-		# the gecko every tick.
-		if absf(s) < (0.4 if _s_dead else 0.2):
+		var raw := clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
+		var away := inp.dot(up) > 0.5 and absf(tangent.y) > 0.5
+		var held := inp == _last_inp
+		if not held:
+			_press_stop = false
+		if _press_stop:
 			s = 0.0
-		_s_dead = s == 0.0
-		# Pressing away from a steep surface walks along it toward the
-		# surface round its corner that goes the pressed way: down a wall
-		# to the floor, up a step in the ceiling to the higher ceiling.
-		if s == 0.0 and inp.dot(up) > 0.5 and absf(tangent.y) > 0.5:
-			s = _away_dir(tangent)
+		elif _away_s != 0.0 and held and away and absf(raw) < 0.7:
+			# The away rule's choice holds while the press holds and the
+			# surface is still steep and faced away from, so a leaning wall
+			# that wobbles the projection cannot argue with it.
+			s = _away_s
+		else:
+			_away_s = 0.0
+			s = raw
+			# The dead band has hysteresis, so an input near its edge on a
+			# surface that wobbles a degree or two does not start and stop
+			# the gecko every tick.
+			if absf(s) < (0.4 if _s_dead else 0.2):
+				s = 0.0
+			_s_dead = s == 0.0
+			if s == 0.0 and away:
+				# Pressing away from a steep surface. A gecko already going
+				# somewhere under this press keeps going (a leaning wall
+				# that turned vertical under it); a fresh press from rest
+				# walks toward the inside corner whose far surface runs the
+				# pressed way: down a wall to the floor, up a ceiling step.
+				if held and absf(speed_along) > 20.0:
+					s = signf(speed_along)
+				else:
+					s = _away_dir(tangent)
+				_away_s = s
+		if _away_s != 0.0 and (tangent * s).dot(inp) < -0.3:
+			# The way chosen for this press now runs against it: the surface
+			# curled back (a bulge). Stop here, as at a wall, and do not
+			# reverse, which would loop; a new press decides afresh.
+			s = 0.0
+			_away_s = 0.0
+			_press_stop = true
+	else:
+		_away_s = 0.0
+		_press_stop = false
+	_last_inp = inp
 	if absf(s) > 0.3:
 		facing = signf(s)
 	_s = s
@@ -464,6 +504,8 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
+		_hold_ticks = HOLD_AFTER_GRAB
+	_hold_ticks = maxi(_hold_ticks - 1, 0)
 	if _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
@@ -490,8 +532,17 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	_n_dbg = n
 	var up_before := up
 	if n != Vector2.ZERO:
-		if _grab_n != Vector2.ZERO or n.dot(_n_target) < 0.5:
+		# A big change of normal (another surface in the probe) must
+		# persist a few ticks before it is followed, unless it is a
+		# committed grab: at a corner where two surfaces take turns being
+		# nearest, following each at once turns the body back and forth.
+		var big := n.dot(_n_target) < FLIP_DOT
+		_flip_ticks = _flip_ticks + 1 if (big and _hold_ticks == 0) else 0
+		if _grab_n != Vector2.ZERO or (big and _flip_ticks >= FLIP_CONFIRM):
 			_n_target = n
+			_flip_ticks = 0
+		elif big:
+			pass
 		else:
 			# Small changes (rough ground) blend in slowly, bigger ones (a
 			# real slope change) faster, so the body neither wobbles on a
@@ -948,9 +999,10 @@ func _update_chain(dt: float) -> void:
 		# line, instead of being shoved aside by the push-out; it comes
 		# forward again at HEAD_RECOVER, not in one go.
 		var back := maxf(_head_back - HEAD_RECOVER * dt, 0.0)
+		var back_max := minf(HEAD_LEAD - 4.0, _head_back + HEAD_RETRACT * dt)
 		target = _pos_s + t * facing * (HEAD_LEAD - back)
-		while back < HEAD_LEAD - 4.0 and map.solid_within(target, chain.radii[0] + BODY_GAP):
-			back += 2.0
+		while back < back_max and map.solid_within(target, chain.radii[0] + BODY_GAP):
+			back = minf(back + 2.0, back_max)
 			target = _pos_s + t * facing * (HEAD_LEAD - back)
 		_head_back = back
 	else:
