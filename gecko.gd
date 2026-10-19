@@ -559,6 +559,13 @@ func _land(n: Vector2) -> void:
 	up = n
 	_n_target = n
 	_grab_n = Vector2.ZERO
+	# Feet re-seat under the body at once; their airborne positions were
+	# relative to the old up and would stick out until the first step.
+	var t := _tangent()
+	for f in feet:
+		f.planted = false
+		f.stepping = false
+		f.pos = chain.points[f.hip] + t * f.end * facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
 	if absf(speed_along) > 1.0:
 		facing = signf(speed_along)
@@ -897,7 +904,7 @@ func _update_feet(dt: float) -> void:
 			q.found = false
 		if not q.found:
 			if not f.planted:
-				f.pos = f.pos.lerp(rest, minf(1.0, 12.0 * dt))
+				f.pos = f.pos.lerp(rest, minf(1.0, 30.0 * dt))
 			continue
 		var threshold := STEP_LEN * (0.5 if _diagonal(f).stepping else 1.0)
 		if f.planted and f.anchor.distance_to(q.nearest) <= threshold:
@@ -954,9 +961,9 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 
 
 func _draw() -> void:
-	# The eye is one pixel of the 4 px world grid, snapped to it.
+	# The eye is one 4 px dot on the gecko's 2 px grid, snapped to it.
 	var head: Vector2 = chain.points[0]
-	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(Vector2(4.0, 4.0))
+	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(Vector2(2.0, 2.0))
 	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)

@@ -2,15 +2,16 @@
 # viewports at the sim's render resolution. The density viewport sums
 # soft circle splats additively. The color viewport holds flat circles
 # in each creature's color. A screen sprite runs metaball.gdshader over
-# both and upscales with nearest filtering, so blobs share the 4 px
-# pixel grid of the terrain.
+# both and upscales with nearest filtering, so blobs sit on a 2 px grid,
+# twice as fine as the terrain's.
 #
 # Usage per frame: set_blobs([[pos, radius, color], ...]).
 extends Node2D
 
-const RENDER_W := 480
-const RENDER_H := 270
-const PIXEL_SZ := 4.0
+# Twice the world's resolution: the gecko reads at 2 px pixels over 4 px rock.
+const RENDER_W := 960
+const RENDER_H := 540
+const PIXEL_SZ := 2.0
 const SPLAT_SCALE := 1.6     # Splat draw radius over the body radius
 const SPLAT_TEX_SIZE := 64
 
