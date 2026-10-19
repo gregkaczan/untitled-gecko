@@ -93,6 +93,7 @@ var seed_value := 7
 var _label: Label
 var _camera: Camera2D
 var _demo: Array = []
+var _hint_t := 0.0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _demo_name := OS.get_environment("GECKO_DEMO")
 var _demo_step := -1
@@ -181,7 +182,15 @@ func _physics_process(dt: float) -> void:
 	_camera.position = gecko.pos
 	if _demo_step >= 0:
 		_run_demo(dt)
-	_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug]" % brush_r
+	# The state readout only with the debug overlay; the controls hint for
+	# the first seconds of a run.
+	_hint_t += dt
+	if gecko.debug:
+		_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug]" % brush_r
+	elif _hint_t < 10.0:
+		_label.text = "WASD move   Space jump   LMB tap spit, hold tongue   RMB chew   R new cave   F1 debug"
+	else:
+		_label.text = ""
 
 
 func _run_demo(dt: float) -> void:
