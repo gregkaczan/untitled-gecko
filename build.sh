@@ -14,8 +14,8 @@ BUILD_WIN=true
 BUILD_LINUX=true
 BUILD_MAC=false
 
-# itch.io: set ITCH_TARGET to push built platforms to itch (default: kwakuuuu/untitled-gecko)
-ITCH_TARGET="${ITCH_TARGET:-kwakuuuu/untitled-gecko}"
+# itch.io: set ITCH_TARGET to push built platforms to itch (default: kwakuuuu/gecko)
+ITCH_TARGET="${ITCH_TARGET:-kwakuuuu/gecko}"
 
 if [[ ! -x "$GODOT" ]]; then
     echo "Error: Godot not found at $GODOT"

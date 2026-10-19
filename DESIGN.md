@@ -82,6 +82,6 @@ Code: https://github.com/gregkaczan/untitled-gecko. `./build.sh` exports
 Windows and Linux release builds into `build/` (export templates for
 Godot 4.6.1 must be installed under `~/.local/share/godot/export_templates/`)
 and, when `butler` is logged in, pushes them to itch.io as
-`kwakuuuu/untitled-gecko:windows` and `:linux`. A web build would have to
+`kwakuuuu/gecko:windows` and `:linux`. A web build would have to
 run the bitmap world: the particle sim needs compute shaders, which the
 web export does not have.
