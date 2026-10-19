@@ -44,7 +44,7 @@ SINK_D = 8.5               # nearest rock closer than this = body inside rock
 FLOAT_D = 24.0             # nearest rock farther than this while clinging = floating
 SINK_TICKS = 10
 TURN_GRACE = 20            # ticks after a facing flip: the head swings round by design
-LAND_GRACE = 4             # ticks after landing: feet re-seat, body settles
+LAND_GRACE = 12            # ticks after landing: feet re-seat, the chain catches up at its set speed
 SPAWN_GRACE = 12           # first ticks: the gecko settles onto its spawn
 
 SCORED = ["draw_jump", "head_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
@@ -93,7 +93,7 @@ def parse(path):
                 "facing": int(d["facing"]), "inp": vec(d["inp"]), "s": float(d["s"]),
                 "blk": d["blk"] == "1", "grab": d["grab"] == "1", "bridge": d["bridge"] == "1",
                 "sq": d["sq"] == "1", "chew": d["chew"] == "1", "jump": d["jump"] == "1",
-                "n": vec(d["n"]), "feet": feet,
+                "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1", "feet": feet,
             })
     return ticks
 
@@ -115,8 +115,8 @@ def dot(a, b):
 
 
 def head_rel(tk):
-    """The head in the body's frame: along the surface, and out from it."""
-    d = (tk["head"][0] - tk["pos"][0], tk["head"][1] - tk["pos"][1])
+    """The head in the drawn body's frame (what is seen): along the surface, and out from it."""
+    d = (tk["head"][0] - tk["draw"][0], tk["head"][1] - tk["draw"][1])
     return (dot(d, tangent(tk["up"])), dot(d, tk["up"]))
 
 
@@ -272,6 +272,10 @@ def outcome(ticks, scene):
         px, py = last["pos"]
         if not (x0 <= px <= x1 and y0 <= py <= y1):
             why.append("ends at (%.0f, %.0f), expected x %d..%d y %d..%d" % (px, py, x0, x1, y0, y1))
+    if "reach" in scene:
+        x0, y0, x1, y1 = scene["reach"]
+        if not any(x0 <= tk["pos"][0] <= x1 and y0 <= tk["pos"][1] <= y1 for tk in ticks):
+            why.append("never reaches x %d..%d y %d..%d" % (x0, x1, y0, y1))
     return {"ok": not why, "why": "; ".join(why)}
 
 

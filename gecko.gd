@@ -19,11 +19,15 @@ const Chain = preload("res://chain.gd")
 const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
+const NUDGE_MAX := 4.0         # Most the ride-height nudge moves the body in one tick (px): settling, never a hop
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
-const LIFT := 3.0              # Px the body rises per tick to get over a low obstacle
+const LIFT := 2.5              # Px the body rises per tick to get over a low obstacle
 const LIFT_LOW := 12.0         # A blocking cell no higher than this over the floor under the body is low enough to step over
-const LIFT_TICKS := 4          # Ticks of lifting with no way forward before the obstacle counts as a wall
+const LIFT_TICKS := 5          # Ticks of lifting with no way forward before the obstacle counts as a wall
 const LIFT_TURN_MAX := 0.04    # No lifting while up turns faster than this per tick (radians): a corner, not a bump
+const STEP_CLIMB := 32.0       # A wall no taller than this over the floor is a step: pressing into it climbs it
+const STEP_TURN_DOT := -0.6    # A step's blocking normal may lean this far past square (cosine to up) and still be climbed
+const GRAB_MIN_S := 0.15       # Least input along a blocking surface that turns the body onto it (a curved face tilts it)
 const CHEW_R := 11.0           # Mean radius of one bite; each bite varies around it
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const DIG_DEAD := 10.0         # A cursor closer than this to the body centre gives no dig direction
@@ -36,6 +40,8 @@ const LOSE_SURFACE_D := 26.0   # Nearest solid farther than this = nothing to ho
 const RAY_HALF := 12.0         # Half the span between the two surface rays
 const RAY_LEN := 34.0          # How far down each surface ray looks
 const BRIDGE := 36.0           # A gap with ground this far ahead at the same level is crossed, not entered
+const BRIDGE_HOLD := 4         # Ticks the gap test may fail before bridging ends (the edge flickers it)
+const BRIDGE_LEVEL := 6.0      # Px the far side of a bridged gap may sit below ride height
 const JUMP_SPEED := 340.0
 const GRAVITY := 900.0
 const AIR_ACCEL := 600.0
@@ -73,8 +79,8 @@ const GRAB_PULL := 90.0        # Speed the body closes on a wall it is turning o
 const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees from up (no flips)
 const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
-const NORMAL_SMOOTH_FINE := 0.12  # The blend for small changes: rough walls wobble the normal every tick
-const NORMAL_FINE_DOT := 0.985 # A change under ~10 degrees counts as small
+const NORMAL_SMOOTH_FINE := 0.08  # The blend for small changes: rough walls and edges wobble the normal every tick
+const NORMAL_FINE_DOT := 0.9   # A change under ~25 degrees counts as small
 const AWAY_LOOK := 200.0       # How far along a steep surface the away rule looks for its inside corner
 const HEAD_RECOVER := 180.0    # Speed the snout comes forward again after a wall held it back (px/s)
 const HEAD_RETRACT := 270.0    # Speed the snout draws back at a wall (px/s); the push-out covers the rest
@@ -166,10 +172,17 @@ var _s_dead := false           # The input scalar is in its dead band (hysteresi
 var _away_s := 0.0             # The away rule's choice of direction, held while the input holds
 var _last_inp := Vector2.ZERO  # Last tick's input, to tell a held press from a new one
 var _press_stop := false       # The held press ran against itself on a bulge: stopped until it changes
+var _step_climb := false       # Pressing into a short step: the press means up its face and over
+var _climb_dir := Vector2.UP   # World direction of the step's free end, the body's up when it met the step
 var _head_back := 0.0          # How far the snout is held back from its lead by a wall
 var _flip_ticks := 0           # Consecutive ticks the surface normal has disagreed with the target by a lot
 var _hold_ticks := 0           # Ticks left of holding the surface a grab just landed on
 var _up_rate := 0.0            # Radians the up vector turned last tick
+var _lifting := false          # This tick the walk lifted the body over a low obstacle
+var _bridge_miss := 0          # Ticks in a row the gap-ahead test has failed while bridging
+var _n_raw := Vector2.ZERO     # Last tick's raw surface normal
+var _n_streak := 0             # Ticks the raw normal has kept turning the same way
+var _n_sign := 0.0
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
@@ -230,6 +243,7 @@ func _physics_process(dt: float) -> void:
 	var jump := _read_jump()
 	chewing = _read_chew()
 	_blocked = false
+	_lifting = false
 	_squeezed_f = false
 	_s = 0.0
 	_n_dbg = Vector2.ZERO
@@ -297,11 +311,12 @@ func _print_trace() -> void:
 	var fs := ""
 	for f in feet:
 		fs += "%.1f,%.1f,%d,%d;" % [f.pos.x, f.pos.y, 1 if f.planted else 0, 1 if f.stepping else 0]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
-		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y, fs])
+		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
+		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, fs])
 
 
 func _read_jump() -> bool:
@@ -426,6 +441,10 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		var raw := clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
 		var away := inp.dot(up) > 0.5 and absf(tangent.y) > 0.5
 		var held := inp == _last_inp
+		# The step climb ends with the press, or once the body has turned
+		# onto the step's face and left it (the surface is flat again).
+		if not held or (_grab_n == Vector2.ZERO and absf(tangent.y) <= 0.5):
+			_step_climb = false
 		if not held:
 			_press_stop = false
 		if _press_stop:
@@ -444,7 +463,12 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			if absf(s) < (0.4 if _s_dead else 0.2):
 				s = 0.0
 			_s_dead = s == 0.0
-			if s == 0.0 and away:
+			if s == 0.0 and _step_climb and inp.dot(up) < -0.5:
+				# Pressing into a short step: along its face toward the free
+				# end, which is the way up was pointing when the step blocked
+				# the walk (world down for a step in the ceiling).
+				s = signf(tangent.dot(_climb_dir))
+			elif s == 0.0 and away:
 				# Pressing away from a steep surface. A gecko already going
 				# somewhere under this press keeps going (a leaning wall
 				# that turned vertical under it); a fresh press from rest
@@ -483,7 +507,22 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		var out_dir: Vector2 = p.normal if p.normal != Vector2.ZERO else up
 		pos += out_dir * (BODY_R - p.dist) * 0.5
 	# A hole the gecko is chewing after the cursor is the way, not a gap.
-	_bridging = _gap_ahead() and _dig_aim == Vector2.ZERO
+	# Bridging ends only after the gap test has failed a few ticks in a
+	# row: at the gap's edge the front ray hits and misses by turns.
+	var gap := _gap_ahead() and _dig_aim == Vector2.ZERO
+	# A bridge that has carried the body away from any rock was wrong.
+	if _bridging and p.found and p.dist > RIDE_H + 8.0:
+		gap = false
+		_bridge_miss = BRIDGE_HOLD
+	if gap:
+		_bridging = true
+		_bridge_miss = 0
+	elif _bridging:
+		_bridge_miss += 1
+		if _bridge_miss >= BRIDGE_HOLD:
+			_bridging = false
+	else:
+		_bridging = false
 	if (not p.found or p.dist > LOSE_SURFACE_D) and not _bridging:
 		_drop()
 		return
@@ -532,6 +571,15 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	_n_dbg = n
 	var up_before := up
 	if n != Vector2.ZERO:
+		# Whether the raw normal keeps turning the same way (a corner being
+		# rounded) or turns back and forth (rough ground, an edge where
+		# two readings take turns).
+		var turn := _n_raw.angle_to(n) if _n_raw != Vector2.ZERO else 0.0
+		var sgn := signf(turn) if absf(turn) > 0.01 else 0.0
+		_n_streak = _n_streak + 1 if (sgn != 0.0 and sgn == _n_sign) else 0
+		if sgn != 0.0:
+			_n_sign = sgn
+		_n_raw = n
 		# A big change of normal (another surface in the probe) must
 		# persist a few ticks before it is followed, unless it is a
 		# committed grab: at a corner where two surfaces take turns being
@@ -544,10 +592,10 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		elif big:
 			pass
 		else:
-			# Small changes (rough ground) blend in slowly, bigger ones (a
-			# real slope change) faster, so the body neither wobbles on a
-			# ragged wall nor lags behind a corner.
-			var k := NORMAL_SMOOTH_FINE if n.dot(_n_target) > NORMAL_FINE_DOT else NORMAL_SMOOTH
+			# A steady turn (a corner) is followed fast; a wobble (rough
+			# ground, an edge) blends in slowly, so the body neither
+			# shivers on a ragged wall nor lags behind a corner.
+			var k := NORMAL_SMOOTH if (_n_streak >= 2 or n.dot(_n_target) < NORMAL_FINE_DOT) else NORMAL_SMOOTH_FINE
 			_n_target = _n_target.slerp(n, k).normalized()
 		up = _turn_toward(up, _n_target, SURF_TURN * dt)
 	_up_rate = absf(up_before.angle_to(up))
@@ -558,7 +606,8 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# there), so a notch does not shove the gecko back and forth. Over an
 	# edge, where no surface is under it, it pulls toward the nearest
 	# rock instead, which is what wraps it round the corner.
-	if not squeezed and not _bridging:
+	# Not while a lift or a grab pull is already moving the body across.
+	if not squeezed and not _bridging and not _lifting and _grab_n == Vector2.ZERO:
 		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
@@ -568,10 +617,17 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			var ceil_pt = map.ray_hit(pos, up, RAY_LEN)
 			if ceil_pt != null:
 				want = minf(want, (d + (ceil_pt - pos).dot(up)) * 0.5)
-			_move(up * (want - d) * minf(1.0, 20.0 * dt))
+			_move(up * clampf((want - d) * minf(1.0, 20.0 * dt), -NUDGE_MAX, NUDGE_MAX))
 		else:
+			# Over an edge: toward the nearest rock, which wraps the body
+			# round the corner, but never backward against the walk.
 			var away: Vector2 = (pos - p.nearest).normalized() if p.dist > 0.01 else up
-			_move(away * (RIDE_H - p.dist) * minf(1.0, 20.0 * dt))
+			var pull: Vector2 = away * clampf((RIDE_H - p.dist) * minf(1.0, 20.0 * dt), -NUDGE_MAX, NUDGE_MAX)
+			var fwd: Vector2 = tangent * facing
+			var back := pull.dot(fwd)
+			if back < 0.0 and absf(speed_along) > 1.0:
+				pull -= fwd * back
+			_move(pull)
 	if jump:
 		_jumped = true
 		_jump()
@@ -585,7 +641,13 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	else:
 		feet_short = 0.0
 	if feet_short > FEET_GRACE:
-		_drop()
+		if p.found and p.dist <= RIDE_H + 2.0:
+			# Too few feet planted but the surface is right here: let the
+			# feet step again rather than drop and land on the spot.
+			_unplant()
+			feet_short = 0.0
+		else:
+			_drop()
 
 
 func _update_airborne(inp: Vector2, dt: float) -> void:
@@ -828,9 +890,12 @@ func _unplant() -> void:
 # or hopping. Rock at body height is a wall and the move is blocked;
 # so is a low obstacle that LIFT_TICKS of lifting have not cleared.
 func _step(delta: Vector2) -> bool:
+	var start := pos
 	if _move(delta):
 		_lift_ticks = 0
 		return true
+	# The failed move may have kept a part step: the lift starts over.
+	pos = start
 	if delta.length() < 0.01:
 		return false
 	var cell = map.blocking_cell(pos, pos + delta, BODY_R)
@@ -848,6 +913,7 @@ func _step(delta: Vector2) -> bool:
 	var save := pos
 	if _move(up * LIFT) and map.ray_hit(pos, -up, RIDE_H + LIFT * LIFT_TICKS + 4.0) != null:
 		_lift_ticks += 1
+		_lifting = true
 		_move(delta)
 		return true
 	pos = save
@@ -887,15 +953,44 @@ func _move(delta: Vector2) -> bool:
 # the floor, and the gecko would rock between the two for ever).
 func _obstacle_normal(inp: Vector2) -> Vector2:
 	var n := _block_normal
-	if n == Vector2.ZERO or n.dot(up) < MAX_TURN_DOT:
+	if n == Vector2.ZERO:
 		return Vector2.ZERO
 	var t_new := Vector2(-n.y, n.x)
 	var s_new := inp.dot(t_new)
-	if absf(s_new) < 0.3:
+	# More or less square into the rock. A short step is climbed: the body
+	# turns onto its face and the press carries it up and over. The step's
+	# corner can tilt the blocking normal a little, which is no reason not
+	# to climb it. A wall square ahead stops.
+	if absf(s_new) < 0.5 and n.dot(up) >= STEP_TURN_DOT and _short_wall_ahead():
+		_step_climb = true
+		_climb_dir = up
+		return n
+	if absf(s_new) < GRAB_MIN_S:
+		return Vector2.ZERO
+	if n.dot(up) < MAX_TURN_DOT:
 		return Vector2.ZERO
 	if (t_new * signf(s_new)).dot(up) < -0.2:
 		return Vector2.ZERO
 	return n
+
+
+# Rock ahead at body height that ends within STEP_CLIMB over the floor.
+func _short_wall_ahead() -> bool:
+	var ahead: Vector2 = pos + _tangent() * facing * (BODY_R + 3.0)
+	if not map.is_solid_world(ahead):
+		return false
+	# Over a gap (bridging) there is no floor under the body: the step is
+	# measured from where the floor would be, ride height below.
+	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
+	if floor_pt == null:
+		floor_pt = pos - up * (RIDE_H - 1.5)
+	var k := 0.0
+	while k <= STEP_CLIMB:
+		var q: Vector2 = ahead + up * k
+		if not map.is_solid_world(q):
+			return (q - floor_pt).dot(up) <= STEP_CLIMB + 6.0
+		k += 2.0
+	return false
 
 
 func _squeezed() -> bool:
@@ -968,8 +1063,11 @@ func _gap_ahead() -> bool:
 	var back = map.ray_hit(pos - t * RAY_HALF, -up, RAY_LEN)
 	if back == null:
 		return false
+	# Ground beyond at about the same level: within a few px of ride height,
+	# not merely somewhere down the ray (a step in the ceiling, a lower far
+	# side, are not bridged).
 	var far = map.ray_hit(pos + t * BRIDGE, -up, RAY_LEN)
-	return far != null
+	return far != null and (pos + t * BRIDGE - far).dot(up) <= RIDE_H + BRIDGE_LEVEL
 
 
 static func _turn_toward(a: Vector2, b: Vector2, max_angle: float) -> Vector2:
