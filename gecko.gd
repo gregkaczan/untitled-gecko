@@ -811,10 +811,10 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 
 
 func _draw() -> void:
+	# The eye is one pixel of the 4 px world grid, snapped to it.
 	var head: Vector2 = chain.points[0]
-	var eye := head + look * 3.5 + up * 3.0
-	draw_circle(eye, 2.2, Color(0.08, 0.07, 0.06))
-	draw_circle(eye + look * 0.7, 0.9, Color(0.95, 0.95, 0.9))
+	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(Vector2(4.0, 4.0))
+	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
 	if chewing:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
 	if tongue_out:
