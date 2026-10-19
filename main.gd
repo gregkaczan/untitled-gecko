@@ -1,8 +1,8 @@
 # Scene driver for the gecko movement spike: one chamber (the particle
 # sim, or the bitmap stand-in with GECKO_WORLD=bitmap), one gecko, a
-# mouse brush for carving (right erases, middle fills, wheel sizes), R
-# for a fresh chamber, F1 for the debug overlay. The left button is the
-# gecko's: tap to spit, hold for the tongue. GECKO_DEMO=1 in the
+# mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
+# R for a fresh chamber, F1 for the debug overlay. The mouse buttons are
+# the gecko's: left tap spits, left hold is the tongue, right chews. GECKO_DEMO=1 in the
 # environment replaces the keyboard with a scripted walk so movie-mode
 # frames show the gecko moving without anyone at the keys.
 extends Node2D
@@ -22,12 +22,17 @@ const BlobLayer = preload("res://blob_layer.gd")
 const DEMOS := {
 	"swim": [
 		[0.3, Vector2.ZERO, false, false],
-		[4.5, Vector2.LEFT, false, false],
+		[2.6, Vector2.LEFT, false, false],
+		[0.6, Vector2.LEFT, true, false],
 		[1.5, Vector2.DOWN, false, false],
 		[1.5, Vector2.LEFT, false, false],
 		[2.0, Vector2.UP, false, false],
 		[1.5, Vector2.RIGHT, false, false],
 		[2.5, Vector2.UP, false, false],
+	],
+	"gap": [
+		[3.5, Vector2.RIGHT, false, false],
+		[3.5, Vector2.LEFT, false, false],
 	],
 	"traverse": [
 		[9.0, Vector2.RIGHT, false, false],
@@ -142,6 +147,10 @@ func _reset() -> void:
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
 		map.fill_rect(Rect2(spawn.x + 110.0, spawn.y - 170.0, 32.0, 200.0))
+	elif _demo_name == "gap":
+		# A hole the body can span, then one it cannot
+		map.erase_circle(Vector2(spawn.x + 80.0, spawn.y + 6.0), 15.0)
+		map.erase_circle(Vector2(spawn.x + 220.0, spawn.y + 10.0), 26.0)
 	elif _demo_name == "crevice":
 		# A funnel in the floor, 44 px wide at the top narrowing to nothing
 		for i in range(9):
@@ -172,7 +181,7 @@ func _physics_process(dt: float) -> void:
 	_camera.position = gecko.pos
 	if _demo_step >= 0:
 		_run_demo(dt)
-	_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, E chew, Space jump, RMB erase, MMB fill, wheel size, R new cave, F1 debug]" % brush_r
+	_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug]" % brush_r
 
 
 func _run_demo(dt: float) -> void:
@@ -201,7 +210,7 @@ func _process(_dt: float) -> void:
 		var screen := (gecko.pos - _camera.get_screen_center_position()) * CAMERA_ZOOM + Vector2(960.0, 540.0)
 		print("F%d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y)])
 	var m := get_global_mouse_position()
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and Input.is_key_pressed(KEY_CTRL):
 		map.erase_circle(m, brush_r)
 	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 		map.fill_circle(m, brush_r)

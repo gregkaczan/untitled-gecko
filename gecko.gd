@@ -20,13 +20,14 @@ const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
-const CHEW_R := 13.0           # Radius of one bite
+const CHEW_R := 11.0           # Mean radius of one bite; each bite varies around it
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const PROBE_R := 32.0          # Reach of the body's surface search
 const SURF_TURN := 14.0        # Up vector turn rate toward the surface normal (rad/s)
 const LOSE_SURFACE_D := 26.0   # Nearest solid farther than this = nothing to hold
 const RAY_HALF := 12.0         # Half the span between the two surface rays
 const RAY_LEN := 34.0          # How far down each surface ray looks
+const BRIDGE := 36.0           # A gap with ground this far ahead at the same level is crossed, not entered
 const JUMP_SPEED := 340.0
 const GRAVITY := 900.0
 const AIR_ACCEL := 600.0
@@ -49,9 +50,9 @@ const LOOK_LIMIT := 1.8        # Radians the head can turn off the body line to 
 const FRONT_HIP := 1
 const BACK_HIP := 3
 const FOOT_SPREAD := 11.0      # Foot rest distance from its hip along the tangent
-const FOOT_LEAD := 14.0        # Extra rest offset in the walking direction at full speed
-const LEG_REACH := 24.0        # Farthest a foot searches for an anchor from its rest spot
-const MAX_LEG := 30.0          # Hip to anchor distance that forces a planted foot to let go
+const FOOT_LEAD := 10.0        # Extra rest offset in the walking direction at full speed
+const LEG_REACH := 16.0        # Farthest a foot searches for an anchor from its rest spot
+const MAX_LEG := 28.0          # Hip to anchor distance that forces a planted foot to let go (rest spot is ~26 at full speed)
 const STEP_LEN := 20.0         # Anchor drift from the rest spot that triggers a step
 const STEP_TIME := 0.1
 const STEP_HEIGHT := 7.0
@@ -65,16 +66,18 @@ const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
 const HOLD_TIME := 0.12        # Mouse held longer than this shoots the tongue; a shorter press spits
 const TONGUE_SPEED := 900.0
-const TONGUE_MAX := 320.0
+const TONGUE_MAX := 160.0
 const PULL_SPEED := 360.0
 const PULL_ACCEL := 2400.0
 const SPIT_SPEED := 520.0
 const SPIT_GRAVITY := 500.0
 const SPIT_R := 20.0           # Crater radius of a spit burst
 const SPIT_COOLDOWN := 0.25
-const SWIM_SPEED := 120.0
+const SWIM_SPEED := 120.0      # Mean speed; the kick peaks above it, the glide falls below
 const SWIM_ACCEL := 700.0
 const SWIM_DRAG := 300.0
+const SWIM_PERIOD := 0.7       # One kick and glide
+const SWIM_KICK := 0.35        # Fraction of the period the legs push
 const BODY_COLOR := Color(0.56, 0.63, 0.40)
 const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const SPIT_COLOR := Color(0.85, 0.95, 0.45)
@@ -116,6 +119,7 @@ var aim_override := Vector2.ZERO  # Demo pilot's cursor, relative to the body
 var chewing := false
 var _bite := Vector2.ZERO
 var swimming := false
+var _swim_phase := 0.0         # 0..1 through the kick cycle
 var tongue_out := false
 var tongue_anchored := false
 var tongue_retracting := false
@@ -134,6 +138,7 @@ var _debug_layer: Node2D
 var _under: Node2D             # Drawn beneath the body: the tongue, so it emerges from the snout
 var _last_probe := {}
 var _block_normal := Vector2.ZERO
+var _bridging := false         # Crossing a gap shorter than the body: keep the line, no nudge, no drop
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 
@@ -192,7 +197,7 @@ func _physics_process(dt: float) -> void:
 		_chew(inp)
 	_update_mouse(dt)
 	_update_spits(dt)
-	var in_water: bool = map.is_water_world(pos)
+	var in_water: bool = map.water_near(pos, 1)
 	if in_water and not clinging and not swimming and not tongue_anchored:
 		swimming = true
 		vel *= 0.4
@@ -215,7 +220,7 @@ func _physics_process(dt: float) -> void:
 		var hd := chain.head()
 		print("t%d pos(%.0f,%.0f) head(%.0f,%.0f) hip(%.0f,%.0f) up(%.2f,%.2f) dist %.1f spd %.0f %s " % [
 			_tick, pos.x, pos.y, hd.x, hd.y, chain.points[FRONT_HIP].x, chain.points[FRONT_HIP].y,
-			up.x, up.y, _last_probe.get("dist", -1.0), speed_along, "cling" if clinging else "air"], _dbg)
+			up.x, up.y, _last_probe.get("dist", -1.0), speed_along, "cling" if clinging else ("swim" if swimming else "air")], _dbg)
 	_push_blobs()
 	queue_redraw()
 	_under.queue_redraw()
@@ -239,6 +244,8 @@ func _read_jump() -> bool:
 func _read_chew() -> bool:
 	if input_override != null:
 		return chew_override
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not Input.is_key_pressed(KEY_CTRL):
+		return true
 	return Input.is_action_pressed("chew")
 
 
@@ -254,7 +261,10 @@ func _chew(inp: Vector2) -> void:
 	var play := CHEW_R - BODY_R - 1.0
 	var h := clampf((base + up * (CHEW_R + 3.0) - pos).dot(up), -play, play)
 	_bite = pos + up * h + dir * CHEW_REACH
-	map.erase_circle(_bite, CHEW_R)
+	# Each bite lands a little off and a little different in size, so a
+	# tunnel comes out ragged like something chewed, not drilled.
+	var jitter := Vector2(randf_range(-3.0, 3.0), randf_range(-3.0, 3.0))
+	map.erase_circle(_bite + jitter, randf_range(CHEW_R - 2.5, CHEW_R + 0.5))
 
 
 func _tangent() -> Vector2:
@@ -280,7 +290,8 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		speed_along = 0.0
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
-	if not p.found or p.dist > LOSE_SURFACE_D:
+	_bridging = _gap_ahead()
+	if (not p.found or p.dist > LOSE_SURFACE_D) and not _bridging:
 		_drop()
 		return
 	# Blocked by rock ahead: turn up toward that rock's normal, so walking
@@ -329,7 +340,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# there), so a notch does not shove the gecko back and forth. Over an
 	# edge, where no surface is under it, it pulls toward the nearest
 	# rock instead, which is what wraps it round the corner.
-	if not squeezed:
+	if not squeezed and not _bridging:
 		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
@@ -344,7 +355,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	for f in feet:
 		if f.planted:
 			planted += 1
-	if planted < MIN_FEET:
+	if planted < MIN_FEET and not _bridging:
 		feet_short += dt
 	else:
 		feet_short = 0.0
@@ -379,17 +390,26 @@ func _update_airborne(inp: Vector2, dt: float) -> void:
 			vel -= n * vn
 
 
-# In water the gecko drifts where the input points, with drag and no
-# gravity. It cannot rise through the surface; it leaves the water by
-# pushing into rock and clinging to it, or on the tongue.
+# In water the gecko swims like a frog: a kick that pushes it the way the
+# input points, then a glide under drag, no gravity. It cannot rise
+# through the surface; it leaves the water by pushing into rock and
+# clinging to it, or on the tongue.
 func _update_swimming(inp: Vector2, dt: float) -> void:
 	if inp.length() > 0.2:
-		vel = vel.move_toward(inp.normalized() * SWIM_SPEED, SWIM_ACCEL * dt)
+		_swim_phase = fmod(_swim_phase + dt / SWIM_PERIOD, 1.0)
+		if _swim_phase < SWIM_KICK:
+			vel = vel.move_toward(inp.normalized() * SWIM_SPEED * 1.7, SWIM_ACCEL * 2.0 * dt)
+		else:
+			vel = vel.move_toward(Vector2.ZERO, SWIM_DRAG * 0.4 * dt)
 		if absf(inp.x) > 0.3:
 			facing = signf(inp.x)
 	else:
 		vel = vel.move_toward(Vector2.ZERO, SWIM_DRAG * dt)
-	if vel.y < 0.0 and not map.is_water_world(pos + Vector2(0.0, -RIDE_H)):
+		if _swim_phase > 0.0:
+			_swim_phase = minf(_swim_phase + dt / SWIM_PERIOD, 1.0)
+			if _swim_phase >= 1.0:
+				_swim_phase = 0.0
+	if vel.y < 0.0 and not map.water_near(pos + Vector2(0.0, -RIDE_H), 1):
 		vel.y = 0.0
 	if not _move(vel * dt):
 		vel = Vector2.ZERO
@@ -671,6 +691,8 @@ func _reach_for_wall(inp: Vector2) -> Vector2:
 # starts inside rock, which happens at corners, where the centroid is
 # what swings the gecko round smoothly.
 func _surface_normal(p: Dictionary) -> Vector2:
+	if _bridging:
+		return up
 	var t := _tangent()
 	var sa := pos + t * RAY_HALF
 	var sb := pos - t * RAY_HALF
@@ -688,6 +710,21 @@ func _surface_normal(p: Dictionary) -> Vector2:
 				n = -n
 			return n
 	return p.normal
+
+
+# A gap shorter than the body: no ground under the front ray, ground
+# under the back ray, and ground again BRIDGE ahead at about the same
+# level. The gecko spans it instead of following the surface down into it.
+func _gap_ahead() -> bool:
+	var t := _tangent() * facing
+	var front = map.ray_hit(pos + t * RAY_HALF, -up, RAY_LEN)
+	if front != null:
+		return false
+	var back = map.ray_hit(pos - t * RAY_HALF, -up, RAY_LEN)
+	if back == null:
+		return false
+	var far = map.ray_hit(pos + t * BRIDGE, -up, RAY_LEN)
+	return far != null
 
 
 static func _turn_toward(a: Vector2, b: Vector2, max_angle: float) -> Vector2:
@@ -830,10 +867,28 @@ func _update_feet(dt: float) -> void:
 				f.pos = f.anchor
 			else:
 				f.planted = false
+		if swimming:
+			# Frog kick: legs sweep back and out fast, then tuck slowly.
+			f.planted = false
+			var fwd := vel.normalized() if vel.length() > 10.0 else chain.heading
+			var perp := Vector2(-fwd.y, fwd.x)
+			var k: float
+			if _swim_phase < SWIM_KICK:
+				var u := _swim_phase / SWIM_KICK
+				k = 1.0 - (1.0 - u) * (1.0 - u)
+			else:
+				k = 1.0 - (_swim_phase - SWIM_KICK) / (1.0 - SWIM_KICK)
+			var tucked := hip + fwd * 2.0 + perp * f.end * 2.0
+			var extended := hip - fwd * 12.0 + perp * (f.end * 7.0 + f.side * 2.0)
+			f.pos = f.pos.lerp(tucked.lerp(extended, k), minf(1.0, 25.0 * dt))
+			continue
 		if not clinging:
 			f.planted = false
-			var hang := hip + Vector2(f.end * facing * 5.0, 9.0)
-			f.pos = f.pos.lerp(hang, minf(1.0, 12.0 * dt))
+			var hang := hip - up * 6.0 + tangent * f.end * facing * 4.0
+			if f.pos.distance_to(hang) > 20.0:
+				f.pos = hang
+			else:
+				f.pos = f.pos.lerp(hang, minf(1.0, 30.0 * dt))
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
 		var rest := hip + tangent * (f.end * facing * FOOT_SPREAD + lead) - up * RIDE_H
@@ -903,7 +958,7 @@ func _draw() -> void:
 	var head: Vector2 = chain.points[0]
 	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(Vector2(4.0, 4.0))
 	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
-	if chewing:
+	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
 	for sp in spits:
 		draw_circle(sp[0], 3.0, SPIT_COLOR)
@@ -936,5 +991,5 @@ func debug_text() -> String:
 	var state := "cling" if clinging else ("swim" if swimming else "air")
 	if tongue_anchored:
 		state = "pull"
-	return "%s%s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
-		state, " chew" if chewing else "", planted, up.x, up.y, speed_along, vel.x, vel.y]
+	return "%s%s%s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
+		state, " chew" if chewing else "", " bridge" if _bridging else "", planted, up.x, up.y, speed_along, vel.x, vel.y]

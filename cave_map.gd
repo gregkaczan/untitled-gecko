@@ -89,7 +89,7 @@ func generate(seed_value: int) -> void:
 	_smooth_rim()
 	for y in range(WATER_Y, H):
 		for x in W:
-			if solid[y * W + x] == CELL_AIR and x < int(c.x):
+			if solid[y * W + x] == CELL_AIR and x < int(c.x - rx * 0.45):
 				solid[y * W + x] = CELL_WATER
 	_repaint(0, 0, W - 1, H - 1)
 
@@ -136,6 +136,18 @@ func is_water(x: int, y: int) -> bool:
 
 func is_water_world(p: Vector2) -> bool:
 	return is_water(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+
+
+# True when any cell within n of the one under p is water. Particle water
+# leaves gaps between cells, so a single-cell test flickers.
+func water_near(p: Vector2, n: int) -> bool:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if is_water(x, y):
+				return true
+	return false
 
 
 func is_solid_world(p: Vector2) -> bool:
