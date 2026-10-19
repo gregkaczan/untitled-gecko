@@ -75,3 +75,13 @@ the keyboard and mouse with a scripted run (see `main.gd`; climb builds
 a test pillar, crevice a funnel). `GECKO_TRACE=1` prints the body state per
 physics tick and the gecko's screen position per frame; `tools/strip.sh`
 turns movie-mode frames into a contact sheet cropped around the gecko.
+
+## Building and publishing
+
+Code: https://github.com/gregkaczan/untitled-gecko. `./build.sh` exports
+Windows and Linux release builds into `build/` (export templates for
+Godot 4.6.1 must be installed under `~/.local/share/godot/export_templates/`)
+and, when `butler` is logged in, pushes them to itch.io as
+`kwakuuuu/untitled-gecko:windows` and `:linux`. A web build would have to
+run the bitmap world: the particle sim needs compute shaders, which the
+web export does not have.
