@@ -310,8 +310,10 @@ def analyze(runs_dir, baseline_path=None):
         if parse.corrupt:
             oc = {"ok": False, "why": "corrupt trace (%d bad lines): re-run it" % parse.corrupt}
         failing = [m for m in SCORED if ev[m] and m not in allow]
+        travel = sum(dist(ticks[i - 1]["pos"], ticks[i]["pos"]) for i in range(1, len(ticks)))
         results[spec] = {
             "ticks": len(ticks),
+            "travel": round(travel),
             "metrics": {m: {"count": len(ev[m]), "worst": max((e[1] for e in ev[m]), default=0),
                             "events": ev[m][:12]} for m in SCORED + INFO},
             "outcome": oc,
@@ -327,12 +329,13 @@ def analyze(runs_dir, baseline_path=None):
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
              "foot_jump": "fjump", "sink": "sink", "float": "float", "body_jump": "body*", "stuck": "stuck*"}
     lines = ["# Movement suite report", "",
-             "Runs: %d, passing: %d, failing: %d. Columns are event counts; * marks informational metrics." % (total, passing, total - passing), ""]
+             "Runs: %d, passing: %d, failing: %d. Columns are event counts; * marks informational metrics; "
+             "travel is the body's path length in px, a check that the scene was exercised." % (total, passing, total - passing), ""]
     if base is not None:
         lines.append("Compared against baseline %s." % os.path.basename(baseline_path))
         lines.append("")
-    lines.append("| run | result | " + " | ".join(short[c] for c in cols) + " | outcome |")
-    lines.append("|---|---|" + "---|" * len(cols) + "---|")
+    lines.append("| run | result | " + " | ".join(short[c] for c in cols) + " | travel | outcome |")
+    lines.append("|---|---|" + "---|" * len(cols) + "---|---|")
     reg, imp = [], []
     for spec, r in sorted(results.items(), key=lambda kv: (kv[1]["pass"], kv[0])):
         cells = []
@@ -352,7 +355,7 @@ def analyze(runs_dir, baseline_path=None):
             cells.append(cell)
         res = "pass" if r["pass"] else "FAIL"
         oc = "ok" if r["outcome"]["ok"] else r["outcome"]["why"]
-        lines.append("| %s | %s | %s | %s |" % (spec, res, " | ".join(cells), oc))
+        lines.append("| %s | %s | %s | %d | %s |" % (spec, res, " | ".join(cells), r["travel"], oc))
     if base is not None:
         lines += ["", "## Against the baseline", ""]
         lines.append("Regressions: %d. Improvements: %d." % (len(reg), len(imp)))
