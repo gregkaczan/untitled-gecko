@@ -36,7 +36,7 @@ const FEET_GRACE := 0.2        # Time with too few feet planted before dropping
 const MIN_FEET := 2
 const HEAD_LEAD := 15.0        # Head sits this far ahead of the body centre
 const HEAD_SPEED := 420.0      # How fast the head swings round on a turn
-const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 3.5, 2.5]
+const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
 const MAX_BEND := 1.0
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
@@ -59,6 +59,7 @@ const LEG_R := 3.4             # Upper leg blob radius; the lower leg tapers fro
 const REACH := 24.0            # How far past the body clearance a wall beside the gecko can be grabbed
 const GRAB_PULL := 90.0        # Speed the body closes on a wall it is turning onto (px/s)
 const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees from up (no flips)
+const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
 const HOLD_TIME := 0.12        # Mouse held longer than this shoots the tongue; a shorter press spits
 const TONGUE_SPEED := 900.0
@@ -261,7 +262,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	var s := 0.0
 	if inp.length() > 0.2:
 		s = clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
-		if absf(s) < 0.15:
+		if absf(s) < 0.3:
 			s = 0.0
 	if absf(s) > 0.3:
 		facing = signf(s)
@@ -281,10 +282,19 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# within reach that the input points along) is a commitment: up keeps
 	# turning toward that surface's normal until it gets there, so a
 	# tilted body half way round cannot talk itself out of it.
+	# Wedged in a crevice, with rock close on both sides: no turning, no
+	# nudge, no grabbing. The nearest rock flips sides every tick there,
+	# and anything that follows it makes the gecko dance. It can still
+	# slide along its tangent, so it sits still or backs out.
+	var squeezed := _squeezed()
 	var n: Vector2
+	if squeezed:
+		_grab_n = Vector2.ZERO
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
-	if _grab_n != Vector2.ZERO:
+	if squeezed:
+		n = Vector2.ZERO
+	elif _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
 		_move(-_grab_n * GRAB_PULL * dt)
@@ -300,7 +310,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			speed_along = 0.0
 		else:
 			n = _surface_normal(p)
-	_dbg = ("blk" if blocked else "surf") + (" grab" if _grab_n != Vector2.ZERO else "")
+	_dbg = ("blk" if blocked else "surf") + (" grab" if _grab_n != Vector2.ZERO else "") + (" squeezed" if squeezed else "")
 	_dbg += " n(%.2f,%.2f) s %.2f" % [n.x, n.y, s]
 	if n != Vector2.ZERO:
 		if _grab_n != Vector2.ZERO or n.dot(_n_target) < 0.5:
@@ -310,8 +320,19 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		up = _turn_toward(up, _n_target, SURF_TURN * dt)
 	# Ride-height nudge, away from (or toward) the nearest rock rather
 	# than along up, so a body squeezed against a side wall can get clear.
-	var away: Vector2 = (pos - p.nearest).normalized() if p.dist > 0.01 else up
-	_move(away * (RIDE_H - p.dist) * minf(1.0, 20.0 * dt))
+	# Ride-height nudge against the surface under the body only. Side
+	# rock never pushes the body (the collision check already stops it
+	# there), so a notch does not shove the gecko back and forth. Over an
+	# edge, where no surface is under it, it pulls toward the nearest
+	# rock instead, which is what wraps it round the corner.
+	if not squeezed:
+		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
+		if floor_pt != null:
+			var d: float = (pos - floor_pt).dot(up)
+			_move(up * (RIDE_H - 1.5 - d) * minf(1.0, 20.0 * dt))
+		else:
+			var away: Vector2 = (pos - p.nearest).normalized() if p.dist > 0.01 else up
+			_move(away * (RIDE_H - p.dist) * minf(1.0, 20.0 * dt))
 	if jump:
 		_jump()
 		return
@@ -589,6 +610,13 @@ func _obstacle_normal(inp: Vector2) -> Vector2:
 	return n
 
 
+func _squeezed() -> bool:
+	var t := _tangent()
+	var a = map.ray_hit(pos, t, SQUEEZE_D)
+	var b = map.ray_hit(pos, -t, SQUEEZE_D)
+	return a != null and b != null
+
+
 # A wall within reach on either side of the body, as a new up, under the
 # same rule as a blocking wall: only when the held input would then move
 # the body along it and away from the surface it is on now. Without this
@@ -811,6 +839,11 @@ func _push_blobs() -> void:
 	_leg_blobs(list, -1.0, FAR_LEG_COLOR)
 	for i in chain.size():
 		list.append([chain.points[i], chain.radii[i], BODY_COLOR])
+		# Thin tail segments get a filler blob between them, so the tail
+		# renders as a line rather than a row of dots.
+		if i > 0 and chain.radii[i] < 4.5:
+			var r_mid: float = (chain.radii[i - 1] + chain.radii[i]) * 0.5
+			list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
 	list.append([chain.head() + look * SNOUT, 5.0, BODY_COLOR])
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs(list)

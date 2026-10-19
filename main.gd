@@ -26,6 +26,20 @@ const DEMOS := {
 		[1.5, Vector2.RIGHT, false, false],
 		[2.5, Vector2.UP, false, false],
 	],
+	"notch": [
+		[4.5, Vector2.RIGHT, false, false],
+		[1.5, Vector2.UP, false, false],
+		[1.5, Vector2.RIGHT, false, false],
+		[1.5, Vector2(1, -1), false, false],
+	],
+	"crevice": [
+		[1.2, Vector2.RIGHT, false, false],
+		[1.5, Vector2(1, 1), false, false],
+		[1.0, Vector2.DOWN, false, false],
+		[1.0, Vector2.LEFT, false, false],
+		[2.0, Vector2.UP, false, false],
+		[1.5, Vector2(-1, -1), false, false],
+	],
 	"tongue": [
 		[1.5, Vector2.RIGHT, false, false, false, Vector2(160, -160)],
 		[0.3, Vector2.ZERO, false, false, false, Vector2(160, -160)],
@@ -111,6 +125,10 @@ func _reset() -> void:
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
 		map.fill_rect(Rect2(spawn.x + 110.0, spawn.y - 170.0, 32.0, 200.0))
+	elif _demo_name == "crevice":
+		# A funnel in the floor, 44 px wide at the top narrowing to nothing
+		for i in range(9):
+			map.erase_circle(Vector2(spawn.x + 90.0, spawn.y + 6.0 + i * 8.0), 22.0 - i * 2.0)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
 	_camera.position = gecko.pos
 	_camera.reset_smoothing()
