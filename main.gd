@@ -7,6 +7,9 @@
 # the cursor, and with no key held the gecko tunnels after the bite.
 # GECKO_DEMO=1 in the environment replaces the keyboard with a scripted
 # walk so movie-mode frames show the gecko moving without anyone at the keys.
+# GECKO_SCENE=name[:script] runs a test scene from tests/scenes.json the
+# same way and quits when the script ends; GECKO_SEED fixes the random
+# bites and steps so a run repeats exactly.
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
@@ -15,6 +18,8 @@ const SimMap = preload("res://sim_map.gd")
 const Sim = preload("res://sim.gd")
 const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
+const SceneBuilder = preload("res://tests/scene_builder.gd")
+const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 
 # Demo steps: seconds, input vector, jump on the first frame, chew held,
 # then optionally the left button held and the cursor offset from the
@@ -108,10 +113,25 @@ var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _demo_name := OS.get_environment("GECKO_DEMO")
 var _demo_step := -1
 var _demo_t := 0.0
+var _scene: Dictionary = {}    # The test scene being run, empty outside the suite
+var _scene_bases: Dictionary = {}
+var _scene_done := -1.0        # Seconds since the scene script ended, -1 while it runs
 
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
+	var seed_env := OS.get_environment("GECKO_SEED")
+	if seed_env != "":
+		seed(int(seed_env))
+	var scene_spec := OS.get_environment("GECKO_SCENE")
+	var picked: Dictionary = {}
+	if scene_spec != "":
+		picked = SceneBuilder.pick(scene_spec)
+		if picked.is_empty():
+			get_tree().quit(2)
+			return
+		_scene = picked.scene
+		_scene_bases = picked.bases
 	# The particle sim is the world unless GECKO_WORLD=bitmap asks for the
 	# static stand-in (faster to start, and what the demo strips were tuned on).
 	if OS.get_environment("GECKO_WORLD") == "bitmap":
@@ -145,7 +165,12 @@ func _ready() -> void:
 	_label.add_theme_font_size_override("font_size", 20)
 	hud.add_child(_label)
 	_reset()
-	if _demo_name != "":
+	if not picked.is_empty():
+		_demo = picked.steps
+		_demo_step = 0
+		_demo_t = 0.0
+		gecko.input_override = Vector2.ZERO
+	elif _demo_name != "":
 		_demo = DEMOS.get(_demo_name, DEMOS["climb"])
 		_demo_step = 0
 		_demo_t = 0.0
@@ -153,6 +178,13 @@ func _ready() -> void:
 
 
 func _reset() -> void:
+	if not _scene.is_empty():
+		SceneBuilder.build(map, _scene, _scene_bases)
+		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
+		gecko.spawn(sp.pos, sp.up)
+		_camera.position = gecko.pos
+		_camera.reset_smoothing()
+		return
 	map.generate(seed_value)
 	var spawn := _flat_spawn()
 	if _demo_name == "climb":
@@ -208,6 +240,11 @@ func _run_demo(dt: float) -> void:
 		gecko.input_override = Vector2.ZERO
 		gecko.chew_override = false
 		gecko.lmb_override = false
+		gecko.aim_override = Vector2.ZERO
+		if not _scene.is_empty():
+			_scene_done = maxf(_scene_done, 0.0) + dt
+			if _scene_done >= SCENE_SETTLE:
+				get_tree().quit()
 		return
 	var step: Array = _demo[_demo_step]
 	if _demo_t == 0.0 and step[2]:
@@ -227,7 +264,7 @@ func _process(_dt: float) -> void:
 		sim.read_render()
 	if _trace:
 		var screen := (gecko.pos - _camera.get_screen_center_position()) * CAMERA_ZOOM + Vector2(960.0, 540.0)
-		print("F%d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y)])
+		print("F%d %d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick])
 	var m := get_global_mouse_position()
 	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and Input.is_key_pressed(KEY_CTRL):
 		map.erase_circle(m, brush_r)

@@ -20,6 +20,10 @@ const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
+const LIFT := 4.0              # Px the body rises per tick to get over a low obstacle
+const LIFT_LOW := 12.0         # A blocking cell no higher than this over the floor under the body is low enough to step over
+const LIFT_TICKS := 4          # Ticks of lifting with no way forward before the obstacle counts as a wall
+const LIFT_TURN_MAX := 0.04    # No lifting while up turns faster than this per tick (radians): a corner, not a bump
 const CHEW_R := 11.0           # Mean radius of one bite; each bite varies around it
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const DIG_DEAD := 10.0         # A cursor closer than this to the body centre gives no dig direction
@@ -60,6 +64,7 @@ const MAX_LEG := 28.0          # Hip to anchor distance that forces a planted fo
 const STEP_LEN := 20.0         # Anchor drift from the rest spot that triggers a step
 const STEP_TIME := 0.1
 const STEP_HEIGHT := 7.0
+const FOOT_SETTLE := 360.0     # Speed an unplanted foot closes on its rest spot (px/s): fast, never a snap
 const KNEE_OUT := 5.0          # Knee lift away from the surface
 const KNEE_BACK := 3.0         # Knee set back against the leg's end (front legs bend back)
 const LEG_R := 3.4             # Upper leg blob radius; the lower leg tapers from it
@@ -136,16 +141,23 @@ var _tongue_spent := false     # A tongue that missed or let go stays in until t
 var _spit_cd := 0.0
 var _n_target := Vector2.UP    # Smoothed surface normal the up vector turns toward
 var _grab_n := Vector2.ZERO    # Normal of the surface the gecko is turning onto, zero when none
-var _dbg := ""
 
 var _debug_layer: Node2D
 var _under: Node2D             # Drawn beneath the body: the tongue, so it emerges from the snout
 var _last_probe := {}
 var _block_normal := Vector2.ZERO
 var _bridging := false         # Crossing a gap shorter than the body: keep the line, no nudge, no drop
+var _blocked := false          # This tick's walk was stopped by rock (trace)
+var _squeezed_f := false       # This tick the body was wedged in a crevice (trace)
+var _s := 0.0                  # This tick's input scalar along the surface (trace)
+var _n_dbg := Vector2.ZERO     # This tick's chosen surface normal (trace)
+var _jumped := false           # This tick began a jump (trace)
+var _lift_ticks := 0           # Ticks spent lifting over the same low obstacle
+var _up_rate := 0.0            # Radians the up vector turned last tick
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
+var _inp := Vector2.ZERO       # This tick's input vector (trace)
 
 
 func _ready() -> void:
@@ -168,10 +180,12 @@ func _ready() -> void:
 	add_child(_debug_layer)
 
 
-func spawn(at: Vector2) -> void:
+# Puts the gecko at rest on a surface whose normal is up_dir (the floor
+# by default; the test scenes also start it on walls and ceilings).
+func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	pos = at
 	vel = Vector2.ZERO
-	up = Vector2.UP
+	up = up_dir
 	facing = 1.0
 	speed_along = 0.0
 	clinging = true
@@ -184,9 +198,11 @@ func spawn(at: Vector2) -> void:
 	tongue_anchored = false
 	tongue_retracting = false
 	spits.clear()
-	_n_target = Vector2.UP
+	_n_target = up_dir
 	_grab_n = Vector2.ZERO
-	chain.reset(pos + Vector2.RIGHT * HEAD_LEAD, Vector2.RIGHT)
+	var fwd := _tangent()
+	look = fwd
+	chain.reset(pos + fwd * HEAD_LEAD, fwd)
 	for f in feet:
 		f.planted = false
 		f.stepping = false
@@ -197,6 +213,11 @@ func _physics_process(dt: float) -> void:
 	var inp := _read_input()
 	var jump := _read_jump()
 	chewing = _read_chew()
+	_blocked = false
+	_squeezed_f = false
+	_s = 0.0
+	_n_dbg = Vector2.ZERO
+	_jumped = false
 	no_cling = maxf(no_cling - dt, 0.0)
 	_dig_aim = Vector2.ZERO
 	if chewing:
@@ -234,11 +255,9 @@ func _physics_process(dt: float) -> void:
 	_update_look(dt)
 	_update_feet(dt)
 	_tick += 1
+	_inp = inp
 	if _trace:
-		var hd := chain.head()
-		print("t%d pos(%.0f,%.0f) head(%.0f,%.0f) hip(%.0f,%.0f) up(%.2f,%.2f) dist %.1f spd %.0f %s " % [
-			_tick, pos.x, pos.y, hd.x, hd.y, chain.points[FRONT_HIP].x, chain.points[FRONT_HIP].y,
-			up.x, up.y, _last_probe.get("dist", -1.0), speed_along, "cling" if clinging else ("swim" if swimming else "air")], _dbg)
+		_print_trace()
 	_push_blobs()
 	queue_redraw()
 	_under.queue_redraw()
@@ -249,6 +268,24 @@ func _read_input() -> Vector2:
 	if input_override != null:
 		return input_override
 	return Input.get_vector("move_left", "move_right", "move_up", "move_down")
+
+
+# One line per physics tick, key=value fields, for tools/analyze.py.
+# Feet are x,y,planted,stepping per foot, front near, front far, back
+# near, back far.
+func _print_trace() -> void:
+	var hd := chain.head()
+	var state := "cling" if clinging else ("swim" if swimming else "air")
+	if tongue_anchored:
+		state = "pull"
+	var fs := ""
+	for f in feet:
+		fs += "%.1f,%.1f,%d,%d;" % [f.pos.x, f.pos.y, 1 if f.planted else 0, 1 if f.stepping else 0]
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f feet=%s" % [
+		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
+		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
+		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
+		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y, fs])
 
 
 func _read_jump() -> bool:
@@ -354,12 +391,20 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			s = signf(tangent.y)
 	if absf(s) > 0.3:
 		facing = signf(s)
+	_s = s
 	speed_along = move_toward(speed_along, s * WALK_SPEED, WALK_ACCEL * dt)
 	var blocked := not _step(tangent * speed_along * dt)
+	_blocked = blocked
 	if blocked:
 		speed_along = 0.0
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
+	# A body centre inside rock (a spawn in a wall, a brush fill, a bite
+	# that missed) is pushed out along the probe normal before anything
+	# else is decided, squeezed or not.
+	if p.found and p.dist < BODY_R - 1.0:
+		var out_dir: Vector2 = p.normal if p.normal != Vector2.ZERO else up
+		pos += out_dir * (BODY_R - p.dist) * 0.5
 	# A hole the gecko is chewing after the cursor is the way, not a gap.
 	_bridging = _gap_ahead() and _dig_aim == Vector2.ZERO
 	if (not p.found or p.dist > LOSE_SURFACE_D) and not _bridging:
@@ -377,6 +422,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# that follows it makes the gecko dance. It still follows the surface
 	# under it and slides along its tangent, so it sits still or backs out.
 	var squeezed := _squeezed()
+	_squeezed_f = squeezed
 	var n: Vector2
 	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
@@ -404,14 +450,15 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			speed_along = 0.0
 		else:
 			n = _surface_normal(p)
-	_dbg = ("blk" if blocked else "surf") + (" grab" if _grab_n != Vector2.ZERO else "") + (" squeezed" if squeezed else "")
-	_dbg += " n(%.2f,%.2f) s %.2f" % [n.x, n.y, s]
+	_n_dbg = n
+	var up_before := up
 	if n != Vector2.ZERO:
 		if _grab_n != Vector2.ZERO or n.dot(_n_target) < 0.5:
 			_n_target = n
 		else:
 			_n_target = _n_target.slerp(n, NORMAL_SMOOTH).normalized()
 		up = _turn_toward(up, _n_target, SURF_TURN * dt)
+	_up_rate = absf(up_before.angle_to(up))
 	# Ride-height nudge, away from (or toward) the nearest rock rather
 	# than along up, so a body squeezed against a side wall can get clear.
 	# Ride-height nudge against the surface under the body only. Side
@@ -423,11 +470,18 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
-			_move(up * (RIDE_H - 1.5 - d) * minf(1.0, 20.0 * dt))
+			var want := RIDE_H - 1.5
+			# Under a low ceiling the body rides halfway between floor and
+			# ceiling, so a tunnel its own height does not wedge it.
+			var ceil_pt = map.ray_hit(pos, up, RAY_LEN)
+			if ceil_pt != null:
+				want = minf(want, (d + (ceil_pt - pos).dot(up)) * 0.5)
+			_move(up * (want - d) * minf(1.0, 20.0 * dt))
 		else:
 			var away: Vector2 = (pos - p.nearest).normalized() if p.dist > 0.01 else up
 			_move(away * (RIDE_H - p.dist) * minf(1.0, 20.0 * dt))
 	if jump:
+		_jumped = true
 		_jump()
 		return
 	var planted := 0
@@ -676,22 +730,35 @@ func _unplant() -> void:
 		f.stepping = false
 
 
-# A walking move: when the way is blocked, tries again from up to
-# STEP_UP higher, so a loose pixel or a small ledge is stepped over
-# instead of stopping the gecko. The ride-height nudge settles it after.
+# A walking move. Blocked by something low (a loose pixel, a small
+# ledge: rock below the body's middle), the body lifts LIFT this tick
+# and tries again, so it climbs over in a few ticks instead of stopping
+# or hopping. Rock at body height is a wall and the move is blocked;
+# so is a low obstacle that LIFT_TICKS of lifting have not cleared.
 func _step(delta: Vector2) -> bool:
 	if _move(delta):
+		_lift_ticks = 0
 		return true
 	if delta.length() < 0.01:
 		return false
-	for k in [3.0, 6.0, 9.0]:
-		var save := pos
-		if _move(up * k) and _move(delta):
-			# Only a real step: the ground must still be right under the body.
-			var floor_pt = map.ray_hit(pos, -up, RIDE_H + k + 4.0)
-			if floor_pt != null:
-				return true
-		pos = save
+	var cell = map.blocking_cell(pos, pos + delta, BODY_R)
+	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
+	if cell == null or floor_pt == null or _lift_ticks >= LIFT_TICKS:
+		return false
+	# Mid-turn (an inside corner, an edge) the surface logic is already
+	# carrying the body round: no lifting on top of it.
+	if _up_rate > LIFT_TURN_MAX:
+		return false
+	# Height over the ground under the body, not over the body centre: a
+	# tilted body must not read a wall's foot as a bump.
+	if (cell - floor_pt).dot(up) > LIFT_LOW:
+		return false
+	var save := pos
+	if _move(up * LIFT) and map.ray_hit(pos, -up, RIDE_H + LIFT * LIFT_TICKS + 4.0) != null:
+		_lift_ticks += 1
+		_move(delta)
+		return true
+	pos = save
 	return false
 
 
@@ -837,6 +904,12 @@ func _update_chain(dt: float) -> void:
 		if absf(across) > BOB_MAX:
 			_pos_s += up * (across - signf(across) * BOB_MAX)
 		target = _pos_s + t * facing * HEAD_LEAD
+		# At a wall the snout stops at the rock, drawn back along the body
+		# line, instead of being shoved aside by the push-out.
+		var back := 0.0
+		while back < HEAD_LEAD - 4.0 and map.solid_within(target, chain.radii[0] + BODY_GAP):
+			target -= t * facing * 2.0
+			back += 2.0
 	else:
 		_pos_s = pos
 		var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
@@ -980,7 +1053,7 @@ func _update_feet(dt: float) -> void:
 			q.found = false
 		if not q.found:
 			if not f.planted:
-				f.pos = f.pos.lerp(rest, minf(1.0, 30.0 * dt))
+				f.pos = f.pos.move_toward(rest, FOOT_SETTLE * dt)
 			continue
 		var threshold := STEP_LEN * (0.5 if _diagonal(f).stepping else 1.0)
 		if f.planted and f.anchor.distance_to(q.nearest) <= threshold:

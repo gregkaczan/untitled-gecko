@@ -1,0 +1,10535 @@
+{
+ "runs": {
+  "flat:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "flat:bounce": {
+   "ticks": 391,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slope_up_10:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 23.72,
+     "events": [
+      [
+       372,
+       23.59,
+       "foot 1"
+      ],
+      [
+       394,
+       23.72,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_down_10:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 23.43,
+     "events": [
+      [
+       311,
+       23.43,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_up_20:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slope_down_20:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 26.19,
+     "events": [
+      [
+       337,
+       26.19,
+       "foot 1"
+      ],
+      [
+       345,
+       21.76,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_up_30:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 25.1,
+     "events": [
+      [
+       98,
+       20.95,
+       "foot 0"
+      ],
+      [
+       102,
+       17.9,
+       "foot 1"
+      ],
+      [
+       314,
+       24.29,
+       "foot 1"
+      ],
+      [
+       491,
+       25.1,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_down_30:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slope_up_45:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 26.25,
+     "events": [
+      [
+       242,
+       26.25,
+       "foot 1"
+      ],
+      [
+       466,
+       23.11,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_down_45:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slope_up_60:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 17.83,
+     "events": [
+      [
+       470,
+       17.83,
+       "foot 0"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_down_60:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slope_up_75:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.63,
+     "events": [
+      [
+       94,
+       4.63
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 1,
+     "worst": 8.18,
+     "events": [
+      [
+       90,
+       8.18
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 5.95,
+     "events": [
+      [
+       94,
+       5.95
+      ],
+      [
+       284,
+       4.14
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slope_down_75:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "step_up_4:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "step_down_4:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "step_up_8:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.23,
+     "events": [
+      [
+       93,
+       4.23
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 6.1,
+     "events": [
+      [
+       93,
+       6.1
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_down_8:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "step_up_12:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 21.98,
+     "events": [
+      [
+       93,
+       21.98,
+       "foot 1"
+      ],
+      [
+       95,
+       13.74,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_down_12:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.35,
+     "events": [
+      [
+       452,
+       4.35
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 21.0,
+     "events": [
+      [
+       90,
+       21.0,
+       "foot 0"
+      ],
+      [
+       453,
+       20.52,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 5.21,
+     "events": [
+      [
+       452,
+       5.21
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_up_16:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 20.19,
+     "events": [
+      [
+       91,
+       20.19,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.79,
+     "events": [
+      [
+       84,
+       4.79
+      ],
+      [
+       92,
+       4.47
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_down_16:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 21.78,
+     "events": [
+      [
+       452,
+       21.78,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.97,
+     "events": [
+      [
+       444,
+       4.12
+      ],
+      [
+       452,
+       4.97
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_up_24:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 3.98,
+     "events": [
+      [
+       93,
+       3.98
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 10.44,
+     "events": [
+      [
+       90,
+       6.22
+      ],
+      [
+       91,
+       10.44
+      ],
+      [
+       92,
+       7.33
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 27.23,
+     "events": [
+      [
+       93,
+       27.23,
+       "foot 1"
+      ],
+      [
+       97,
+       14.94,
+       "foot 1"
+      ],
+      [
+       454,
+       22.74,
+       "foot 1"
+      ],
+      [
+       455,
+       12.48,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 5,
+     "worst": 5.37,
+     "events": [
+      [
+       92,
+       4.85
+      ],
+      [
+       93,
+       5.37
+      ],
+      [
+       460,
+       5.28
+      ],
+      [
+       461,
+       3.58
+      ],
+      [
+       462,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_down_24:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 4.29,
+     "events": [
+      [
+       443,
+       4.0
+      ],
+      [
+       444,
+       4.29
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 23.98,
+     "events": [
+      [
+       98,
+       22.52,
+       "foot 1"
+      ],
+      [
+       99,
+       12.36,
+       "foot 1"
+      ],
+      [
+       448,
+       23.98,
+       "foot 0"
+      ],
+      [
+       449,
+       12.18,
+       "foot 0"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 5,
+     "worst": 6.92,
+     "events": [
+      [
+       103,
+       6.39
+      ],
+      [
+       104,
+       3.54
+      ],
+      [
+       106,
+       4.73
+      ],
+      [
+       443,
+       6.92
+      ],
+      [
+       444,
+       4.87
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_up_32:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 1,
+     "worst": 7.04,
+     "events": [
+      [
+       94,
+       7.04
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 22.93,
+     "events": [
+      [
+       450,
+       22.83,
+       "foot 0"
+      ],
+      [
+       451,
+       12.46,
+       "foot 0"
+      ],
+      [
+       452,
+       22.93,
+       "foot 1"
+      ],
+      [
+       459,
+       16.1,
+       "foot 2"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 5.79,
+     "events": [
+      [
+       92,
+       4.32
+      ],
+      [
+       454,
+       5.79
+      ],
+      [
+       456,
+       4.57
+      ],
+      [
+       457,
+       4.73
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_down_32:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 10.93,
+     "events": [
+      [
+       451,
+       7.96
+      ],
+      [
+       452,
+       7.1
+      ],
+      [
+       453,
+       10.93
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 6,
+     "worst": 33.37,
+     "events": [
+      [
+       100,
+       21.83,
+       "foot 1"
+      ],
+      [
+       105,
+       23.32,
+       "foot 0"
+      ],
+      [
+       453,
+       33.37,
+       "foot 0"
+      ],
+      [
+       454,
+       15.99,
+       "foot 0"
+      ],
+      [
+       462,
+       28.18,
+       "foot 1"
+      ],
+      [
+       463,
+       14.05,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.83,
+     "events": [
+      [
+       452,
+       4.83
+      ],
+      [
+       453,
+       4.83
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "step_up_48:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.81,
+     "events": [
+      [
+       92,
+       4.81
+      ],
+      [
+       275,
+       4.03
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "step_down_48:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 27.79,
+     "events": [
+      [
+       129,
+       27.79,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 4.83,
+     "events": [
+      [
+       119,
+       4.7
+      ],
+      [
+       120,
+       4.12
+      ],
+      [
+       424,
+       4.83
+      ],
+      [
+       425,
+       4.81
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "specks_floor:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       336,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 23.31,
+     "events": [
+      [
+       178,
+       21.31,
+       "foot 1"
+      ],
+      [
+       416,
+       23.31,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "notch_1:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "notch_2:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "notch_deep:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.45,
+     "events": [
+      [
+       96,
+       3.89
+      ],
+      [
+       456,
+       4.45
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "notch_wide_deep:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 19.73,
+     "events": [
+      [
+       103,
+       19.73,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 4.96,
+     "events": [
+      [
+       99,
+       3.82
+      ],
+      [
+       100,
+       4.96
+      ],
+      [
+       456,
+       3.82
+      ],
+      [
+       457,
+       4.95
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "bump_2x2:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.06,
+     "events": [
+      [
+       93,
+       4.06
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 20.81,
+     "events": [
+      [
+       94,
+       20.81,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 6.22,
+     "events": [
+      [
+       93,
+       6.22
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "bump_row:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       112,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 5.01,
+     "events": [
+      [
+       102,
+       5.01
+      ],
+      [
+       445,
+       4.97
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "pillar:climb_over": {
+   "ticks": 726,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 2,
+     "worst": 9,
+     "events": [
+      [
+       263,
+       4
+      ],
+      [
+       293,
+       9
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 20.4,
+     "events": [
+      [
+       238,
+       20.4,
+       "foot 0"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.82,
+     "events": [
+      [
+       92,
+       4.75
+      ],
+      [
+       477,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "pillar_thin:climb_over": {
+   "ticks": 726,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 28.26,
+     "events": [
+      [
+       407,
+       28.26,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 3,
+     "worst": 4.76,
+     "events": [
+      [
+       92,
+       4.75
+      ],
+      [
+       395,
+       4.04
+      ],
+      [
+       396,
+       4.76
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "boulder_30:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.14,
+     "events": [
+      [
+       176,
+       4.13
+      ],
+      [
+       424,
+       4.14
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "boulder_70:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 4.64,
+     "events": [
+      [
+       106,
+       4.16
+      ],
+      [
+       107,
+       4.64
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 8.03,
+     "events": [
+      [
+       106,
+       6.72
+      ],
+      [
+       321,
+       6.93
+      ],
+      [
+       322,
+       8.03
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 8,
+     "worst": 6.91,
+     "events": [
+      [
+       106,
+       6.91
+      ],
+      [
+       107,
+       5.28
+      ],
+      [
+       221,
+       4.07
+      ],
+      [
+       222,
+       4.78
+      ],
+      [
+       231,
+       4.89
+      ],
+      [
+       322,
+       4.32
+      ],
+      [
+       436,
+       4.06
+      ],
+      [
+       437,
+       4.77
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "boulder_120:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.1,
+     "events": [
+      [
+       82,
+       4.1
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 1,
+     "worst": 7.02,
+     "events": [
+      [
+       81,
+       7.02
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 6.91,
+     "events": [
+      [
+       82,
+       6.91
+      ],
+      [
+       280,
+       4.75
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "shelf_lip:traverse_left": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 20.32,
+     "events": [
+      [
+       234,
+       20.32,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "corner_climb:wall_ceiling": {
+   "ticks": 875,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 3.62,
+     "events": [
+      [
+       101,
+       3.62
+      ],
+      [
+       404,
+       3.59
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 6.37,
+     "events": [
+      [
+       99,
+       6.37
+      ],
+      [
+       403,
+       6.09
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 5.28,
+     "events": [
+      [
+       101,
+       5.28
+      ],
+      [
+       404,
+       5.28
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "box:box_round": {
+   "ticks": 786,
+   "metrics": {
+    "draw_jump": {
+     "count": 7,
+     "worst": 5.15,
+     "events": [
+      [
+       82,
+       4.16
+      ],
+      [
+       83,
+       4.64
+      ],
+      [
+       378,
+       5.15
+      ],
+      [
+       379,
+       4.63
+      ],
+      [
+       558,
+       3.59
+      ],
+      [
+       741,
+       4.16
+      ],
+      [
+       742,
+       4.64
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 4,
+     "worst": 11.82,
+     "events": [
+      [
+       82,
+       6.71
+      ],
+      [
+       378,
+       8.03
+      ],
+      [
+       557,
+       11.82
+      ],
+      [
+       558,
+       6.99
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 9,
+     "worst": 7.41,
+     "events": [
+      [
+       82,
+       6.91
+      ],
+      [
+       83,
+       5.28
+      ],
+      [
+       226,
+       4.29
+      ],
+      [
+       227,
+       4.82
+      ],
+      [
+       378,
+       7.41
+      ],
+      [
+       379,
+       5.28
+      ],
+      [
+       558,
+       5.28
+      ],
+      [
+       741,
+       6.91
+      ],
+      [
+       742,
+       5.28
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "overhang_wedge:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 14.98,
+     "events": [
+      [
+       184,
+       14.98
+      ],
+      [
+       185,
+       8.06
+      ],
+      [
+       186,
+       8.06
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 3,
+     "worst": 4.82,
+     "events": [
+      [
+       184,
+       4.29
+      ],
+      [
+       185,
+       4.82
+      ],
+      [
+       275,
+       4.04
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "overhang_shelf_under:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "gap_8:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "gap_16:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 5.77,
+     "events": [
+      [
+       460,
+       5.77
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "gap_24:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 3,
+     "worst": 23.53,
+     "events": [
+      [
+       97,
+       23.53,
+       "foot 1"
+      ],
+      [
+       99,
+       13.81,
+       "foot 1"
+      ],
+      [
+       104,
+       16.34,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 4.61,
+     "events": [
+      [
+       102,
+       4.61
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_32:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 8,
+     "worst": 30.28,
+     "events": [
+      [
+       100,
+       24.2,
+       "foot 1"
+      ],
+      [
+       106,
+       23.83,
+       "foot 1"
+      ],
+      [
+       107,
+       18.39,
+       "foot 0"
+      ],
+      [
+       107,
+       14.0,
+       "foot 1"
+      ],
+      [
+       446,
+       21.49,
+       "foot 0"
+      ],
+      [
+       457,
+       30.28,
+       "foot 1"
+      ],
+      [
+       458,
+       18.46,
+       "foot 0"
+      ],
+      [
+       458,
+       16.81,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_40:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 3.85,
+     "events": [
+      [
+       172,
+       3.85
+      ],
+      [
+       290,
+       3.64
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 6,
+     "worst": 15.61,
+     "events": [
+      [
+       168,
+       8.65
+      ],
+      [
+       169,
+       8.52
+      ],
+      [
+       171,
+       15.61
+      ],
+      [
+       172,
+       8.2
+      ],
+      [
+       173,
+       9.63
+      ],
+      [
+       175,
+       6.04
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 5,
+     "worst": 5.27,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       171,
+       4.83
+      ],
+      [
+       172,
+       5.27
+      ],
+      [
+       290,
+       5.27
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_48:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 13.26,
+     "events": [
+      [
+       172,
+       13.26
+      ],
+      [
+       176,
+       10.86
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 6,
+     "worst": 5.28,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       175,
+       5.28
+      ],
+      [
+       275,
+       4.04
+      ],
+      [
+       294,
+       4.29
+      ],
+      [
+       295,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_64:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 4.62,
+     "events": [
+      [
+       300,
+       4.14
+      ],
+      [
+       301,
+       4.62
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 8.77,
+     "events": [
+      [
+       299,
+       6.99
+      ],
+      [
+       302,
+       8.77
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 26.16,
+     "events": [
+      [
+       162,
+       26.16,
+       "foot 1"
+      ],
+      [
+       164,
+       15.63,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 6.91,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       300,
+       6.91
+      ],
+      [
+       301,
+       5.28
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_lower_16:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 6.12,
+     "events": [
+      [
+       108,
+       6.12
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 10.56,
+     "events": [
+      [
+       439,
+       7.0
+      ],
+      [
+       441,
+       10.56
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 24.82,
+     "events": [
+      [
+       98,
+       22.52,
+       "foot 1"
+      ],
+      [
+       99,
+       12.36,
+       "foot 1"
+      ],
+      [
+       442,
+       24.82,
+       "foot 0"
+      ],
+      [
+       447,
+       23.01,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 7,
+     "worst": 6.73,
+     "events": [
+      [
+       103,
+       6.4
+      ],
+      [
+       106,
+       6.73
+      ],
+      [
+       107,
+       5.61
+      ],
+      [
+       108,
+       6.34
+      ],
+      [
+       439,
+       3.66
+      ],
+      [
+       440,
+       4.83
+      ],
+      [
+       441,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_higher_16:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 22.08,
+     "events": [
+      [
+       447,
+       22.08,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 5,
+     "worst": 6.56,
+     "events": [
+      [
+       92,
+       6.1
+      ],
+      [
+       445,
+       4.58
+      ],
+      [
+       448,
+       6.56
+      ],
+      [
+       449,
+       4.19
+      ],
+      [
+       451,
+       3.84
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_lower_32:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 7,
+     "worst": 6.9,
+     "events": [
+      [
+       164,
+       5.7
+      ],
+      [
+       165,
+       4.76
+      ],
+      [
+       166,
+       6.9
+      ],
+      [
+       167,
+       4.26
+      ],
+      [
+       168,
+       3.67
+      ],
+      [
+       286,
+       3.8
+      ],
+      [
+       287,
+       4.5
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 7,
+     "worst": 15.3,
+     "events": [
+      [
+       162,
+       11.24
+      ],
+      [
+       163,
+       11.73
+      ],
+      [
+       164,
+       15.3
+      ],
+      [
+       165,
+       8.84
+      ],
+      [
+       167,
+       13.68
+      ],
+      [
+       168,
+       10.32
+      ],
+      [
+       169,
+       7.43
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 7,
+     "worst": 9.53,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       164,
+       9.53
+      ],
+      [
+       165,
+       6.52
+      ],
+      [
+       166,
+       5.87
+      ],
+      [
+       286,
+       5.27
+      ],
+      [
+       287,
+       5.27
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_higher_32:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 10.41,
+     "events": [
+      [
+       105,
+       6.35
+      ],
+      [
+       106,
+       10.41
+      ],
+      [
+       107,
+       6.94
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 5,
+     "worst": 20.69,
+     "events": [
+      [
+       105,
+       16.57,
+       "foot 2"
+      ],
+      [
+       106,
+       19.83,
+       "foot 0"
+      ],
+      [
+       107,
+       18.18,
+       "foot 0"
+      ],
+      [
+       114,
+       14.14,
+       "foot 1"
+      ],
+      [
+       452,
+       20.69,
+       "foot 3"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.83,
+     "events": [
+      [
+       107,
+       4.83
+      ],
+      [
+       108,
+       4.81
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_lower_48:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 13.26,
+     "events": [
+      [
+       172,
+       13.26
+      ],
+      [
+       176,
+       10.86
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 6,
+     "worst": 5.28,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       175,
+       5.28
+      ],
+      [
+       275,
+       4.04
+      ],
+      [
+       294,
+       4.29
+      ],
+      [
+       295,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "gap_higher_48:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 2,
+     "worst": 13.26,
+     "events": [
+      [
+       172,
+       13.26
+      ],
+      [
+       176,
+       10.86
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 6,
+     "worst": 5.28,
+     "events": [
+      [
+       152,
+       4.03
+      ],
+      [
+       153,
+       4.76
+      ],
+      [
+       175,
+       5.28
+      ],
+      [
+       275,
+       4.04
+      ],
+      [
+       294,
+       4.29
+      ],
+      [
+       295,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "funnel_40:funnel": {
+   "ticks": 617,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 4,
+     "worst": 14.5,
+     "events": [
+      [
+       106,
+       14.5
+      ],
+      [
+       136,
+       0.0
+      ],
+      [
+       193,
+       0.0
+      ],
+      [
+       223,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "funnel_60:funnel": {
+   "ticks": 617,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 3,
+     "worst": 13,
+     "events": [
+      [
+       365,
+       4
+      ],
+      [
+       395,
+       13
+      ],
+      [
+       425,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 4,
+     "worst": 14.5,
+     "events": [
+      [
+       115,
+       14.5
+      ],
+      [
+       145,
+       0.0
+      ],
+      [
+       193,
+       0.0
+      ],
+      [
+       223,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "funnel_90:funnel": {
+   "ticks": 617,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 3.98,
+     "events": [
+      [
+       230,
+       3.98
+      ],
+      [
+       231,
+       3.55
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 8,
+     "worst": 14.17,
+     "events": [
+      [
+       92,
+       8.98
+      ],
+      [
+       93,
+       13.78
+      ],
+      [
+       94,
+       12.81
+      ],
+      [
+       95,
+       14.17
+      ],
+      [
+       98,
+       14.05
+      ],
+      [
+       103,
+       13.95
+      ],
+      [
+       104,
+       13.99
+      ],
+      [
+       105,
+       14.0
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 6.37,
+     "events": [
+      [
+       229,
+       3.7
+      ],
+      [
+       230,
+       6.37
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 4,
+     "worst": 13.2,
+     "events": [
+      [
+       115,
+       13.2
+      ],
+      [
+       145,
+       0.0
+      ],
+      [
+       193,
+       0.0
+      ],
+      [
+       223,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slot_20:slot": {
+   "ticks": 598,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 5.78,
+     "events": [
+      [
+       55,
+       5.78
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slot_24:slot": {
+   "ticks": 598,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 23.1,
+     "events": [
+      [
+       67,
+       23.1,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 4.03,
+     "events": [
+      [
+       56,
+       4.03
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "slot_28:slot": {
+   "ticks": 598,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 4.74,
+     "events": [
+      [
+       58,
+       4.74
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "slot_36:slot": {
+   "ticks": 598,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 3,
+     "worst": 27.67,
+     "events": [
+      [
+       55,
+       18.05,
+       "foot 2"
+      ],
+      [
+       57,
+       27.67,
+       "foot 1"
+      ],
+      [
+       58,
+       14.68,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 7.43,
+     "events": [
+      [
+       56,
+       7.43
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "ceiling_walk:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "ceiling_walk:bounce": {
+   "ticks": 391,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "ceiling_specks:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "ceiling_step_up:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 1,
+     "worst": 2,
+     "events": [
+      [
+       126,
+       2
+      ]
+     ]
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       118,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 1,
+     "worst": 13.7,
+     "events": [
+      [
+       130,
+       13.7
+      ]
+     ]
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "dance",
+    "up_osc",
+    "stall"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "ceiling_step_down:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.81,
+     "events": [
+      [
+       92,
+       4.81
+      ],
+      [
+       275,
+       4.04
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "tunnel_level:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 5,
+     "worst": 23.51,
+     "events": [
+      [
+       30,
+       23.51,
+       "foot 1"
+      ],
+      [
+       150,
+       23.51,
+       "foot 1"
+      ],
+      [
+       270,
+       23.51,
+       "foot 1"
+      ],
+      [
+       407,
+       23.41,
+       "foot 1"
+      ],
+      [
+       527,
+       23.41,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "tunnel_ragged:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 16,
+     "worst": 14.4,
+     "events": [
+      [
+       42,
+       2.2
+      ],
+      [
+       72,
+       0.0
+      ],
+      [
+       102,
+       0.0
+      ],
+      [
+       132,
+       0.0
+      ],
+      [
+       162,
+       0.0
+      ],
+      [
+       192,
+       0.0
+      ],
+      [
+       222,
+       0.0
+      ],
+      [
+       252,
+       0.0
+      ],
+      [
+       303,
+       14.4
+      ],
+      [
+       333,
+       0.0
+      ],
+      [
+       363,
+       0.0
+      ],
+      [
+       393,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "tunnel_45:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 26,
+     "worst": 15.91,
+     "events": [
+      [
+       31,
+       13.04
+      ],
+      [
+       32,
+       8.01
+      ],
+      [
+       34,
+       15.81
+      ],
+      [
+       35,
+       15.77
+      ],
+      [
+       39,
+       11.13
+      ],
+      [
+       40,
+       12.28
+      ],
+      [
+       41,
+       10.32
+      ],
+      [
+       42,
+       14.33
+      ],
+      [
+       43,
+       15.91
+      ],
+      [
+       44,
+       7.3
+      ],
+      [
+       46,
+       10.65
+      ],
+      [
+       47,
+       13.09
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 2,
+     "worst": 15,
+     "events": [
+      [
+       31,
+       14
+      ],
+      [
+       61,
+       15
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 21.15,
+     "events": [
+      [
+       66,
+       21.15,
+       "foot 0"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 1,
+     "worst": 0.2,
+     "events": [
+      [
+       22,
+       0.2
+      ]
+     ]
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 13,
+     "worst": 14.4,
+     "events": [
+      [
+       112,
+       0.4
+      ],
+      [
+       142,
+       0.0
+      ],
+      [
+       172,
+       0.0
+      ],
+      [
+       202,
+       0.0
+      ],
+      [
+       232,
+       0.0
+      ],
+      [
+       262,
+       0.0
+      ],
+      [
+       342,
+       14.4
+      ],
+      [
+       372,
+       0.0
+      ],
+      [
+       402,
+       0.0
+      ],
+      [
+       432,
+       0.0
+      ],
+      [
+       462,
+       0.0
+      ],
+      [
+       492,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "up_osc",
+    "foot_jump",
+    "sink"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "tunnel_45_ragged:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 29,
+     "worst": 14.95,
+     "events": [
+      [
+       30,
+       11.27
+      ],
+      [
+       32,
+       13.61
+      ],
+      [
+       33,
+       12.4
+      ],
+      [
+       35,
+       14.95
+      ],
+      [
+       36,
+       9.5
+      ],
+      [
+       37,
+       10.22
+      ],
+      [
+       39,
+       14.83
+      ],
+      [
+       41,
+       8.95
+      ],
+      [
+       42,
+       8.27
+      ],
+      [
+       43,
+       8.04
+      ],
+      [
+       44,
+       9.35
+      ],
+      [
+       46,
+       14.95
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 2,
+     "worst": 13,
+     "events": [
+      [
+       31,
+       13
+      ],
+      [
+       61,
+       13
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 1,
+     "worst": 2.3,
+     "events": [
+      [
+       22,
+       2.3
+      ]
+     ]
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 11,
+     "worst": 13.9,
+     "events": [
+      [
+       182,
+       12.9
+      ],
+      [
+       212,
+       0.0
+      ],
+      [
+       242,
+       0.0
+      ],
+      [
+       323,
+       13.9
+      ],
+      [
+       353,
+       0.0
+      ],
+      [
+       383,
+       0.0
+      ],
+      [
+       413,
+       0.0
+      ],
+      [
+       443,
+       0.0
+      ],
+      [
+       473,
+       0.0
+      ],
+      [
+       503,
+       0.0
+      ],
+      [
+       533,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "up_osc",
+    "sink"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "tunnel_shaft:shaft": {
+   "ticks": 393,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 4,
+     "worst": 23.41,
+     "events": [
+      [
+       29,
+       23.41,
+       "foot 1"
+      ],
+      [
+       88,
+       23.31,
+       "foot 1"
+      ],
+      [
+       90,
+       13.8,
+       "foot 1"
+      ],
+      [
+       346,
+       23.31,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "tunnel_bend:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 11,
+     "worst": 14.8,
+     "events": [
+      [
+       728,
+       7.88
+      ],
+      [
+       730,
+       13.9
+      ],
+      [
+       731,
+       8.78
+      ],
+      [
+       1081,
+       14.32
+      ],
+      [
+       1082,
+       7.02
+      ],
+      [
+       1083,
+       14.8
+      ],
+      [
+       1084,
+       11.35
+      ],
+      [
+       1085,
+       10.65
+      ],
+      [
+       1086,
+       9.99
+      ],
+      [
+       1088,
+       12.64
+      ],
+      [
+       1089,
+       12.03
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 25.11,
+     "events": [
+      [
+       30,
+       23.51,
+       "foot 1"
+      ],
+      [
+       571,
+       25.11,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 22,
+     "worst": 13.9,
+     "events": [
+      [
+       183,
+       13.5
+      ],
+      [
+       213,
+       0.0
+      ],
+      [
+       243,
+       0.0
+      ],
+      [
+       273,
+       0.0
+      ],
+      [
+       303,
+       0.0
+      ],
+      [
+       333,
+       0.0
+      ],
+      [
+       363,
+       0.0
+      ],
+      [
+       393,
+       0.0
+      ],
+      [
+       423,
+       0.0
+      ],
+      [
+       453,
+       0.0
+      ],
+      [
+       483,
+       0.0
+      ],
+      [
+       513,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "tunnel_up_bend:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 23.51,
+     "events": [
+      [
+       30,
+       23.51,
+       "foot 1"
+      ],
+      [
+       150,
+       23.51,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 30,
+     "worst": 14.9,
+     "events": [
+      [
+       199,
+       14.9
+      ],
+      [
+       229,
+       0.0
+      ],
+      [
+       259,
+       0.0
+      ],
+      [
+       289,
+       0.0
+      ],
+      [
+       319,
+       0.0
+      ],
+      [
+       349,
+       0.0
+      ],
+      [
+       379,
+       0.0
+      ],
+      [
+       409,
+       0.0
+      ],
+      [
+       439,
+       0.0
+      ],
+      [
+       469,
+       0.0
+      ],
+      [
+       499,
+       0.0
+      ],
+      [
+       529,
+       0.0
+      ]
+     ]
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "jump_flat:jump_right": {
+   "ticks": 297,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 17.1,
+     "events": [
+      [
+       112,
+       17.1,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "jump_flat:jump_up": {
+   "ticks": 214,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "jump_wall:jump_right": {
+   "ticks": 297,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "cliff_walk:traverse": {
+   "ticks": 573,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 4,
+     "worst": 13.69,
+     "events": [
+      [
+       358,
+       8.28
+      ],
+      [
+       359,
+       8.42
+      ],
+      [
+       360,
+       9.3
+      ],
+      [
+       361,
+       13.69
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 4.82,
+     "events": [
+      [
+       189,
+       4.03
+      ],
+      [
+       190,
+       4.76
+      ],
+      [
+       359,
+       4.29
+      ],
+      [
+       360,
+       4.82
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cliff_jump:cliff_jump": {
+   "ticks": 308,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "drop_funnel:cliff_jump": {
+   "ticks": 308,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "pool:swim_across": {
+   "ticks": 634,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.69,
+     "events": [
+      [
+       326,
+       4.69
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 4,
+     "worst": 18.23,
+     "events": [
+      [
+       324,
+       6.04
+      ],
+      [
+       325,
+       18.23
+      ],
+      [
+       326,
+       7.15
+      ],
+      [
+       327,
+       8.73
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 25.1,
+     "events": [
+      [
+       218,
+       25.1,
+       "foot 1"
+      ],
+      [
+       396,
+       20.16,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 6.51,
+     "events": [
+      [
+       143,
+       4.04
+      ],
+      [
+       144,
+       4.11
+      ],
+      [
+       325,
+       6.51
+      ],
+      [
+       326,
+       5.28
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "pool_bank_slope:swim_across": {
+   "ticks": 634,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 1,
+     "worst": 25.1,
+     "events": [
+      [
+       218,
+       25.1,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.11,
+     "events": [
+      [
+       143,
+       4.04
+      ],
+      [
+       144,
+       4.11
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_1:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 2,
+     "worst": 4.59,
+     "events": [
+      [
+       125,
+       4.46
+      ],
+      [
+       126,
+       4.59
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 2,
+     "worst": 4,
+     "events": [
+      [
+       31,
+       4
+      ],
+      [
+       1060,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 11,
+     "worst": 23.73,
+     "events": [
+      [
+       196,
+       23.73,
+       "foot 1"
+      ],
+      [
+       197,
+       12.31,
+       "foot 1"
+      ],
+      [
+       570,
+       12.12,
+       "foot 1"
+      ],
+      [
+       776,
+       23.35,
+       "foot 1"
+      ],
+      [
+       777,
+       12.14,
+       "foot 1"
+      ],
+      [
+       831,
+       18.54,
+       "foot 1"
+      ],
+      [
+       833,
+       12.48,
+       "foot 1"
+      ],
+      [
+       838,
+       13.75,
+       "foot 1"
+      ],
+      [
+       880,
+       18.3,
+       "foot 1"
+      ],
+      [
+       910,
+       17.23,
+       "foot 1"
+      ],
+      [
+       970,
+       23.56,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 3,
+     "worst": 6.91,
+     "events": [
+      [
+       125,
+       6.91
+      ],
+      [
+       126,
+       4.86
+      ],
+      [
+       741,
+       4.72
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_2:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 12.35,
+     "events": [
+      [
+       95,
+       11.65
+      ],
+      [
+       97,
+       12.35
+      ],
+      [
+       98,
+       7.74
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       197,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 10,
+     "worst": 25.93,
+     "events": [
+      [
+       34,
+       22.02,
+       "foot 1"
+      ],
+      [
+       62,
+       23.67,
+       "foot 1"
+      ],
+      [
+       98,
+       22.94,
+       "foot 1"
+      ],
+      [
+       104,
+       24.89,
+       "foot 0"
+      ],
+      [
+       105,
+       12.62,
+       "foot 0"
+      ],
+      [
+       251,
+       18.56,
+       "foot 0"
+      ],
+      [
+       308,
+       22.89,
+       "foot 1"
+      ],
+      [
+       862,
+       25.93,
+       "foot 1"
+      ],
+      [
+       1012,
+       21.78,
+       "foot 0"
+      ],
+      [
+       1060,
+       22.91,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 2,
+     "worst": 4.86,
+     "events": [
+      [
+       98,
+       4.86
+      ],
+      [
+       804,
+       4.04
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_3:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 2,
+     "worst": 4,
+     "events": [
+      [
+       133,
+       4
+      ],
+      [
+       649,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 10,
+     "worst": 28.74,
+     "events": [
+      [
+       100,
+       19.14,
+       "foot 0"
+      ],
+      [
+       146,
+       20.95,
+       "foot 1"
+      ],
+      [
+       287,
+       28.74,
+       "foot 1"
+      ],
+      [
+       318,
+       22.02,
+       "foot 1"
+      ],
+      [
+       322,
+       15.66,
+       "foot 1"
+      ],
+      [
+       696,
+       20.74,
+       "foot 1"
+      ],
+      [
+       769,
+       19.78,
+       "foot 1"
+      ],
+      [
+       926,
+       18.71,
+       "foot 1"
+      ],
+      [
+       1009,
+       23.82,
+       "foot 1"
+      ],
+      [
+       1014,
+       16.72,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_4:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 3,
+     "worst": 5,
+     "events": [
+      [
+       60,
+       5
+      ],
+      [
+       651,
+       4
+      ],
+      [
+       785,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 9,
+     "worst": 31.67,
+     "events": [
+      [
+       219,
+       20.11,
+       "foot 1"
+      ],
+      [
+       242,
+       23.34,
+       "foot 1"
+      ],
+      [
+       246,
+       14.12,
+       "foot 1"
+      ],
+      [
+       579,
+       19.91,
+       "foot 1"
+      ],
+      [
+       584,
+       16.68,
+       "foot 1"
+      ],
+      [
+       625,
+       21.43,
+       "foot 1"
+      ],
+      [
+       662,
+       19.48,
+       "foot 1"
+      ],
+      [
+       894,
+       19.96,
+       "foot 1"
+      ],
+      [
+       1021,
+       31.67,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 3,
+     "worst": 4.12,
+     "events": [
+      [
+       752,
+       4.04
+      ],
+      [
+       753,
+       4.12
+      ],
+      [
+       941,
+       3.68
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_5:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 1,
+     "worst": 4.17,
+     "events": [
+      [
+       116,
+       4.17
+      ]
+     ]
+    },
+    "head_jump": {
+     "count": 3,
+     "worst": 11.1,
+     "events": [
+      [
+       113,
+       11.1
+      ],
+      [
+       114,
+       10.85
+      ],
+      [
+       115,
+       9.07
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       1056,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 9,
+     "worst": 25.75,
+     "events": [
+      [
+       243,
+       19.38,
+       "foot 0"
+      ],
+      [
+       277,
+       20.52,
+       "foot 1"
+      ],
+      [
+       594,
+       20.58,
+       "foot 1"
+      ],
+      [
+       642,
+       16.84,
+       "foot 0"
+      ],
+      [
+       712,
+       25.32,
+       "foot 1"
+      ],
+      [
+       714,
+       15.3,
+       "foot 1"
+      ],
+      [
+       740,
+       23.72,
+       "foot 1"
+      ],
+      [
+       890,
+       25.75,
+       "foot 1"
+      ],
+      [
+       1023,
+       20.05,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 4,
+     "worst": 7.44,
+     "events": [
+      [
+       116,
+       7.44
+      ],
+      [
+       793,
+       3.98
+      ],
+      [
+       794,
+       4.72
+      ],
+      [
+       1040,
+       4.47
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "draw_jump",
+    "head_jump",
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "cave_6:traverse_long": {
+   "ticks": 1111,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 1,
+     "worst": 4,
+     "events": [
+      [
+       663,
+       4
+      ]
+     ]
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 13,
+     "worst": 29.76,
+     "events": [
+      [
+       108,
+       17.69,
+       "foot 1"
+      ],
+      [
+       224,
+       15.1,
+       "foot 0"
+      ],
+      [
+       225,
+       22.42,
+       "foot 1"
+      ],
+      [
+       226,
+       12.41,
+       "foot 1"
+      ],
+      [
+       257,
+       27.67,
+       "foot 1"
+      ],
+      [
+       596,
+       21.62,
+       "foot 1"
+      ],
+      [
+       603,
+       18.93,
+       "foot 1"
+      ],
+      [
+       617,
+       19.52,
+       "foot 1"
+      ],
+      [
+       782,
+       15.45,
+       "foot 1"
+      ],
+      [
+       847,
+       21.69,
+       "foot 0"
+      ],
+      [
+       895,
+       21.18,
+       "foot 0"
+      ],
+      [
+       911,
+       29.76,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "up_osc",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "dig_45:dig_45": {
+   "ticks": 297,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 26.08,
+     "events": [
+      [
+       59,
+       26.08,
+       "foot 1"
+      ],
+      [
+       162,
+       23.1,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "dig_shaft:dig_shaft": {
+   "ticks": 297,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 13,
+     "worst": 14.01,
+     "events": [
+      [
+       161,
+       12.76
+      ],
+      [
+       162,
+       13.8
+      ],
+      [
+       164,
+       11.62
+      ],
+      [
+       165,
+       12.87
+      ],
+      [
+       167,
+       13.75
+      ],
+      [
+       168,
+       13.45
+      ],
+      [
+       170,
+       8.72
+      ],
+      [
+       172,
+       13.05
+      ],
+      [
+       173,
+       13.67
+      ],
+      [
+       175,
+       7.7
+      ],
+      [
+       178,
+       13.74
+      ],
+      [
+       179,
+       14.01
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 3,
+     "worst": 28.76,
+     "events": [
+      [
+       44,
+       28.76,
+       "foot 1"
+      ],
+      [
+       165,
+       14.57,
+       "foot 2"
+      ],
+      [
+       196,
+       21.69,
+       "foot 2"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 1,
+     "worst": 5.83,
+     "events": [
+      [
+       26,
+       5.83
+      ]
+     ]
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  },
+  "dig_level_wall:dig_level": {
+   "ticks": 297,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [],
+   "pass": true,
+   "allow": []
+  },
+  "dig_turns:dig_turns": {
+   "ticks": 571,
+   "metrics": {
+    "draw_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "head_jump": {
+     "count": 4,
+     "worst": 12.02,
+     "events": [
+      [
+       375,
+       9.41
+      ],
+      [
+       376,
+       12.02
+      ],
+      [
+       377,
+       9.3
+      ],
+      [
+       380,
+       8.89
+      ]
+     ]
+    },
+    "dance": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_flip": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "up_osc": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "state_flicker": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stall": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_toggle": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_slide": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "foot_jump": {
+     "count": 2,
+     "worst": 26.08,
+     "events": [
+      [
+       59,
+       26.08,
+       "foot 1"
+      ],
+      [
+       178,
+       23.97,
+       "foot 1"
+      ]
+     ]
+    },
+    "sink": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "float": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "body_jump": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    },
+    "stuck": {
+     "count": 0,
+     "worst": 0,
+     "events": []
+    }
+   },
+   "outcome": {
+    "ok": true,
+    "why": ""
+   },
+   "failing": [
+    "head_jump",
+    "foot_jump"
+   ],
+   "pass": false,
+   "allow": []
+  }
+ }
+}

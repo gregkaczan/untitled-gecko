@@ -253,6 +253,105 @@ func floor_below(p: Vector2) -> Vector2:
 	return Vector2(p.x, cy * CELL)
 
 
+# All rock, no repaint: the test scenes carve their rooms out of this.
+func blank() -> void:
+	if solid.size() != W * H:
+		solid.resize(W * H)
+	solid.fill(CELL_ROCK)
+	if _noise == null:
+		_noise = FastNoiseLite.new()
+		_noise.frequency = 1.0
+
+
+func repaint_all() -> void:
+	_repaint(0, 0, W - 1, H - 1)
+
+
+# Clears a world-space rectangle to air.
+func erase_rect(r: Rect2) -> void:
+	_set_rect(r, CELL_AIR)
+
+
+# Turns the air cells of a world-space rectangle into still water.
+func water_rect(r: Rect2) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			if solid[y * W + x] == CELL_AIR:
+				solid[y * W + x] = CELL_WATER
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
+# Rock under the line from a to b (world px), from the line down to the
+# bottom of the map, between the two x's: a slope of any angle.
+func fill_below_line(a: Vector2, b: Vector2) -> void:
+	if b.x < a.x:
+		var t := a
+		a = b
+		b = t
+	var x0 := int(floor(a.x / CELL))
+	var x1 := int(ceil(b.x / CELL)) - 1
+	for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+		var cx := (x + 0.5) * CELL
+		var f := clampf((cx - a.x) / maxf(b.x - a.x, 0.001), 0.0, 1.0)
+		var line_y := lerpf(a.y, b.y, f)
+		var y0 := int(floor(line_y / CELL))
+		for y in range(maxi(y0, 0), H):
+			solid[y * W + x] = CELL_ROCK
+	_repaint(x0 - 1, 0, x1 + 1, H - 1)
+
+
+# Rock over the line from a to b: from the top of the map down to it.
+func fill_above_line(a: Vector2, b: Vector2) -> void:
+	if b.x < a.x:
+		var t := a
+		a = b
+		b = t
+	var x0 := int(floor(a.x / CELL))
+	var x1 := int(ceil(b.x / CELL)) - 1
+	for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+		var cx := (x + 0.5) * CELL
+		var f := clampf((cx - a.x) / maxf(b.x - a.x, 0.001), 0.0, 1.0)
+		var line_y := lerpf(a.y, b.y, f)
+		var y1 := int(ceil(line_y / CELL)) - 1
+		for y in range(0, mini(y1, H - 1) + 1):
+			solid[y * W + x] = CELL_ROCK
+	_repaint(x0 - 1, 0, x1 + 1, H - 1)
+
+
+# One cell at a world point.
+func set_cell_world(p: Vector2, value: int) -> void:
+	var x := int(floor(p.x / CELL))
+	var y := int(floor(p.y / CELL))
+	if x < 0 or y < 0 or x >= W or y >= H:
+		return
+	solid[y * W + x] = value
+	_repaint(x - 1, y - 1, x + 1, y + 1)
+
+
+# First solid cell straight above p: the underside of a ceiling.
+func ceiling_above(p: Vector2) -> Vector2:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	while cy >= 0 and not is_solid(cx, cy):
+		cy -= 1
+	return Vector2(p.x, (cy + 1) * CELL)
+
+
+func _set_rect(r: Rect2, value: int) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			solid[y * W + x] = value
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
 # Fills a world-space rectangle with rock (a test wall for the demos).
 func fill_rect(r: Rect2) -> void:
 	var x0 := int(floor(r.position.x / CELL))

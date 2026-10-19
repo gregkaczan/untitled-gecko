@@ -1,0 +1,2912 @@
+{
+ "bases": {
+  "room": [
+   [
+    "blank"
+   ],
+   [
+    "room",
+    0,
+    160,
+    1920,
+    640
+   ]
+  ],
+  "solid": [
+   [
+    "blank"
+   ]
+  ]
+ },
+ "scripts": {
+  "walk_right": [
+   [
+    5.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "walk_left": [
+   [
+    5.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "traverse": [
+   [
+    4.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    4.5,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "traverse_left": [
+   [
+    4.5,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    4.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "traverse_long": [
+   [
+    9.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    9.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "bounce": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "climb_over": [
+   [
+    1.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "wall_ceiling": [
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    6.0,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    4.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "box_round": [
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "slot": [
+   [
+    1.4,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "funnel": [
+   [
+    1.2,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     1,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     -1,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "jump_right": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.4,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "jump_up": [
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "cliff_jump": [
+   [
+    1.3,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "shaft": [
+   [
+    3.0,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "swim_across": [
+   [
+    6.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "dig_45": [
+   [
+    0.4,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     120,
+     120
+    ]
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "dig_shaft": [
+   [
+    0.4,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     0,
+     140
+    ]
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "dig_level": [
+   [
+    0.4,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     140,
+     0
+    ]
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "dig_turns": [
+   [
+    0.4,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     120,
+     120
+    ]
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     140,
+     -60
+    ]
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     0,
+     140
+    ]
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     -140,
+     0
+    ]
+   ],
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ]
+ },
+ "scenes": {
+  "flat": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse",
+    "bounce"
+   ],
+   "end": [
+    300,
+    700,
+    700,
+    900
+   ],
+   "state": "cling"
+  },
+  "slope_up_10": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1500,
+     659
+    ],
+    [
+     "fill",
+     1500,
+     659,
+     420,
+     441
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_10": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1500,
+     659
+    ],
+    [
+     "fill",
+     1500,
+     659,
+     420,
+     441
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    459
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "slope_up_20": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1400,
+     545
+    ],
+    [
+     "fill",
+     1400,
+     545,
+     520,
+     555
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_20": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1400,
+     545
+    ],
+    [
+     "fill",
+     1400,
+     545,
+     520,
+     555
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    345
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "slope_up_30": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1300,
+     454
+    ],
+    [
+     "fill",
+     1300,
+     454,
+     620,
+     646
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_30": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1300,
+     454
+    ],
+    [
+     "fill",
+     1300,
+     454,
+     620,
+     646
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    254
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "slope_up_45": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1100,
+     400
+    ],
+    [
+     "fill",
+     1100,
+     400,
+     820,
+     700
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_45": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     1100,
+     400
+    ],
+    [
+     "fill",
+     1100,
+     400,
+     820,
+     700
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    200
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "slope_up_60": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     930,
+     402
+    ],
+    [
+     "fill",
+     930,
+     402,
+     990,
+     698
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_60": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     930,
+     402
+    ],
+    [
+     "fill",
+     930,
+     402,
+     990,
+     698
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    202
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "slope_up_75": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     800,
+     427
+    ],
+    [
+     "fill",
+     800,
+     427,
+     1120,
+     673
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "slope_down_75": {
+   "base": "room",
+   "terrain": [
+    [
+     "below",
+     700,
+     800,
+     800,
+     427
+    ],
+    [
+     "fill",
+     800,
+     427,
+     1120,
+     673
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1700,
+    227
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_4": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     796,
+     1020,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_4": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     796,
+     1020,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_8": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     792,
+     1020,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_8": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     792,
+     1020,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     788,
+     1020,
+     12
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     788,
+     1020,
+     12
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     784,
+     1020,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     784,
+     1020,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_24": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     776,
+     1020,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_24": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     776,
+     1020,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_32": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     768,
+     1020,
+     32
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_32": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     768,
+     1020,
+     32
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "step_up_48": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     752,
+     1020,
+     48
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "step_down_48": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     752,
+     1020,
+     48
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1100,
+    700
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling"
+  },
+  "specks_floor": {
+   "base": "room",
+   "terrain": [
+    [
+     "specks",
+     3,
+     600,
+     1400,
+     798,
+     14
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "notch_1": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     4,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "notch_2": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     8,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "notch_deep": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     4,
+     12
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "notch_wide_deep": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     12,
+     12
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "bump_2x2": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     792,
+     8,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "bump_row": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     796,
+     4,
+     4
+    ],
+    [
+     "fill",
+     1016,
+     792,
+     4,
+     8
+    ],
+    [
+     "fill",
+     1040,
+     796,
+     8,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "pillar": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     500,
+     120,
+     300
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "climb_over"
+   ],
+   "end": [
+    1130,
+    700,
+    1700,
+    900
+   ],
+   "state": "cling"
+  },
+  "pillar_thin": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     560,
+     24,
+     240
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "climb_over"
+   ],
+   "state": "cling"
+  },
+  "boulder_30": {
+   "base": "room",
+   "terrain": [
+    [
+     "disc",
+     1000,
+     800,
+     30
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "boulder_70": {
+   "base": "room",
+   "terrain": [
+    [
+     "disc",
+     1000,
+     800,
+     70
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "boulder_120": {
+   "base": "room",
+   "terrain": [
+    [
+     "disc",
+     1000,
+     800,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "shelf_lip": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     600,
+     920,
+     40
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1500,
+    500
+   ],
+   "scripts": [
+    "traverse_left"
+   ],
+   "state": "cling",
+   "note": "walks off the shelf edge, round the lip onto the underside, and back"
+  },
+  "corner_climb": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    1700,
+    700
+   ],
+   "scripts": [
+    "wall_ceiling"
+   ],
+   "state": "cling",
+   "note": "floor to wall to ceiling"
+  },
+  "box": {
+   "base": "solid",
+   "terrain": [
+    [
+     "room",
+     700,
+     500,
+     300,
+     300
+    ],
+    [
+     "fill",
+     700,
+     500,
+     300,
+     20
+    ],
+    [
+     "fill",
+     700,
+     500,
+     20,
+     300
+    ],
+    [
+     "fill",
+     980,
+     500,
+     20,
+     300
+    ],
+    [
+     "fill",
+     0,
+     160,
+     1920,
+     640
+    ],
+    [
+     "room",
+     720,
+     520,
+     260,
+     260
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    600
+   ],
+   "scripts": [
+    "box_round"
+   ],
+   "state": "cling",
+   "note": "an enclosed box, all four walls"
+  },
+  "overhang_wedge": {
+   "base": "room",
+   "terrain": [
+    [
+     "above",
+     1100,
+     800,
+     1500,
+     160
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling",
+   "note": "a ceiling slanting down to the floor: a dead end, the gecko must stop without dancing"
+  },
+  "overhang_shelf_under": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     700,
+     1020,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    760
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling",
+   "note": "a low shelf 76 px over the floor"
+  },
+  "gap_8": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     8,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     16,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_24": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     24,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_32": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     32,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_40": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     40,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_48": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     48,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_64": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     64,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_lower_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     16,
+     120
+    ],
+    [
+     "erase",
+     1016,
+     800,
+     920,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_higher_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     16,
+     120
+    ],
+    [
+     "fill",
+     1016,
+     784,
+     920,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_lower_32": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     32,
+     120
+    ],
+    [
+     "erase",
+     1032,
+     800,
+     920,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_higher_32": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     32,
+     120
+    ],
+    [
+     "fill",
+     1032,
+     784,
+     920,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_lower_48": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     48,
+     120
+    ],
+    [
+     "erase",
+     1048,
+     800,
+     920,
+     24
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "gap_higher_48": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     48,
+     120
+    ],
+    [
+     "fill",
+     1048,
+     784,
+     920,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "funnel_40": {
+   "base": "room",
+   "terrain": [
+    [
+     "funnel",
+     1000,
+     800,
+     40,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "funnel"
+   ],
+   "state": "cling"
+  },
+  "funnel_60": {
+   "base": "room",
+   "terrain": [
+    [
+     "funnel",
+     1000,
+     800,
+     60,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "funnel"
+   ],
+   "state": "cling"
+  },
+  "funnel_90": {
+   "base": "room",
+   "terrain": [
+    [
+     "funnel",
+     1000,
+     800,
+     90,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "funnel"
+   ],
+   "state": "cling"
+  },
+  "slot_20": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     20,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "slot"
+   ],
+   "state": "cling"
+  },
+  "slot_24": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     24,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "slot"
+   ],
+   "state": "cling"
+  },
+  "slot_28": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     28,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "slot"
+   ],
+   "state": "cling"
+  },
+  "slot_36": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     36,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "slot"
+   ],
+   "state": "cling"
+  },
+  "ceiling_walk": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "ceiling",
+    800,
+    300
+   ],
+   "scripts": [
+    "traverse",
+    "bounce"
+   ],
+   "state": "cling"
+  },
+  "ceiling_specks": {
+   "base": "room",
+   "terrain": [
+    [
+     "specks",
+     5,
+     600,
+     1400,
+     162,
+     14
+    ]
+   ],
+   "spawn": [
+    "ceiling",
+    500,
+    300
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "ceiling_step_up": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     100,
+     920,
+     60
+    ]
+   ],
+   "spawn": [
+    "ceiling",
+    800,
+    300
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling",
+   "note": "the ceiling recedes to the right: a convex corner upside down"
+  },
+  "ceiling_step_down": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     920,
+     40
+    ]
+   ],
+   "spawn": [
+    "ceiling",
+    800,
+    300
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling",
+   "note": "the ceiling comes down to the right: a concave corner upside down"
+  },
+  "tunnel_level": {
+   "base": "solid",
+   "terrain": [
+    [
+     "tunnel",
+     500,
+     600,
+     1500,
+     600,
+     11
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    600
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "tunnel_ragged": {
+   "base": "solid",
+   "terrain": [
+    [
+     "ragged",
+     500,
+     600,
+     1500,
+     600,
+     11,
+     7
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    600
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "tunnel_45": {
+   "base": "solid",
+   "terrain": [
+    [
+     "tunnel",
+     500,
+     400,
+     1000,
+     900,
+     11
+    ]
+   ],
+   "spawn": [
+    "floor",
+    520,
+    420
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "tunnel_45_ragged": {
+   "base": "solid",
+   "terrain": [
+    [
+     "ragged",
+     500,
+     400,
+     1000,
+     900,
+     11,
+     11
+    ]
+   ],
+   "spawn": [
+    "floor",
+    520,
+    420
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling"
+  },
+  "tunnel_shaft": {
+   "base": "solid",
+   "terrain": [
+    [
+     "tunnel",
+     1000,
+     300,
+     1000,
+     900,
+     11
+    ],
+    [
+     "tunnel",
+     1000,
+     900,
+     1300,
+     900,
+     11
+    ]
+   ],
+   "spawn": [
+    "at",
+    1000,
+    330,
+    1,
+    0
+   ],
+   "scripts": [
+    "shaft"
+   ],
+   "state": "cling",
+   "note": "a 22 px shaft, spawned on its left wall"
+  },
+  "tunnel_bend": {
+   "base": "solid",
+   "terrain": [
+    [
+     "tunnel",
+     500,
+     600,
+     900,
+     600,
+     11
+    ],
+    [
+     "tunnel",
+     900,
+     600,
+     1200,
+     900,
+     11
+    ],
+    [
+     "tunnel",
+     1200,
+     900,
+     1600,
+     900,
+     11
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    600
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "tunnel_up_bend": {
+   "base": "solid",
+   "terrain": [
+    [
+     "tunnel",
+     500,
+     800,
+     900,
+     800,
+     11
+    ],
+    [
+     "tunnel",
+     900,
+     800,
+     1200,
+     500,
+     11
+    ],
+    [
+     "tunnel",
+     1200,
+     500,
+     1600,
+     500,
+     11
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    800
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "jump_flat": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "jump_right",
+    "jump_up"
+   ],
+   "state": "cling"
+  },
+  "jump_wall": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "jump_right"
+   ],
+   "state": "cling"
+  },
+  "cliff_walk": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     920,
+     200
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "state": "cling",
+   "note": "the floor ends: the gecko wraps the edge, walks down the face and along the lower floor, then back up"
+  },
+  "cliff_jump": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     920,
+     200
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "cliff_jump"
+   ],
+   "state": "cling"
+  },
+  "drop_funnel": {
+   "base": "room",
+   "terrain": [
+    [
+     "funnel",
+     1200,
+     800,
+     90,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1000,
+    700
+   ],
+   "scripts": [
+    "cliff_jump"
+   ],
+   "state": "cling"
+  },
+  "pool": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     400,
+     100
+    ],
+    [
+     "water",
+     1000,
+     800,
+     400,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "swim_across"
+   ],
+   "state": "cling",
+   "note": "walk in, swim across, climb out on the far wall"
+  },
+  "pool_bank_slope": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     400,
+     100
+    ],
+    [
+     "below",
+     1300,
+     900,
+     1400,
+     800
+    ],
+    [
+     "water",
+     1000,
+     800,
+     400,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "swim_across"
+   ],
+   "state": "cling"
+  },
+  "cave_1": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     1
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "cave_2": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     2
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "cave_3": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     3
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "cave_4": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "cave_5": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     5
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "cave_6": {
+   "base": "solid",
+   "terrain": [
+    [
+     "cave",
+     6
+    ]
+   ],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ],
+   "scripts": [
+    "traverse_long"
+   ],
+   "state": "cling"
+  },
+  "dig_45": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "dig_45"
+   ],
+   "note": "45 degrees down-right from the floor"
+  },
+  "dig_shaft": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "dig_shaft"
+   ],
+   "note": "straight down from the floor"
+  },
+  "dig_level_wall": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     900,
+     300,
+     1020,
+     500
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "dig_level"
+   ],
+   "note": "level into a wall"
+  },
+  "dig_turns": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    600,
+    700
+   ],
+   "scripts": [
+    "dig_turns"
+   ],
+   "note": "down-right, up-right, down, back left"
+  }
+ }
+}
