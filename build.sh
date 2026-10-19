@@ -11,7 +11,7 @@ GODOT="${GODOT:-$HOME/.local/bin/godot}"
 
 # Toggle which platforms to build (edit these)
 BUILD_WIN=true
-BUILD_LINUX=true
+BUILD_LINUX=false
 BUILD_MAC=false
 
 # itch.io: set ITCH_TARGET to push built platforms to itch (default: kwakuuuu/gecko)
