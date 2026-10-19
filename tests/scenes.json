@@ -847,13 +847,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1760,
     459
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "slope_up_20": {
    "base": "room",
@@ -903,13 +904,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1660,
     345
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "slope_up_30": {
    "base": "room",
@@ -959,13 +961,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1560,
     254
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "slope_up_45": {
    "base": "room",
@@ -1015,13 +1018,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1360,
     200
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "slope_up_60": {
    "base": "room",
@@ -1071,13 +1075,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1190,
     202
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "slope_up_75": {
    "base": "room",
@@ -1127,13 +1132,14 @@
    ],
    "spawn": [
     "floor",
-    1700,
+    1060,
     227
    ],
    "scripts": [
     "traverse_left"
    ],
-   "state": "cling"
+   "state": "cling",
+   "note": "spawned 260 px up the plateau, so the walk left goes down the slope and back up it"
   },
   "step_up_4": {
    "base": "room",

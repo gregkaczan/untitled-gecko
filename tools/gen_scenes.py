@@ -79,7 +79,8 @@ for ang in (10, 20, 30, 45, 60, 75):
     top = F - rise
     terrain = [["below", 700, F, 700 + run, top], ["fill", 700 + run, top, 1920 - 700 - run, rise + 300]]
     add("slope_up_%d" % ang, terrain, ["floor", 500, 700], ["traverse"], state="cling")
-    add("slope_down_%d" % ang, terrain, ["floor", 1700, top - 200], ["traverse_left"], state="cling")
+    add("slope_down_%d" % ang, terrain, ["floor", 700 + run + 260, top - 200], ["traverse_left"], state="cling",
+        note="spawned 260 px up the plateau, so the walk left goes down the slope and back up it")
 
 # 3. Steps up and down
 for h in (4, 8, 12, 16, 24, 32, 48):
