@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://c7m1kj26fnaq0"
+path="res://.godot/imported/grid_clear.glsl-0b35e88bc29117e2c2101f89995eec6c.res"
+
+[deps]
+
+source_file="res://shaders/grid_clear.glsl"
+dest_files=["res://.godot/imported/grid_clear.glsl-0b35e88bc29117e2c2101f89995eec6c.res"]
+
+[params]
+

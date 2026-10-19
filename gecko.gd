@@ -35,6 +35,8 @@ const NO_CLING_TIME := 0.18    # Grace after a jump or a drop before clinging ag
 const FEET_GRACE := 0.2        # Time with too few feet planted before dropping
 const MIN_FEET := 2
 const HEAD_LEAD := 15.0        # Head sits this far ahead of the body centre
+const BOB_SMOOTH := 0.15       # Per-tick blend of the drawn body's across-surface bounce
+const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may carry
 const HEAD_SPEED := 420.0      # How fast the head swings round on a turn
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
@@ -105,6 +107,7 @@ var feet_short := 0.0
 var chain: Chain
 var feet: Array[Foot] = []
 var look := Vector2.RIGHT      # Where the head points: toward the mouse, within LOOK_LIMIT of the body line
+var _pos_s := Vector2.ZERO     # Body centre with its across-surface bounce filtered out, for the drawn body
 var input_override = null      # Vector2 from the demo pilot, null for real input
 var jump_override := false
 var chew_override := false
@@ -165,6 +168,7 @@ func spawn(at: Vector2) -> void:
 	no_cling = 0.0
 	feet_short = 0.0
 	look = Vector2.RIGHT
+	_pos_s = at
 	swimming = false
 	tongue_out = false
 	tongue_anchored = false
@@ -264,6 +268,10 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		s = clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
 		if absf(s) < 0.3:
 			s = 0.0
+		# Pressing away from a steep surface walks down it: left on a
+		# right-hand wall takes the gecko back to the floor, not nowhere.
+		if s == 0.0 and inp.dot(up) > 0.5 and absf(tangent.y) > 0.5:
+			s = signf(tangent.y)
 	if absf(s) > 0.3:
 		facing = signf(s)
 	speed_along = move_toward(speed_along, s * WALK_SPEED, WALK_ACCEL * dt)
@@ -282,19 +290,15 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# within reach that the input points along) is a commitment: up keeps
 	# turning toward that surface's normal until it gets there, so a
 	# tilted body half way round cannot talk itself out of it.
-	# Wedged in a crevice, with rock close on both sides: no grabbing and
+	# Wedged in a crevice, with rock close on both sides: no new grabs and
 	# no nudge. The nearest rock flips sides every tick there, and anything
 	# that follows it makes the gecko dance. It still follows the surface
 	# under it and slides along its tangent, so it sits still or backs out.
 	var squeezed := _squeezed()
 	var n: Vector2
-	if squeezed:
-		_grab_n = Vector2.ZERO
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
-	if squeezed:
-		n = _surface_normal(p)
-	elif _grab_n != Vector2.ZERO:
+	if _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
 		_move(-_grab_n * GRAB_PULL * dt)
@@ -304,7 +308,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		n = _obstacle_normal(inp)
 		_grab_n = n
 	else:
-		n = _reach_for_wall(inp) if (not chewing and inp.length() > 0.2) else Vector2.ZERO
+		n = _reach_for_wall(inp) if (not chewing and not squeezed and inp.length() > 0.2) else Vector2.ZERO
 		if n != Vector2.ZERO:
 			_grab_n = n
 			speed_along = 0.0
@@ -522,7 +526,7 @@ func _update_spits(dt: float) -> void:
 		var delta: Vector2 = sp[1] * dt
 		var hit = map.ray_hit(from, delta.normalized(), delta.length())
 		if hit != null:
-			map.erase_circle(hit, SPIT_R)
+			map.blast(hit, SPIT_R)
 			spits.remove_at(i)
 			continue
 		sp[0] = from + delta
@@ -577,7 +581,10 @@ func _step(delta: Vector2) -> bool:
 	for k in [3.0, 6.0, 9.0]:
 		var save := pos
 		if _move(up * k) and _move(delta):
-			return true
+			# Only a real step: the ground must still be right under the body.
+			var floor_pt = map.ray_hit(pos, -up, RIDE_H + k + 4.0)
+			if floor_pt != null:
+				return true
 		pos = save
 	return false
 
@@ -599,8 +606,8 @@ func _move(delta: Vector2) -> bool:
 		var step := minf(1.0, length - moved)
 		var next: Vector2 = pos + dir * step
 		if map.solid_within(next, BODY_R):
-			var q: Dictionary = map.probe(next, BODY_R + 1.0)
-			_block_normal = (next - q.nearest).normalized() if q.found else -dir
+			var cell = map.blocking_cell(pos, next, BODY_R)
+			_block_normal = (next - cell).normalized() if cell != null else -dir
 			return false
 		pos = next
 		moved += step
@@ -694,10 +701,21 @@ static func _turn_toward(a: Vector2, b: Vector2, max_angle: float) -> Vector2:
 # surface behind it. Airborne, it points along the velocity and the body
 # trails freely, only pushed out of rock.
 func _update_chain(dt: float) -> void:
+	# The drawn body hangs off a base that follows the body centre exactly
+	# along the surface but only slowly across it, so bumps in the ground
+	# do not bob the head: a chicken's head on its gyro.
 	var target: Vector2
 	if clinging:
-		target = pos + _tangent() * facing * HEAD_LEAD
+		var t := _tangent()
+		var d := pos - _pos_s
+		var across := d.dot(up)
+		_pos_s += t * d.dot(t) + up * across * BOB_SMOOTH
+		across = (pos - _pos_s).dot(up)
+		if absf(across) > BOB_MAX:
+			_pos_s += up * (across - signf(across) * BOB_MAX)
+		target = _pos_s + t * facing * HEAD_LEAD
 	else:
+		_pos_s = pos
 		var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
 		target = pos + dir * HEAD_LEAD
 	var head := chain.head()

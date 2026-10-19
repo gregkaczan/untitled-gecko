@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://fexgqifuadr3"
+path="res://.godot/imported/pbd_delta.glsl-71925b70d386fd9c3f1f91f0fee47f15.res"
+
+[deps]
+
+source_file="res://shaders/pbd_delta.glsl"
+dest_files=["res://.godot/imported/pbd_delta.glsl-71925b70d386fd9c3f1f91f0fee47f15.res"]
+
+[params]
+

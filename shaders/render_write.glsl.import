@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://df73qp0yow6k4"
+path="res://.godot/imported/render_write.glsl-3c9657e2704dd809efd28bbdc0fad04d.res"
+
+[deps]
+
+source_file="res://shaders/render_write.glsl"
+dest_files=["res://.godot/imported/render_write.glsl-3c9657e2704dd809efd28bbdc0fad04d.res"]
+
+[params]
+

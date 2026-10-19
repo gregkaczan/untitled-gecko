@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://fyf5gvkdiek4"
+path="res://.godot/imported/pbd_predict.glsl-7d5b8eeabfcc45588231f88bd1881665.res"
+
+[deps]
+
+source_file="res://shaders/pbd_predict.glsl"
+dest_files=["res://.godot/imported/pbd_predict.glsl-7d5b8eeabfcc45588231f88bd1881665.res"]
+
+[params]
+

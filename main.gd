@@ -1,4 +1,5 @@
-# Scene driver for the gecko movement spike: one chamber, one gecko, a
+# Scene driver for the gecko movement spike: one chamber (the particle
+# sim, or the bitmap stand-in with GECKO_WORLD=bitmap), one gecko, a
 # mouse brush for carving (right erases, middle fills, wheel sizes), R
 # for a fresh chamber, F1 for the debug overlay. The left button is the
 # gecko's: tap to spit, hold for the tongue. GECKO_DEMO=1 in the
@@ -8,6 +9,8 @@ extends Node2D
 
 const CAMERA_ZOOM := 2.0
 const CaveMap = preload("res://cave_map.gd")
+const SimMap = preload("res://sim_map.gd")
+const Sim = preload("res://sim.gd")
 const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
 
@@ -77,6 +80,7 @@ const DEMOS := {
 }
 
 var map: CaveMap
+var sim: Sim
 var gecko: Gecko
 var blobs: BlobLayer
 var brush_r := 24.0
@@ -92,7 +96,16 @@ var _demo_t := 0.0
 
 func _ready() -> void:
 	InputSetup.ensure_actions()
-	map = CaveMap.new()
+	# The particle sim is the world unless GECKO_WORLD=bitmap asks for the
+	# static stand-in (faster to start, and what the demo strips were tuned on).
+	if OS.get_environment("GECKO_WORLD") == "bitmap":
+		map = CaveMap.new()
+	else:
+		sim = Sim.new()
+		add_child(sim)
+		var sm := SimMap.new()
+		sm.sim = sim
+		map = sm
 	add_child(map)
 	blobs = BlobLayer.new()
 	add_child(blobs)
@@ -154,6 +167,8 @@ func _flat_spawn() -> Vector2:
 
 
 func _physics_process(dt: float) -> void:
+	if sim:
+		sim.tick()
 	_camera.position = gecko.pos
 	if _demo_step >= 0:
 		_run_demo(dt)
@@ -180,6 +195,8 @@ func _run_demo(dt: float) -> void:
 
 
 func _process(_dt: float) -> void:
+	if sim:
+		sim.read_render()
 	if _trace:
 		var screen := (gecko.pos - _camera.get_screen_center_position()) * CAMERA_ZOOM + Vector2(960.0, 540.0)
 		print("F%d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y)])

@@ -4,11 +4,21 @@ Movement spike for the gecko game. The design document lives in Claude Docs:
 https://claude.ai/artifact/HeBpi84hMyeL581NWrvdvB
 
 This repo answers the first question in that document's next steps: is
-moving the gecko around a cave fun on its own? The world is a CPU bitmap
-(`cave_map.gd`) on the same 4 px grid the GPU particle sim renders at, so
-the live sim's readback can replace it later without touching the gecko.
-`chain.gd`, `blob_layer.gd` and the metaball shader come from
-untitled-idle-shooter.
+moving the gecko around a cave fun on its own? The world is the GPU
+particle sim from untitled-idle-shooter (`sim.gd`, `shaders/*.glsl`),
+read back every tick as one cell class per 4 px render pixel (air,
+water, solid, lava) into the same 480x270 grid the gecko's queries run
+on (`sim_map.gd`). The CPU bitmap stand-in (`cave_map.gd`) is still
+there behind `GECKO_WORLD=bitmap`: it starts instantly, runs headless,
+and the particle world is built from its generator. `chain.gd`,
+`blob_layer.gd` and the metaball shader also come from the shooter.
+
+Sim notes: every particle covers the full 1920x1080 (the shooter started
+at a ground line), so the shaders carry offsets different from the
+shooter's; `sim.gd` asserts the cell-class offset. Chewing and the brush
+are melt capsules (particles deleted on the GPU), spit is a sim
+explosion, a fill spawns particles. The local rendering device does not
+exist headless, so sim runs need the window (movie mode is fine).
 
 ## Rules the gecko follows
 
@@ -42,6 +52,15 @@ untitled-idle-shooter.
   or on the tongue. Walking in from the floor keeps it clinging, so it
   walks along the bottom; jump to swim.
 - The head looks at the cursor, within about 100 degrees of the body line.
+- The drawn body rides on a base that follows the body centre exactly
+  along the surface and only slowly across it, so bumps do not bob the
+  head.
+- A blocked walking move retries from up to 9 px higher (a step over a
+  loose pixel or a small ledge), but only if the ground is still right
+  under the body afterward.
+- Pressing away from a steep surface walks down it.
+- Turns are decided from the cell that actually blocked the step, never
+  from the cell the body rests on.
 
 ## Controls
 
@@ -51,7 +70,8 @@ the brush. R makes a new chamber, F1 toggles the debug overlay.
 
 ## Checking it without a hand on the keys
 
-`GECKO_DEMO=climb|tunnel|swim|tongue` replaces the keyboard and mouse
-with a scripted run (see `main.gd`; climb also builds a test pillar). `GECKO_TRACE=1` prints the body state per
+`GECKO_DEMO=climb|tunnel|swim|tongue|notch|crevice|traverse` replaces
+the keyboard and mouse with a scripted run (see `main.gd`; climb builds
+a test pillar, crevice a funnel). `GECKO_TRACE=1` prints the body state per
 physics tick and the gecko's screen position per frame; `tools/strip.sh`
 turns movie-mode frames into a contact sheet cropped around the gecko.

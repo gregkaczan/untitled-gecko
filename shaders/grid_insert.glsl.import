@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dcprcipspmr2n"
+path="res://.godot/imported/grid_insert.glsl-ef7faf9f4ab841c9b49847a7d9b05fd9.res"
+
+[deps]
+
+source_file="res://shaders/grid_insert.glsl"
+dest_files=["res://.godot/imported/grid_insert.glsl-ef7faf9f4ab841c9b49847a7d9b05fd9.res"]
+
+[params]
+

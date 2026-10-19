@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://bcjon0fpp7lsi"
+path="res://.godot/imported/pbd_lambda.glsl-ded61026a9e07d0a3714a102dab6ac18.res"
+
+[deps]
+
+source_file="res://shaders/pbd_lambda.glsl"
+dest_files=["res://.godot/imported/pbd_lambda.glsl-ded61026a9e07d0a3714a102dab6ac18.res"]
+
+[params]
+
