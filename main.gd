@@ -26,6 +26,10 @@ const DEMOS := {
 		[1.5, Vector2.RIGHT, false, false],
 		[2.5, Vector2.UP, false, false],
 	],
+	"traverse": [
+		[9.0, Vector2.RIGHT, false, false],
+		[9.0, Vector2.LEFT, false, false],
+	],
 	"notch": [
 		[4.5, Vector2.RIGHT, false, false],
 		[1.5, Vector2.UP, false, false],

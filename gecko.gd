@@ -267,7 +267,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	if absf(s) > 0.3:
 		facing = signf(s)
 	speed_along = move_toward(speed_along, s * WALK_SPEED, WALK_ACCEL * dt)
-	var blocked := not _move(tangent * speed_along * dt)
+	var blocked := not _step(tangent * speed_along * dt)
 	if blocked:
 		speed_along = 0.0
 	var p: Dictionary = map.probe(pos, PROBE_R)
@@ -282,10 +282,10 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# within reach that the input points along) is a commitment: up keeps
 	# turning toward that surface's normal until it gets there, so a
 	# tilted body half way round cannot talk itself out of it.
-	# Wedged in a crevice, with rock close on both sides: no turning, no
-	# nudge, no grabbing. The nearest rock flips sides every tick there,
-	# and anything that follows it makes the gecko dance. It can still
-	# slide along its tangent, so it sits still or backs out.
+	# Wedged in a crevice, with rock close on both sides: no grabbing and
+	# no nudge. The nearest rock flips sides every tick there, and anything
+	# that follows it makes the gecko dance. It still follows the surface
+	# under it and slides along its tangent, so it sits still or backs out.
 	var squeezed := _squeezed()
 	var n: Vector2
 	if squeezed:
@@ -293,7 +293,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
 	if squeezed:
-		n = Vector2.ZERO
+		n = _surface_normal(p)
 	elif _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
@@ -564,6 +564,22 @@ func _unplant() -> void:
 	for f in feet:
 		f.planted = false
 		f.stepping = false
+
+
+# A walking move: when the way is blocked, tries again from up to
+# STEP_UP higher, so a loose pixel or a small ledge is stepped over
+# instead of stopping the gecko. The ride-height nudge settles it after.
+func _step(delta: Vector2) -> bool:
+	if _move(delta):
+		return true
+	if delta.length() < 0.01:
+		return false
+	for k in [3.0, 6.0, 9.0]:
+		var save := pos
+		if _move(up * k) and _move(delta):
+			return true
+		pos = save
+	return false
 
 
 # Moves pos by delta in 1 px sub-steps and stops at the first step that
