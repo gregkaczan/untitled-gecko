@@ -32,16 +32,43 @@ exist headless, so sim runs need the window (movie mode is fine).
   within 33 px that the held input points along) happens only when the
   input, read on that surface, would carry the body away from the one it
   is on, and never more than about 110 degrees at once. So up at a wall
-  climbs it, right at a wall stops at it, and a boulder's underside is a
-  dead end (jump onto it or chew). Once begun, a turn runs to completion.
+  climbs it, right at a sheer wall stops at it, and a boulder's underside
+  is a dead end (jump onto it or chew). Once begun, a turn runs to
+  completion, and the surface it lands on is held for a quarter second
+  against any other reading.
+- A wall no taller than 32 px over the floor, or a face that leans back
+  within that height (a boulder's side), is a step: pressing into it
+  turns the body onto its face and the press carries it up and over,
+  toward the step's free end, which is world down for a step in a
+  ceiling.
+- The surface normal is followed fast while it keeps turning the same
+  way (a corner being rounded) and blended in slowly while it wobbles
+  (rough ground, an edge where two readings take turns). A change of
+  more than 45 degrees must persist four ticks before the body follows
+  it, so two surfaces taking turns being nearest cannot rock it.
+- A gap shorter than the body (36 px) with ground at about the same
+  level beyond it is bridged, not entered; bridging ends only after the
+  gap test has failed a few ticks in a row, and at once if it has
+  carried the body away from any rock.
 - The body is laid along the surface link by link behind the head, so an
   inside corner bends it into an L instead of bunching it up.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
-  planted. Fewer than two for 0.2 s and the gecko drops.
-- Chewing bites a 13 px circle ahead in the input direction, anchored to
-  the row the gecko stands on, so a tunnel comes out level.
+  planted. Fewer than two for 0.2 s and the gecko drops, unless the
+  surface is right under it, in which case the feet step again. An
+  unplanted foot closes on its rest spot at a set speed, never in one
+  snap, and a stretched leg keeps enough blobs along it to stay one limb.
+- Chewing bites a 13 px circle toward the cursor; with no key held the
+  body creeps after the bite, turning its up vector so its walking line
+  follows the bite when the bite line finds rock (head first down a
+  shaft). The aim snaps to a world axis within 15 degrees. Gamepad and
+  the demo pilot bite in the input direction, anchored to the row the
+  gecko stands on, so a tunnel comes out level.
+- Under a ceiling low enough to touch, the body rides halfway between
+  floor and ceiling, so a tunnel its own height does not wedge it. A
+  body centre that ends up inside rock is pushed out before anything
+  else is decided.
 - Tongue: held left button shoots it at the cursor, up to 320 px; on rock
   it anchors and reels the body in, which clings where it arrives.
   Release lets go. A tap instead spits a lobbed shot that blows a 20 px
@@ -54,11 +81,22 @@ exist headless, so sim runs need the window (movie mode is fine).
 - The head looks at the cursor, within about 100 degrees of the body line.
 - The drawn body rides on a base that follows the body centre exactly
   along the surface and only slowly across it, so bumps do not bob the
-  head.
-- A blocked walking move retries from up to 9 px higher (a step over a
-  loose pixel or a small ledge), but only if the ground is still right
-  under the body afterward.
-- Pressing away from a steep surface walks down it.
+  head. The snout stops at rock instead of being shoved aside, and
+  comes forward again at a set speed.
+- A walking move blocked by rock low over the floor (a loose pixel, a
+  ledge up to 12 px) lifts the body 2.5 px a tick and tries again, so
+  it climbs over in a few ticks instead of stopping or hopping; never
+  mid-turn, and never more than five ticks before the obstacle counts as
+  a wall. The ride-height nudge moves at most 4 px a tick, skips a tick
+  that lifted or pulled the body, and over an edge never pulls backward
+  against the walk.
+- The input dead band has hysteresis. Pressing away from a steep
+  surface keeps a moving gecko moving under the same press, and sends a
+  gecko at rest toward the nearer inside corner (down a wall to the
+  floor, up a ceiling step to the higher ceiling). When the way chosen
+  for a press turns against it (a bulge whose underside and upper slope
+  read a press as opposite ways) the gecko stops, as at a wall, until the
+  press changes; it never reverses in a loop.
 - Turns are decided from the cell that actually blocked the step, never
   from the cell the body rests on.
 
