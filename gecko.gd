@@ -372,8 +372,9 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 			_land(n)
 
 
+# The mouth is at the snout's tip, on its underside, well away from the eye.
 func _mouth() -> Vector2:
-	return chain.head() + look * SNOUT
+	return chain.head() + look * (SNOUT + 4.0) - up * 2.5
 
 
 func _cursor() -> Vector2:
