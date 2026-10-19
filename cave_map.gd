@@ -14,6 +14,14 @@ const ROCK := Color(0.17, 0.14, 0.12)
 const ROCK_VAR := Color(0.05, 0.04, 0.03)
 const RIM := Color(0.33, 0.28, 0.23)
 const CAVE := Color(0.045, 0.04, 0.06)
+const WATER := Color(0.07, 0.15, 0.30)
+const WATER_TOP := Color(0.18, 0.32, 0.48)
+const WATER_Y := 222           # Cells: empty cells below this row inside the basin are water
+
+# Cell values
+const CELL_AIR := 0
+const CELL_ROCK := 1
+const CELL_WATER := 2
 
 var solid := PackedByteArray()
 
@@ -42,8 +50,11 @@ func _process(_dt: float) -> void:
 		_dirty = false
 
 
-# One rough round chamber with a wobbly rim, a few side pockets, and some
-# shelves and a stalactite growing out of the rim for climbing practice.
+# One rough round chamber with a wobbly rim, a few side pockets, some
+# shelves and a stalactite growing out of the rim for climbing practice,
+# and a basin in the floor at the left holding a still pool. The pool
+# stands in for the particle sim's water until the sim's readback feeds
+# this map.
 func generate(seed_value: int) -> void:
 	_noise = FastNoiseLite.new()
 	_noise.seed = seed_value
@@ -70,6 +81,11 @@ func generate(seed_value: int) -> void:
 	_carve_blob(c + Vector2(rx * 0.55, ry * 0.7), 18.0, 1)
 	_carve_blob(c + Vector2(rx * 0.25, -ry * 0.9), 15.0, 1)
 	_carve_blob(c + Vector2(-rx * 0.9, -ry * 0.1), 20.0, 1)
+	_carve_blob(c + Vector2(-rx * 0.75, ry * 0.95), 30.0, 0)
+	for y in range(WATER_Y, H):
+		for x in W:
+			if solid[y * W + x] == CELL_AIR and x < int(c.x):
+				solid[y * W + x] = CELL_WATER
 	_repaint(0, 0, W - 1, H - 1)
 
 
@@ -88,7 +104,17 @@ func _carve_blob(centre: Vector2, radius: float, value: int) -> void:
 func is_solid(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return true
-	return solid[y * W + x] != 0
+	return solid[y * W + x] == CELL_ROCK
+
+
+func is_water(x: int, y: int) -> bool:
+	if x < 0 or y < 0 or x >= W or y >= H:
+		return false
+	return solid[y * W + x] == CELL_WATER
+
+
+func is_water_world(p: Vector2) -> bool:
+	return is_water(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
 
 
 func is_solid_world(p: Vector2) -> bool:
@@ -171,6 +197,18 @@ func floor_below(p: Vector2) -> Vector2:
 	return Vector2(p.x, cy * CELL)
 
 
+# Fills a world-space rectangle with rock (a test wall for the demos).
+func fill_rect(r: Rect2) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL))
+	var y1 := int(ceil(r.end.y / CELL))
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			solid[y * W + x] = CELL_ROCK
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
 func erase_circle(p: Vector2, radius: float) -> void:
 	_paint_circle(p, radius, 0)
 
@@ -193,12 +231,15 @@ func _paint_circle(p: Vector2, radius: float, value: int) -> void:
 
 
 # Rock gets a grain from the noise and a lighter rim where it meets air,
-# so the surface the gecko walks on reads at a glance.
+# so the surface the gecko walks on reads at a glance. Water is flat with
+# a lighter surface row.
 func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
 		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
 			var col := CAVE
-			if is_solid(x, y):
+			if is_water(x, y):
+				col = WATER_TOP if not is_water(x, y - 1) and not is_solid(x, y - 1) else WATER
+			elif is_solid(x, y):
 				var rim := not (is_solid(x - 1, y) and is_solid(x + 1, y) and is_solid(x, y - 1) and is_solid(x, y + 1))
 				if rim:
 					col = RIM
