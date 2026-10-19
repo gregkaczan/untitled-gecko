@@ -63,7 +63,14 @@ case "$MODE" in
 esac
 
 if [[ "$MODE" != "run" ]]; then
-    [[ "$BUILD_LINUX" == true ]] && build_preset "Linux" "$LINUX_BINARY" "$flag" || true
+    if [[ "$BUILD_LINUX" == true ]]; then
+        build_preset "Linux" "$LINUX_BINARY" "$flag" || true
+        if [[ -n "${ITCH_TARGET:-}" && -f "$LINUX_BINARY" ]] && command -v butler &>/dev/null; then
+            echo "--- Pushing to itch.io (linux) ---"
+            butler push "$BUILD_DIR/linux" "$ITCH_TARGET:linux"
+            echo "  OK: pushed to $ITCH_TARGET:linux"
+        fi
+    fi
     if [[ "$BUILD_WIN" == true ]]; then
         build_preset "Windows Desktop" "$WIN_BINARY" "$flag" || true
         if [[ -n "${ITCH_TARGET:-}" && -f "$WIN_BINARY" ]] && command -v butler &>/dev/null; then
