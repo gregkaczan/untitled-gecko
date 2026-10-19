@@ -18,7 +18,7 @@ export FRAMES="${FRAMES:-0}"
 # run never overwrites the trace that maps a recording's frames to ticks.
 if [[ "$FRAMES" == 1 ]]; then
   export OUT="${OUT:-frames}"
-  jobs=1
+  jobs="${JOBS:-1}"
 else
   export OUT="${OUT:-runs}"
   jobs="${JOBS:-6}"

@@ -24,7 +24,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 CROP_W, CROP_H = 200, 140
-FLICKER = 0.15            # share of the silhouette that changes in one frame
+FLICKER = 0.35            # share of the silhouette that changes in one frame, outside a turn (legs stepping is ~0.12)
+TURN_GRACE = 20           # ticks after a facing flip where the body folds round by design
 FRAGMENT = 8              # px of silhouette not attached to its largest piece
 SHIFTS = range(-2, 3)     # px of extra alignment searched each way
 MIN_MASK = 150            # px: smaller masks (gecko off screen or hidden) are skipped
@@ -32,7 +33,13 @@ JOBS = 7
 
 
 def gecko_pixel(r, g, b):
-    return g > r + 8 and g > b + 25 and g > 70
+    """Body, far legs and their shader-darkened rims are all greens with
+    g well over r and b; rock, cave and water never are."""
+    if g > r + 5 and g > b + 15 and g > 40:
+        return True
+    # The eye, drawn over the blob layer in (20, 18, 15): part of the head,
+    # or the sliver of head above it reads as a detached piece.
+    return abs(r - 20) <= 3 and abs(g - 18) <= 3 and abs(b - 15) <= 3
 
 
 def crop_mask(frame, sx, sy):
@@ -134,11 +141,32 @@ def frame_positions(trace):
     return out
 
 
+def turn_ticks(trace):
+    """Ticks inside the grace after a facing flip, from the t lines."""
+    out = set()
+    last = None
+    with open(trace) as f:
+        for line in f:
+            if not (line.startswith("t") and line[1:2].isdigit()):
+                continue
+            parts = line.split()
+            tick = int(parts[0][1:])
+            facing = None
+            for kv in parts[1:]:
+                if kv.startswith("facing="):
+                    facing = kv[7:]
+            if last is not None and facing != last:
+                out.update(range(tick, tick + TURN_GRACE))
+            last = facing
+    return out
+
+
 def analyze_run(run_dir):
     trace = os.path.join(run_dir, "trace.log")
     if not os.path.exists(trace):
         return None
     pos = frame_positions(trace)
+    turning = turn_ticks(trace)
     frames = sorted(int(f[1:9]) for f in os.listdir(run_dir) if f.startswith("f") and f.endswith(".png") and f[1:9].isdigit())
     frames = [k for k in frames if k in pos]
     if len(frames) < 2:
@@ -159,7 +187,7 @@ def analyze_run(run_dir):
             continue
         change = best_change(m0, m1, size0)
         changes.append(change)
-        if change > FLICKER:
+        if change > FLICKER and t1 not in turning:
             events.append((t1, round(change, 3)))
         fr = fragments(m1)
         if fr >= FRAGMENT:
