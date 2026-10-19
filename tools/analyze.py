@@ -25,7 +25,7 @@ SCENES = os.path.join(ROOT, "tests", "scenes.json")
 WALK_STEP = 130.0 / 60.0   # px per tick at walk speed
 DRAW_JUMP = 4.0            # drawn body centre, px per tick while clinging (walk is 2.2; a corner sweep reaches 3.5)
 BODY_JUMP = 3.5            # physics centre (informational)
-HEAD_JUMP = 6.0            # px per tick of the head in the body's frame (a corner wrap swings it by design)
+HEAD_JUMP = 6.5            # px per tick of the head in the drawn body frame: its set speed is 6, and the frame turning adds a little
 UP_FLIP = 0.35             # rad in one tick outside a committed grab
 UP_OSC_MIN = 0.035         # rad, an up increment that counts for oscillation
 UP_OSC_N = 4               # alternations within UP_OSC_WIN ticks
@@ -36,6 +36,7 @@ DANCE_MIN = 0.3            # px per tick that counts as motion
 FLICK_WIN = 10             # ticks: two state changes inside this is a flicker
 STALL_WIN = 30             # ticks of held input along the surface with no rock ahead ...
 STALL_PX = 15.0            # ... and less progress than this
+IDLE_TAIL = 15             # ticks at the end of a stall window judged for a press that does nothing by design
 FOOT_TOGGLE_WIN = 8        # ticks: a step is 6 ticks of lift, so three toggles inside 8 is a flicker
 FOOT_TOGGLE_N = 3          # planted toggles inside the window
 FOOT_SLIDE = 2.0           # px a planted foot may move per tick
@@ -214,27 +215,37 @@ def metrics(ticks):
         if alt >= UP_OSC_N and i - last_flag >= UP_OSC_WIN:
             ev["up_osc"].append((ticks[i]["tick"], alt))
             last_flag = i
-    # Stall and stuck: held input along the surface, no progress
+    # Stall and stuck: a held press, no progress. Stuck (informational)
+    # is a press into the rock that blocks the body, a wall by design.
+    # A press square to a flat surface (up on a floor) does nothing by
+    # design too. Anything else is a stall: the press is ignored.
     last_stall = -STALL_WIN
     last_stuck = -STALL_WIN
     for i in range(STALL_WIN, n):
         w = range(i - STALL_WIN + 1, i + 1)
-        if any(ticks[j]["state"] != "cling" or abs(ticks[j]["s"]) < 0.3 or ticks[j]["chew"] or ticks[j]["grab"] for j in w):
+        if any(ticks[j]["state"] != "cling" or ticks[j]["chew"] or ticks[j]["grab"] for j in w):
             continue
         if any(j in spawn or j in land for j in w):
             continue
         inp = ticks[i]["inp"]
+        if abs(inp[0]) < 0.2 and abs(inp[1]) < 0.2:
+            continue
         if any(ticks[j]["inp"] != inp for j in w):
             continue
         prog = dist(ticks[i]["pos"], ticks[i - STALL_WIN + 1]["pos"])
         if prog >= STALL_PX:
             continue
-        blocked = sum(1 for j in w if ticks[j]["blk"])
-        if blocked > STALL_WIN // 2:
+        into_rock = sum(1 for j in w if ticks[j]["blk"] and dot(inp, ticks[j]["bn"]) < -0.3)
+        # A press into the surface the body clings to attempts no step at
+        # all (no block is recorded), and does nothing by design.
+        rest = range(i - IDLE_TAIL + 1, i + 1)
+        into_surface = all(dot(inp, ticks[j]["up"]) < -0.5 for j in rest)
+        idle_ok = into_surface or all(abs(dot(inp, tangent(ticks[j]["up"]))) < 0.3 and abs(tangent(ticks[j]["up"])[1]) <= 0.5 for j in rest)
+        if into_rock > STALL_WIN // 2:
             if i - last_stuck >= STALL_WIN:
                 ev["stuck"].append((ticks[i]["tick"], round(prog, 1)))
                 last_stuck = i
-        elif i - last_stall >= STALL_WIN:
+        elif not idle_ok and i - last_stall >= STALL_WIN:
             ev["stall"].append((ticks[i]["tick"], round(prog, 1)))
             last_stall = i
     # Foot toggles

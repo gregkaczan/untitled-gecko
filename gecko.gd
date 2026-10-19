@@ -52,7 +52,7 @@ const MIN_FEET := 2
 const HEAD_LEAD := 15.0        # Head sits this far ahead of the body centre
 const BOB_SMOOTH := 0.15       # Per-tick blend of the drawn body's across-surface bounce
 const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may carry
-const HEAD_SPEED := 420.0      # How fast the head swings round on a turn
+const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick)
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
 const MAX_BEND := 1.0
@@ -83,7 +83,7 @@ const NORMAL_SMOOTH_FINE := 0.08  # The blend for small changes: rough walls and
 const NORMAL_FINE_DOT := 0.9   # A change under ~25 degrees counts as small
 const AWAY_LOOK := 200.0       # How far along a steep surface the away rule looks for its inside corner
 const HEAD_RECOVER := 180.0    # Speed the snout comes forward again after a wall held it back (px/s)
-const HEAD_RETRACT := 270.0    # Speed the snout draws back at a wall (px/s); the push-out covers the rest
+const HEAD_RETRACT := 240.0    # Speed the snout draws back at a wall (px/s); the push-out covers the rest
 const FLIP_CONFIRM := 4        # Ticks a big change of surface normal must persist before the body follows it
 const FLIP_DOT := 0.7          # A normal this far from the target (cosine, ~45 degrees) is a big change
 const HOLD_AFTER_GRAB := 15    # Ticks after a grab lands during which big changes of normal are ignored
@@ -479,7 +479,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 				else:
 					s = _away_dir(tangent)
 				_away_s = s
-		if _away_s != 0.0 and (tangent * s).dot(inp) < -0.3:
+		if _away_s != 0.0 and (tangent * s).dot(inp) < -0.5:
 			# The way chosen for this press now runs against it: the surface
 			# curled back (a bulge). Stop here, as at a wall, and do not
 			# reverse, which would loop; a new press decides afresh.

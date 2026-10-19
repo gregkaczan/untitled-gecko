@@ -12,7 +12,7 @@ Compared against baseline baseline.json.
 | box:box_round | pass |  (-7) |  (-4) |  |  |  |  |  |  |  |  |  |  |  (-9) |  | 1215 | ok |
 | bump_2x2:traverse | pass |  (-1) |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-1) |  | 1189 | ok |
 | bump_row:traverse | pass |  |  |  |  |  (-1) |  |  |  |  |  |  |  |  (-2) |  | 1192 | ok |
-| cave_1:traverse_long | pass |  (-2) |  |  |  |  (-2) |  |  |  |  |  (-11) |  |  | 4 (+1) |  | 929 | ok |
+| cave_1:traverse_long | pass |  (-2) |  |  |  |  (-2) |  |  |  |  |  (-11) |  |  | 4 (+1) |  | 2088 | ok |
 | cave_2:traverse_long | pass |  |  (-3) |  |  |  (-1) |  |  |  |  |  (-10) |  |  |  (-2) |  | 1961 | ok |
 | cave_3:traverse_long | pass |  |  |  |  |  (-2) |  |  |  |  |  (-10) |  |  |  |  | 1969 | ok |
 | cave_4:traverse_long | pass |  |  |  |  |  (-3) |  |  |  |  |  (-9) |  |  |  (-3) |  | 1939 | ok |
@@ -62,7 +62,7 @@ Compared against baseline baseline.json.
 | pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-3) |  | 1035 | ok |
 | pool:swim_across | pass |  (-1) |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  (-4) |  | 1044 | ok |
 | pool_bank_slope:swim_across | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-2) |  | 1011 | ok |
-| shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1176 | ok |
+| shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1180 | ok |
 | slope_down_10:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1192 | ok |
 | slope_down_20:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 1196 | ok |
 | slope_down_30:traverse_left | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1197 | ok |
@@ -96,7 +96,7 @@ Compared against baseline baseline.json.
 | step_up_8:traverse | pass |  (-1) |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 1184 | ok |
 | tunnel_45:traverse | pass |  |  (-26) |  |  |  (-2) |  |  |  |  |  (-1) |  (-1) |  |  |  (-13) | 1164 | ok |
 | tunnel_45_ragged:traverse | pass |  |  (-29) |  |  |  (-2) |  |  |  |  |  |  (-1) |  |  |  (-11) | 1169 | ok |
-| tunnel_bend:traverse_long | pass |  |  (-11) |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-22) | 1202 | ok |
+| tunnel_bend:traverse_long | pass |  |  (-11) |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-22) | 2295 | ok |
 | tunnel_level:traverse | pass |  |  |  |  |  |  |  |  |  |  (-5) |  |  |  |  | 1187 | ok |
 | tunnel_ragged:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  (-16) | 1190 | ok |
 | tunnel_shaft:shaft | pass |  |  |  |  |  |  |  |  |  |  (-4) |  |  |  |  | 792 | ok |
