@@ -2755,8 +2755,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "cave_2": {
    "base": "solid",
@@ -2773,8 +2772,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "cave_3": {
    "base": "solid",
@@ -2791,8 +2789,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "cave_4": {
    "base": "solid",
@@ -2809,8 +2806,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "cave_5": {
    "base": "solid",
@@ -2827,8 +2823,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "cave_6": {
    "base": "solid",
@@ -2845,8 +2840,7 @@
    ],
    "scripts": [
     "traverse_long"
-   ],
-   "state": "cling"
+   ]
   },
   "dig_45": {
    "base": "room",

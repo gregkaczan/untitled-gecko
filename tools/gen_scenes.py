@@ -167,7 +167,7 @@ add("pool_bank_slope", [["erase", 1000, F, 400, 100], ["below", 1300, F + 100, 1
 
 # 14. Generated caves
 for sd in (1, 2, 3, 4, 5, 6):
-    add("cave_%d" % sd, [["cave", sd]], ["floor", 960, 540], ["traverse_long"], base="solid", state="cling")
+    add("cave_%d" % sd, [["cave", sd]], ["floor", 960, 540], ["traverse_long"], base="solid")
 
 # 15. Digging after the cursor
 add("dig_45", [], ["floor", 700, 700], ["dig_45"], note="45 degrees down-right from the floor")

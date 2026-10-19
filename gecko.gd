@@ -20,7 +20,7 @@ const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
-const LIFT := 4.0              # Px the body rises per tick to get over a low obstacle
+const LIFT := 3.0              # Px the body rises per tick to get over a low obstacle
 const LIFT_LOW := 12.0         # A blocking cell no higher than this over the floor under the body is low enough to step over
 const LIFT_TICKS := 4          # Ticks of lifting with no way forward before the obstacle counts as a wall
 const LIFT_TURN_MAX := 0.04    # No lifting while up turns faster than this per tick (radians): a corner, not a bump
@@ -73,6 +73,11 @@ const GRAB_PULL := 90.0        # Speed the body closes on a wall it is turning o
 const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees from up (no flips)
 const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
+const NORMAL_SMOOTH_FINE := 0.12  # The blend for small changes: rough walls wobble the normal every tick
+const NORMAL_FINE_DOT := 0.985 # A change under ~10 degrees counts as small
+const AWAY_LOOK := 200.0       # How far along a steep surface the away rule looks for its inside corner
+const HEAD_RECOVER := 180.0    # Speed the snout comes forward again after a wall held it back (px/s)
+const LEG_BLOB_GAP := 4.5      # Largest spacing of the blobs along a leg, so a stretched leg stays one shape
 const HOLD_TIME := 0.12        # Mouse held longer than this shoots the tongue; a shorter press spits
 const TONGUE_SPEED := 900.0
 const TONGUE_MAX := 160.0
@@ -153,6 +158,8 @@ var _s := 0.0                  # This tick's input scalar along the surface (tra
 var _n_dbg := Vector2.ZERO     # This tick's chosen surface normal (trace)
 var _jumped := false           # This tick began a jump (trace)
 var _lift_ticks := 0           # Ticks spent lifting over the same low obstacle
+var _s_dead := false           # The input scalar is in its dead band (hysteresis, so it does not flicker)
+var _head_back := 0.0          # How far the snout is held back from its lead by a wall
 var _up_rate := 0.0            # Radians the up vector turned last tick
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _tick := 0
@@ -378,17 +385,47 @@ func _tangent() -> Vector2:
 	return Vector2(-up.y, up.x)
 
 
+# The way along a steep surface to its nearer inside corner, where the
+# next surface runs out along up, which is the way the player pressed.
+# A face with no inside corner in reach (a pillar's side) is walked
+# down, toward the floor.
+func _away_dir(tangent: Vector2) -> float:
+	var best := 0.0
+	var best_k := INF
+	for sgn in [1.0, -1.0]:
+		var d: Vector2 = tangent * sgn
+		var k := BODY_R
+		while k <= AWAY_LOOK:
+			var q: Vector2 = pos + d * k
+			if map.solid_within(q, BODY_R - 1.0):
+				if k < best_k:
+					best_k = k
+					best = sgn
+				break
+			if map.ray_hit(q, -up, RAY_LEN) == null:
+				break
+			k += 4.0
+	if best != 0.0:
+		return best
+	return signf(tangent.y)
+
+
 func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	var tangent := _tangent()
 	var s := 0.0
 	if inp.length() > 0.2:
 		s = clampf(inp.dot(tangent) * sqrt(2.0), -1.0, 1.0)
-		if absf(s) < 0.3:
+		# The dead band has hysteresis, so an input near its edge on a
+		# surface that wobbles a degree or two does not start and stop
+		# the gecko every tick.
+		if absf(s) < (0.4 if _s_dead else 0.2):
 			s = 0.0
-		# Pressing away from a steep surface walks down it: left on a
-		# right-hand wall takes the gecko back to the floor, not nowhere.
+		_s_dead = s == 0.0
+		# Pressing away from a steep surface walks along it toward the
+		# surface round its corner that goes the pressed way: down a wall
+		# to the floor, up a step in the ceiling to the higher ceiling.
 		if s == 0.0 and inp.dot(up) > 0.5 and absf(tangent.y) > 0.5:
-			s = signf(tangent.y)
+			s = _away_dir(tangent)
 	if absf(s) > 0.3:
 		facing = signf(s)
 	_s = s
@@ -456,7 +493,11 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		if _grab_n != Vector2.ZERO or n.dot(_n_target) < 0.5:
 			_n_target = n
 		else:
-			_n_target = _n_target.slerp(n, NORMAL_SMOOTH).normalized()
+			# Small changes (rough ground) blend in slowly, bigger ones (a
+			# real slope change) faster, so the body neither wobbles on a
+			# ragged wall nor lags behind a corner.
+			var k := NORMAL_SMOOTH_FINE if n.dot(_n_target) > NORMAL_FINE_DOT else NORMAL_SMOOTH
+			_n_target = _n_target.slerp(n, k).normalized()
 		up = _turn_toward(up, _n_target, SURF_TURN * dt)
 	_up_rate = absf(up_before.angle_to(up))
 	# Ride-height nudge, away from (or toward) the nearest rock rather
@@ -903,13 +944,15 @@ func _update_chain(dt: float) -> void:
 		across = (pos - _pos_s).dot(up)
 		if absf(across) > BOB_MAX:
 			_pos_s += up * (across - signf(across) * BOB_MAX)
-		target = _pos_s + t * facing * HEAD_LEAD
 		# At a wall the snout stops at the rock, drawn back along the body
-		# line, instead of being shoved aside by the push-out.
-		var back := 0.0
+		# line, instead of being shoved aside by the push-out; it comes
+		# forward again at HEAD_RECOVER, not in one go.
+		var back := maxf(_head_back - HEAD_RECOVER * dt, 0.0)
+		target = _pos_s + t * facing * (HEAD_LEAD - back)
 		while back < HEAD_LEAD - 4.0 and map.solid_within(target, chain.radii[0] + BODY_GAP):
-			target -= t * facing * 2.0
 			back += 2.0
+			target = _pos_s + t * facing * (HEAD_LEAD - back)
+		_head_back = back
 	else:
 		_pos_s = pos
 		var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
@@ -1101,11 +1144,15 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 		var hip: Vector2 = chain.points[f.hip]
 		var knee := _knee(f)
 		var foot := f.pos + (up * 1.5 if f.planted else Vector2.ZERO)
-		for k in range(1, 4):
-			var t := k / 3.0
+		# Blobs close enough along each segment that a stretched leg still
+		# renders as one limb, not a row of specks.
+		var n1 := clampi(ceili(hip.distance_to(knee) / LEG_BLOB_GAP), 3, 8)
+		for k in range(1, n1 + 1):
+			var t := float(k) / n1
 			list.append([hip.lerp(knee, t), LEG_R, color])
-		for k in range(1, 4):
-			var t := k / 3.0
+		var n2 := clampi(ceili(knee.distance_to(foot) / LEG_BLOB_GAP), 3, 8)
+		for k in range(1, n2 + 1):
+			var t := float(k) / n2
 			list.append([knee.lerp(foot, t), lerpf(LEG_R, LEG_R * 0.85, t), color])
 
 
