@@ -1,6 +1,12 @@
 # Movement polish suite: plan
 
-Date: 2026-10-20. Status: proposed, not started.
+Date: 2026-10-20. Status: built on 2026-10-20. Parts 1 to 4 and the
+frame flicker metric are in `tools/` and `tests/` (see DESIGN.md,
+"Checking it without a hand on the keys"). The first fix loop took the
+suite from 31 of 95 runs passing to 95 of 95. Part 5, the look-ahead
+heuristic, was not needed in that loop: the flips the suite found were
+cured with hysteresis where the decisions already are (the surface
+normal, the wall grab, the input dead band and the away rule).
 
 ## Goal
 

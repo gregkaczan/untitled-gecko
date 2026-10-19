@@ -70,11 +70,39 @@ the brush. R makes a new chamber, F1 toggles the debug overlay.
 
 ## Checking it without a hand on the keys
 
-`GECKO_DEMO=climb|tunnel|swim|tongue|notch|crevice|traverse` replaces
+`GECKO_DEMO=climb|tunnel|swim|tongue|notch|crevice|traverse|dig` replaces
 the keyboard and mouse with a scripted run (see `main.gd`; climb builds
-a test pillar, crevice a funnel). `GECKO_TRACE=1` prints the body state per
-physics tick and the gecko's screen position per frame; `tools/strip.sh`
-turns movie-mode frames into a contact sheet cropped around the gecko.
+a test pillar, crevice a funnel, dig chews after a scripted cursor).
+`GECKO_TRACE=1` prints the body state per physics tick (key=value: the
+body, the drawn body, the head, up, the feet, the decision flags) and
+the gecko's screen position and tick per frame; `tools/strip.sh` turns
+movie-mode frames into a contact sheet cropped around the gecko.
+
+The movement suite is the regression gate for any movement change:
+
+- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 92 scenes
+  built from terrain primitives on the bitmap map, each with a spawn and
+  scripted input: flat floor, slopes, steps, bumps, corners, overhangs,
+  gaps, crevices, ceilings, tunnels, landings, water, generated caves
+  and cursor digs. `GECKO_SCENE=name[:script]` runs one and quits when
+  the script ends; `GECKO_SEED` fixes the random bites and steps.
+- `tools/suite.sh [filter]` runs every scene headless at fixed fps
+  (about twelve seconds for the lot, `JOBS` in parallel) into `runs/`
+  and scores them with `tools/analyze.py`: drawn body and head jumps,
+  back-and-forth under a held input, up flips and oscillation, state
+  flicker, stalls, foot flicker and sinking, plus each scene's expected
+  outcome. `BASELINE=tests/baseline.json` marks regressions against the
+  committed baseline. A run passes with no events at all.
+- `FRAMES=1 tools/suite.sh [filter]` records 60 fps frames (one per
+  tick, needs a display) under `frames/`; `tools/flicker.py frames/`
+  measures the drawn silhouette's change between frames and any
+  fragments it breaks into; `tools/sheet.sh scene:script tick` makes a
+  contact sheet round a tick, and `tools/ticks.py` dumps a tick range of
+  a trace as a table.
+
+Fixes come from reading the trace and the sheet round a flagged tick,
+then re-running the whole suite: a fix is accepted only when no other
+run regresses.
 
 ## Building and publishing
 
