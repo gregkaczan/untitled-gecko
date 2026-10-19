@@ -1,10 +1,12 @@
 # Scene driver for the gecko movement spike: one chamber (the particle
 # sim, or the bitmap stand-in with GECKO_WORLD=bitmap), one gecko, a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
-# R for a fresh chamber, F1 for the debug overlay. The mouse buttons are
-# the gecko's: left tap spits, left hold is the tongue, right chews. GECKO_DEMO=1 in the
-# environment replaces the keyboard with a scripted walk so movie-mode
-# frames show the gecko moving without anyone at the keys.
+# R for a fresh chamber, F1 for the debug overlay, 1 and 2 for the gecko's
+# pixel grid (4 px like the rock, or 2 px). The mouse buttons are
+# the gecko's: left tap spits, left hold is the tongue, right chews toward
+# the cursor, and with no key held the gecko tunnels after the bite.
+# GECKO_DEMO=1 in the environment replaces the keyboard with a scripted
+# walk so movie-mode frames show the gecko moving without anyone at the keys.
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
@@ -18,8 +20,16 @@ const BlobLayer = preload("res://blob_layer.gd")
 # then optionally the left button held and the cursor offset from the
 # body. GECKO_DEMO=climb walks into the boulder and over it, tunnel chews
 # through it and walks the tunnel both ways, swim drops into the pool,
-# tongue grapples the ceiling and spits at the floor.
+# tongue grapples the ceiling and spits at the floor, dig chews after the
+# cursor with no key held: down-right, up-right, straight down, back left.
 const DEMOS := {
+	"dig": [
+		[0.5, Vector2.ZERO, false, false],
+		[2.5, Vector2.ZERO, false, true, false, Vector2(120, 120)],
+		[2.5, Vector2.ZERO, false, true, false, Vector2(140, -60)],
+		[2.0, Vector2.ZERO, false, true, false, Vector2(0, 140)],
+		[2.5, Vector2.ZERO, false, true, false, Vector2(-140, 0)],
+	],
 	"swim": [
 		[0.3, Vector2.ZERO, false, false],
 		[2.6, Vector2.LEFT, false, false],
@@ -186,9 +196,9 @@ func _physics_process(dt: float) -> void:
 	# the first seconds of a run.
 	_hint_t += dt
 	if gecko.debug:
-		_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug]" % brush_r
+		_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug, 1/2 gecko px]" % brush_r
 	elif _hint_t < 10.0:
-		_label.text = "WASD move   Space jump   LMB tap spit, hold tongue   RMB chew   R new cave   F1 debug"
+		_label.text = "WASD move   Space jump   LMB tap spit, hold tongue   RMB chew at cursor   R new cave   F1 debug"
 	else:
 		_label.text = ""
 
@@ -228,6 +238,10 @@ func _process(_dt: float) -> void:
 		_reset()
 	if Input.is_action_just_pressed("debug_toggle"):
 		gecko.debug = not gecko.debug
+	if Input.is_action_just_pressed("render_coarse"):
+		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
+	if Input.is_action_just_pressed("render_fine"):
+		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_FINE)
 
 
 func _unhandled_input(event: InputEvent) -> void:

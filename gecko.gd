@@ -22,6 +22,10 @@ const RIDE_H := 16.0           # Body centre height above the nearest solid
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
 const CHEW_R := 11.0           # Mean radius of one bite; each bite varies around it
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
+const DIG_DEAD := 10.0         # A cursor closer than this to the body centre gives no dig direction
+const LEVEL_SNAP := 0.26       # A dig direction within ~15 degrees of a world axis snaps to it
+const DIG_LOOK := 44.0         # Rock within this along the dig direction means the body turns onto it (past a bite's reach)
+const DIG_GRAB_ANGLE := 0.35   # A dig turn bigger than this (radians) is a commitment, like a wall grab
 const PROBE_R := 32.0          # Reach of the body's surface search
 const SURF_TURN := 14.0        # Up vector turn rate toward the surface normal (rad/s)
 const LOSE_SURFACE_D := 26.0   # Nearest solid farther than this = nothing to hold
@@ -139,6 +143,7 @@ var _under: Node2D             # Drawn beneath the body: the tongue, so it emerg
 var _last_probe := {}
 var _block_normal := Vector2.ZERO
 var _bridging := false         # Crossing a gap shorter than the body: keep the line, no nudge, no drop
+var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 
@@ -193,8 +198,21 @@ func _physics_process(dt: float) -> void:
 	var jump := _read_jump()
 	chewing = _read_chew()
 	no_cling = maxf(no_cling - dt, 0.0)
+	_dig_aim = Vector2.ZERO
 	if chewing:
-		_chew(inp)
+		var aim := _aim_dir()
+		if aim == Vector2.ZERO:
+			# No cursor (a gamepad, or the demo pilot without an aim): bite
+			# the way the input points, straight ahead with none.
+			_chew(inp.normalized() if inp.length() > 0.2 else _tangent() * facing)
+		else:
+			# The mouth follows the cursor. With no key held the body creeps
+			# after the bite, so a held button and a pointed cursor tunnel
+			# there on their own; a held key still steers the body.
+			if inp.length() <= 0.2 and _cursor().distance_to(pos) > CHEW_REACH:
+				inp = aim
+			_dig_aim = aim
+			_chew(_within_look(aim))
 	_update_mouse(dt)
 	_update_spits(dt)
 	var in_water: bool = map.water_near(pos, 1)
@@ -249,13 +267,11 @@ func _read_chew() -> bool:
 	return Input.is_action_pressed("chew")
 
 
-# One bite ahead of the body in the input direction (screen space, so
-# right digs level and down digs down), or straight ahead with no input.
-# Its height is anchored to the row the gecko stands on, within reach of
-# the body's own level, so a level tunnel keeps its floor and the body
-# always fits through the hole it chews.
-func _chew(inp: Vector2) -> void:
-	var dir: Vector2 = inp.normalized() if inp.length() > 0.2 else _tangent() * facing
+# One bite CHEW_REACH ahead of the body centre in dir. Its height is
+# anchored to the row the gecko stands on, within reach of the body's own
+# level, so a level tunnel keeps its floor and the body always fits
+# through the hole it chews.
+func _chew(dir: Vector2) -> void:
 	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 	var base: Vector2 = floor_pt if floor_pt != null else pos - up * RIDE_H
 	var play := CHEW_R - BODY_R - 1.0
@@ -265,6 +281,60 @@ func _chew(inp: Vector2) -> void:
 	# tunnel comes out ragged like something chewed, not drilled.
 	var jitter := Vector2(randf_range(-3.0, 3.0), randf_range(-3.0, 3.0))
 	map.erase_circle(_bite + jitter, randf_range(CHEW_R - 2.5, CHEW_R + 0.5))
+	# Wedged against its own tunnel's wall, where the bite ahead cannot
+	# reach back to a ragged bit at the shoulder: a bite round the body
+	# itself frees it.
+	if map.solid_within(pos + dir * 2.0, BODY_R):
+		map.erase_circle(pos + dir * 3.0, BODY_R + 2.0)
+
+
+# The dig direction from the cursor: body centre to cursor, snapped to a
+# world axis when nearly on one (a flat tunnel stays flat, a shaft stays
+# straight). Zero without a cursor (the demo pilot with no aim) or with
+# the cursor on top of the body.
+func _aim_dir() -> Vector2:
+	if input_override != null and aim_override == Vector2.ZERO:
+		return Vector2.ZERO
+	var to := _cursor() - pos
+	if to.length() < DIG_DEAD:
+		return Vector2.ZERO
+	var dir := to.normalized()
+	if absf(dir.x) < LEVEL_SNAP:
+		dir = Vector2(0.0, signf(dir.y))
+	elif absf(dir.y) < LEVEL_SNAP:
+		dir = Vector2(signf(dir.x), 0.0)
+	return dir
+
+
+# While chewing after the cursor into rock, the normal that lays the
+# walking line along the bite. Zero when not chewing that way, or when
+# the dig line finds no rock (open cave: the body walks the surface it
+# is on). Straight into or away from the surface, the gecko pitches
+# forward, nose first.
+func _dig_normal() -> Vector2:
+	if _dig_aim == Vector2.ZERO:
+		return Vector2.ZERO
+	if map.ray_hit(pos, _dig_aim, DIG_LOOK) == null:
+		return Vector2.ZERO
+	var a := Vector2(-_dig_aim.y, _dig_aim.x)
+	var da := up.dot(a)
+	if absf(da) < 0.05:
+		# Square to the body: the side nearer the world's up, so a level
+		# tunnel out of a shaft is walked on its floor, and nose first when
+		# that is square too (a shaft straight down from a floor).
+		da = Vector2.UP.dot(a)
+		if absf(da) < 0.05:
+			return _tangent() * facing
+	return a if da > 0.0 else -a
+
+
+# dir pulled inside the head's look cone, so the mouth never bites back
+# through the body: a cursor behind the gecko means turn round first.
+func _within_look(dir: Vector2) -> Vector2:
+	var off := chain.heading.angle_to(dir)
+	if absf(off) > LOOK_LIMIT:
+		return chain.heading.rotated(signf(off) * LOOK_LIMIT)
+	return dir
 
 
 func _tangent() -> Vector2:
@@ -290,7 +360,8 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		speed_along = 0.0
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
-	_bridging = _gap_ahead()
+	# A hole the gecko is chewing after the cursor is the way, not a gap.
+	_bridging = _gap_ahead() and _dig_aim == Vector2.ZERO
 	if (not p.found or p.dist > LOSE_SURFACE_D) and not _bridging:
 		_drop()
 		return
@@ -307,12 +378,20 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# under it and slides along its tangent, so it sits still or backs out.
 	var squeezed := _squeezed()
 	var n: Vector2
+	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
 	if _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
 		_move(-_grab_n * GRAB_PULL * dt)
+	elif dig_n != Vector2.ZERO:
+		# Chewing off the surface line into rock: up turns so the walking
+		# line follows the bite, and the gecko climbs into the hole it
+		# chews, head first down a shaft, up a wall it bites into.
+		n = dig_n
+		if absf(up.angle_to(n)) > DIG_GRAB_ANGLE:
+			_grab_n = n
 	elif blocked and chewing:
 		n = Vector2.ZERO
 	elif blocked:
@@ -830,10 +909,7 @@ func _update_look(dt: float) -> void:
 	if input_override == null or aim_override != Vector2.ZERO:
 		var to_mouse := _cursor() - chain.head()
 		if to_mouse.length() > 4.0:
-			want = to_mouse.normalized()
-			var off := chain.heading.angle_to(want)
-			if absf(off) > LOOK_LIMIT:
-				want = chain.heading.rotated(signf(off) * LOOK_LIMIT)
+			want = _within_look(to_mouse.normalized())
 	look = _turn_toward(look, want, 16.0 * dt)
 
 
@@ -961,9 +1037,10 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 
 
 func _draw() -> void:
-	# The eye is one 4 px dot on the gecko's 2 px grid, snapped to it.
+	# The eye is one 4 px dot on the gecko's pixel grid, snapped to it.
 	var head: Vector2 = chain.points[0]
-	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(Vector2(2.0, 2.0))
+	var grid := Vector2(blobs.pixel_sz, blobs.pixel_sz)
+	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(grid)
 	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)

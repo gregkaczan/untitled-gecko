@@ -1,7 +1,8 @@
 # Input actions, registered at runtime so the bindings live in one
 # readable place instead of project.godot. Rain World layout: WASD, the
 # arrows or the left stick move, Space or the south face button jumps,
-# E, Shift or the west face button chews.
+# E, Shift or the west face button chews. 1 and 2 pick the gecko's pixel
+# grid: 4 px like the rock, or the default 2 px.
 # The mouse is reserved for the tongue and spit later; for the spike the
 # buttons drive the terrain brush instead.
 class_name InputSetup
@@ -19,6 +20,8 @@ static func ensure_actions() -> void:
 	_add("chew", [_key(KEY_E), _key(KEY_SHIFT), _button(JOY_BUTTON_X)])
 	_add("regenerate", [_key(KEY_R)])
 	_add("debug_toggle", [_key(KEY_F1)])
+	_add("render_coarse", [_key(KEY_1)])
+	_add("render_fine", [_key(KEY_2)])
 
 
 static func _add(action: String, events: Array, deadzone := 0.4) -> void:
