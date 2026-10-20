@@ -44,6 +44,10 @@ func _ready() -> void:
 	_scenes = ItemList.new()
 	_scenes.custom_minimum_size = Vector2(0.0, 300.0)
 	_scenes.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	# Mouse only: the keys belong to the gecko. With focus, the list's
+	# type-ahead search would jump to a scene on any letter (W, A, S, D).
+	_scenes.allow_search = false
+	_scenes.focus_mode = Control.FOCUS_NONE
 	_scenes.item_selected.connect(func(i: int) -> void: scene_picked.emit(i))
 	col.add_child(_scenes)
 	var row := HBoxContainer.new()
@@ -68,6 +72,7 @@ func _ready() -> void:
 	_brush.max_value = 80.0
 	_brush.step = 4.0
 	_brush.value = 24.0
+	_brush.focus_mode = Control.FOCUS_NONE
 	_brush.value_changed.connect(func(v: float) -> void: brush_changed.emit(v))
 	col.add_child(_brush)
 	col.add_child(_label("Time scale"))
@@ -76,12 +81,14 @@ func _ready() -> void:
 	_time.max_value = 2.0
 	_time.step = 0.1
 	_time.value = 1.0
+	_time.focus_mode = Control.FOCUS_NONE
 	_time.value_changed.connect(func(v: float) -> void: time_scale_changed.emit(v))
 	col.add_child(_time)
 	var clock := HBoxContainer.new()
 	col.add_child(clock)
 	_pause = CheckButton.new()
 	_pause.text = "Pause"
+	_pause.focus_mode = Control.FOCUS_NONE
 	_pause.toggled.connect(func(on: bool) -> void: paused.emit(on))
 	clock.add_child(_pause)
 	clock.add_child(_button("Step one tick", func() -> void: step.emit()))
@@ -94,11 +101,13 @@ func _ready() -> void:
 	_pixel = OptionButton.new()
 	_pixel.add_item("2 px", 2)
 	_pixel.add_item("4 px", 4)
+	_pixel.focus_mode = Control.FOCUS_NONE
 	_pixel.item_selected.connect(func(i: int) -> void: pixel_size_changed.emit(float(_pixel.get_item_id(i))))
 	px_row.add_child(_pixel)
 	_overlay = CheckButton.new()
 	_overlay.text = "Overlay (up, probe, feet, bite)"
 	_overlay.button_pressed = true
+	_overlay.focus_mode = Control.FOCUS_NONE
 	_overlay.toggled.connect(func(on: bool) -> void: overlay_changed.emit(on))
 	col.add_child(_overlay)
 	_status = Label.new()
@@ -168,5 +177,6 @@ func _label(text: String) -> Label:
 func _button(text: String, on_pressed: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
 	b.pressed.connect(on_pressed)
 	return b

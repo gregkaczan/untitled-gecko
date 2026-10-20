@@ -143,10 +143,15 @@ exist headless, so sim runs need the window (movie mode is fine).
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse: tap to
 spit, hold for the tongue. Right mouse erases, middle fills, wheel sizes
-the brush. R makes a new chamber, F1 toggles the debug overlay, 1 and 2
-pick the gecko's pixel grid. Tab loads the next scene from the movement
-suite (built in whichever world is running, the keys driving the gecko)
-and Shift+Tab goes back to the generated cave.
+the brush. R makes a new chamber, 1 and 2 pick the gecko's pixel grid.
+Tab loads the next scene from the movement suite (built in whichever
+world is running, the keys driving the gecko) and Shift+Tab goes back
+to the generated cave. F1 is debug mode: the gecko's overlay (up
+vector, probe reach, feet, bite) and a panel down the right of the
+screen with the scene list to click into, main cave and reload, the
+cave seed, the brush radius, the time scale, pause and a single-tick
+step, the pixel grid and the overlay toggle, and the gecko's state.
+The world's mouse actions ignore the mouse while it is over the panel.
 
 ## Checking it without a hand on the keys
 

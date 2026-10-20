@@ -1,6 +1,6 @@
 # Movement suite report
 
-Runs: 95, passing: 95, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 100, passing: 100, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 Compared against baseline baseline.json.
 
@@ -11,15 +11,15 @@ Compared against baseline baseline.json.
 | boulder_70:traverse | pass |  (-2) |  (-3) |  |  |  |  |  |  |  |  |  |  |  (-8) |  | 1119 | ok |
 | box:box_round | pass |  (-7) |  (-4) |  |  |  |  |  |  |  |  |  |  |  (-9) |  | 1215 | ok |
 | bump_2x2:traverse | pass |  (-1) |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-1) |  | 1189 | ok |
-| bump_row:traverse | pass |  |  |  |  |  (-1) |  |  |  |  |  |  |  |  (-2) |  | 1192 | ok |
-| cave_1:traverse_long | pass |  (-2) |  |  |  |  (-2) |  |  |  |  |  (-11) |  |  | 4 (+1) |  | 2088 | ok |
+| bump_row:traverse | pass |  |  |  |  |  (-1) |  |  |  |  |  |  |  |  (-2) |  | 1191 | ok |
+| cave_1:traverse_long | pass |  (-2) |  |  |  |  (-2) |  |  |  |  |  (-11) |  |  | 4 (+1) |  | 1138 | ok |
 | cave_2:traverse_long | pass |  |  (-3) |  |  |  (-1) |  |  |  |  |  (-10) |  |  |  (-2) |  | 1961 | ok |
 | cave_3:traverse_long | pass |  |  |  |  |  (-2) |  |  |  |  |  (-10) |  |  |  |  | 1969 | ok |
 | cave_4:traverse_long | pass |  |  |  |  |  (-3) |  |  |  |  |  (-9) |  |  |  (-3) |  | 1939 | ok |
 | cave_5:traverse_long | pass |  (-1) |  (-3) |  |  |  (-1) |  |  |  |  |  (-9) |  |  | 1 (-3) |  | 1920 | ok |
 | cave_6:traverse_long | pass |  |  |  |  |  (-1) |  |  |  |  |  (-13) |  |  |  |  | 1959 | ok |
 | ceiling_specks:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1192 | ok |
-| ceiling_step_down:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 (-1) |  | 1161 | ok |
+| ceiling_step_down:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-2) |  | 1164 | ok |
 | ceiling_step_up:traverse | pass |  |  |  (-1) |  |  (-1) |  |  (-1) |  |  |  |  |  |  |  | 1144 | ok |
 | ceiling_walk:bounce | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 743 | ok |
 | ceiling_walk:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1181 | ok |
@@ -29,24 +29,24 @@ Compared against baseline baseline.json.
 | dig_45:dig_45 | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 435 | ok |
 | dig_level_wall:dig_level | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 434 | ok |
 | dig_shaft:dig_shaft | pass |  |  (-13) |  |  |  |  |  |  |  |  (-3) |  |  |  (-1) |  | 327 | ok |
-| dig_turns:dig_turns | pass |  |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 1040 | ok |
+| dig_turns:dig_turns | pass |  |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 1035 | ok |
 | drop_funnel:cliff_jump | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 656 | ok |
 | flat:bounce | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 743 | ok |
 | flat:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1181 | ok |
 | funnel_40:funnel | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 | 692 | ok |
 | funnel_60:funnel | pass |  |  |  |  |  (-3) |  |  |  |  |  |  |  |  | 4 | 709 | ok |
 | funnel_90:funnel | pass |  (-2) |  (-8) |  |  |  |  |  |  |  |  |  |  |  (-2) | 4 | 724 | ok |
-| gap_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 1182 | ok |
-| gap_24:traverse | pass |  |  |  |  |  |  |  |  |  |  (-3) |  |  | 1 |  | 1184 | ok |
+| gap_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 1181 | ok |
+| gap_24:traverse | pass |  |  |  |  |  |  |  |  |  |  (-3) |  |  |  (-1) |  | 1181 | ok |
 | gap_32:traverse | pass |  |  |  |  |  |  |  |  |  |  (-8) |  |  |  |  | 1183 | ok |
 | gap_40:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1418 | ok |
 | gap_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1428 | ok |
 | gap_64:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1458 | ok |
 | gap_8:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1181 | ok |
-| gap_higher_16:traverse | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  | 1 (-4) |  | 1179 | ok |
+| gap_higher_16:traverse | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  | 1 (-4) |  | 1178 | ok |
 | gap_higher_32:traverse | pass |  |  (-3) |  |  |  |  |  |  |  |  (-5) |  |  |  (-2) |  | 1161 | ok |
 | gap_higher_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1458 | ok |
-| gap_lower_16:traverse | pass |  (-1) |  (-2) |  |  |  |  |  |  |  |  (-4) |  |  | 1 (-6) |  | 1168 | ok |
+| gap_lower_16:traverse | pass |  (-1) |  (-2) |  |  |  |  |  |  |  |  (-4) |  |  | 1 (-6) |  | 1167 | ok |
 | gap_lower_32:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 1330 | ok |
 | gap_lower_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1388 | ok |
 | jump_flat:jump_right | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 698 | ok |
@@ -57,12 +57,12 @@ Compared against baseline baseline.json.
 | notch_deep:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  | 1187 | ok |
 | notch_wide_deep:traverse | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-4) |  | 1170 | ok |
 | overhang_shelf_under:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1181 | ok |
-| overhang_wedge:traverse | pass |  |  (-3) |  |  |  |  |  |  |  |  |  |  |  (-3) | 3 (+3) | 1010 | ok |
-| pillar:climb_over | pass |  |  |  |  |  (-2) |  |  |  |  |  (-1) |  |  |  (-2) |  | 1193 | ok |
-| pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-3) |  | 1035 | ok |
+| overhang_wedge:traverse | pass |  |  (-3) |  |  |  |  |  |  |  |  |  |  |  (-3) | 3 (+3) | 1017 | ok |
+| pillar:climb_over | pass |  |  |  |  |  (-2) |  |  |  |  |  (-1) |  |  |  (-2) |  | 1189 | ok |
+| pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-3) |  | 1033 | ok |
 | pool:swim_across | pass |  (-1) |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  (-4) |  | 1044 | ok |
 | pool_bank_slope:swim_across | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-2) |  | 1011 | ok |
-| shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1180 | ok |
+| shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1179 | ok |
 | slope_down_10:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 1192 | ok |
 | slope_down_20:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 1196 | ok |
 | slope_down_30:traverse_left | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1197 | ok |
@@ -76,10 +76,15 @@ Compared against baseline baseline.json.
 | slope_up_60:traverse_diag | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1188 | ok |
 | slope_up_75:traverse_diag | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1192 | ok |
 | slot_20:slot | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 660 | ok |
-| slot_24:slot | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  | 1 |  | 663 | ok |
-| slot_28:slot | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 662 | ok |
+| slot_24:slot | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-1) |  | 660 | ok |
+| slot_28:slot | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 660 | ok |
 | slot_36:slot | pass |  |  |  |  |  |  |  |  |  |  (-3) |  |  |  (-1) |  | 658 | ok |
 | specks_floor:traverse | pass |  |  |  |  |  (-1) |  |  |  |  |  (-2) |  |  |  |  | 1192 | ok |
+| squeeze_low_12:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  | 844 | ok |
+| squeeze_low_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 841 | ok |
+| squeeze_ragged:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 661 | ok |
+| squeeze_slot_12:slot_dive | pass |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  | 711 | ok |
+| squeeze_slot_16:slot_dive | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 707 | ok |
 | step_down_12:traverse_left | pass |  (-1) |  |  |  |  |  |  |  |  |  (-2) |  |  |  (-1) |  | 1176 | ok |
 | step_down_16:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  | 1 (-1) |  | 1186 | ok |
 | step_down_24:traverse_left | pass |  (-2) |  |  |  |  |  |  |  |  |  (-4) |  |  |  (-5) |  | 1167 | ok |
@@ -89,18 +94,18 @@ Compared against baseline baseline.json.
 | step_down_8:traverse_left | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1184 | ok |
 | step_up_12:traverse | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 1187 | ok |
 | step_up_16:traverse | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  | 1 (-1) |  | 1186 | ok |
-| step_up_24:traverse | pass |  (-1) |  (-3) |  |  |  |  |  |  |  |  (-4) |  |  |  (-5) |  | 1164 | ok |
+| step_up_24:traverse | pass |  (-1) |  (-3) |  |  |  |  |  |  |  |  (-4) |  |  |  (-5) |  | 1165 | ok |
 | step_up_32:traverse | pass |  |  (-1) |  |  |  |  |  |  |  |  (-4) |  |  |  (-4) |  | 1155 | ok |
-| step_up_48:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-2) | 6 (+6) | 829 | ok |
+| step_up_48:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-2) | 6 (+6) | 831 | ok |
 | step_up_4:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1182 | ok |
 | step_up_8:traverse | pass |  (-1) |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 1184 | ok |
 | tunnel_45:traverse | pass |  |  (-26) |  |  |  (-2) |  |  |  |  |  (-1) |  (-1) |  |  |  (-13) | 1164 | ok |
 | tunnel_45_ragged:traverse | pass |  |  (-29) |  |  |  (-2) |  |  |  |  |  |  (-1) |  |  |  (-11) | 1169 | ok |
-| tunnel_bend:traverse_long | pass |  |  (-11) |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-22) | 2295 | ok |
+| tunnel_bend:traverse_long | pass |  |  (-11) |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-22) | 2345 | ok |
 | tunnel_level:traverse | pass |  |  |  |  |  |  |  |  |  |  (-5) |  |  |  |  | 1187 | ok |
 | tunnel_ragged:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  (-16) | 1190 | ok |
 | tunnel_shaft:shaft | pass |  |  |  |  |  |  |  |  |  |  (-4) |  |  |  |  | 792 | ok |
-| tunnel_up_bend:traverse_long | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-30) | 2333 | ok |
+| tunnel_up_bend:traverse_long | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  (-30) | 2348 | ok |
 
 ## Against the baseline
 

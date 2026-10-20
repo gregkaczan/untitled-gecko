@@ -1756,12 +1756,14 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 		var foot := _foot_draw(f)
 		var leg_r := LEG_R * _leg_scale(f)
 		# Blobs close enough along each segment that a stretched leg still
-		# renders as one limb, not a row of specks.
-		var n1 := clampi(ceili(hip.distance_to(knee) / LEG_BLOB_GAP), 3, 8)
+		# renders as one limb, not a row of specks; closer still for a
+		# leg thinned with its body, whose blobs are smaller.
+		var gap := LEG_BLOB_GAP * _leg_scale(f)
+		var n1 := clampi(ceili(hip.distance_to(knee) / gap), 3, 16)
 		for k in range(1, n1 + 1):
 			var t := float(k) / n1
 			list.append([hip.lerp(knee, t), leg_r, color])
-		var n2 := clampi(ceili(knee.distance_to(foot) / LEG_BLOB_GAP), 3, 8)
+		var n2 := clampi(ceili(knee.distance_to(foot) / gap), 3, 16)
 		for k in range(1, n2 + 1):
 			var t := float(k) / n2
 			list.append([knee.lerp(foot, t), lerpf(leg_r, leg_r * 0.85, t), color])
