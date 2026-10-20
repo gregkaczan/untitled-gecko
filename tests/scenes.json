@@ -867,7 +867,7 @@
     false
    ],
    [
-    3.0,
+    6.0,
     [
      0,
      0
@@ -903,7 +903,7 @@
     false
    ],
    [
-    3.0,
+    6.0,
     [
      0,
      0
@@ -939,7 +939,7 @@
     false
    ],
    [
-    3.0,
+    6.0,
     [
      0,
      0
@@ -975,7 +975,7 @@
     false
    ],
    [
-    2.0,
+    4.0,
     [
      0,
      0
@@ -989,7 +989,7 @@
     ]
    ],
    [
-    2.0,
+    4.0,
     [
      0,
      0
@@ -1003,7 +1003,7 @@
     ]
    ],
    [
-    2.0,
+    4.0,
     [
      0,
      0
@@ -1017,7 +1017,7 @@
     ]
    ],
    [
-    2.0,
+    4.0,
     [
      0,
      0
@@ -1032,6 +1032,98 @@
    ],
    [
     0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "sand_dig": [
+   [
+    7.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    4.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     0,
+     140
+    ]
+   ],
+   [
+    3.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "hopper": [
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     0,
+     -18
+    ]
+   ],
+   [
+    6.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    5.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
     [
      0,
      0
@@ -3946,6 +4038,453 @@
    ],
    "state": "cling",
    "note": "a ragged chewed passage 11 to 20 px tall at floor level between two rooms, 160 px long"
+  },
+  "sand_bed": {
+   "base": "room",
+   "terrain": [
+    [
+     "sand",
+     700,
+     796,
+     500,
+     4
+    ],
+    [
+     "sand",
+     704,
+     792,
+     492,
+     4
+    ],
+    [
+     "sand",
+     708,
+     788,
+     484,
+     4
+    ],
+    [
+     "sand",
+     712,
+     784,
+     476,
+     4
+    ],
+    [
+     "sand",
+     716,
+     780,
+     468,
+     4
+    ],
+    [
+     "sand",
+     720,
+     776,
+     460,
+     4
+    ],
+    [
+     "sand",
+     724,
+     772,
+     452,
+     4
+    ],
+    [
+     "sand",
+     728,
+     768,
+     444,
+     4
+    ],
+    [
+     "sand",
+     732,
+     764,
+     436,
+     4
+    ],
+    [
+     "sand",
+     736,
+     760,
+     428,
+     4
+    ],
+    [
+     "sand",
+     740,
+     756,
+     420,
+     4
+    ],
+    [
+     "sand",
+     744,
+     752,
+     412,
+     4
+    ],
+    [
+     "sand",
+     748,
+     748,
+     404,
+     4
+    ],
+    [
+     "sand",
+     752,
+     744,
+     396,
+     4
+    ],
+    [
+     "sand",
+     756,
+     740,
+     388,
+     4
+    ],
+    [
+     "sand",
+     760,
+     736,
+     380,
+     4
+    ],
+    [
+     "erase",
+     1300,
+     800,
+     240,
+     100
+    ],
+    [
+     "sand",
+     1300,
+     800,
+     240,
+     100
+    ],
+    [
+     "bedrock",
+     1300,
+     900,
+     240,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "traverse_long",
+    "sand_dig"
+   ],
+   "reach": [
+    1500,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a bed of sand 64 px tall on the floor, then a trench of sand level with the floor on a plate of bedrock: walked over and back; sand_dig bites down into the trench and waits for the sand to pour in",
+   "sim_only": true
+  },
+  "sand_hopper": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     820,
+     500,
+     360,
+     268
+    ],
+    [
+     "sand",
+     900,
+     548,
+     200,
+     216
+    ]
+   ],
+   "spawn": [
+    "floor",
+    1000,
+    790
+   ],
+   "scripts": [
+    "hopper"
+   ],
+   "reach": [
+    0,
+    0,
+    800,
+    1080
+   ],
+   "state": "cling",
+   "note": "a hopper of sand in a rock block over a 32 px pocket, a 4 px plate under it: a bite up from the pocket's floor opens the plate, the sand pours over the gecko, which burrows out to the left",
+   "sim_only": true
+  },
+  "materials": {
+   "base": "room",
+   "terrain": [
+    [
+     "sand",
+     300,
+     796,
+     260,
+     4
+    ],
+    [
+     "sand",
+     304,
+     792,
+     252,
+     4
+    ],
+    [
+     "sand",
+     308,
+     788,
+     244,
+     4
+    ],
+    [
+     "sand",
+     312,
+     784,
+     236,
+     4
+    ],
+    [
+     "sand",
+     316,
+     780,
+     228,
+     4
+    ],
+    [
+     "sand",
+     320,
+     776,
+     220,
+     4
+    ],
+    [
+     "sand",
+     324,
+     772,
+     212,
+     4
+    ],
+    [
+     "sand",
+     328,
+     768,
+     204,
+     4
+    ],
+    [
+     "sand",
+     332,
+     764,
+     196,
+     4
+    ],
+    [
+     "sand",
+     336,
+     760,
+     188,
+     4
+    ],
+    [
+     "sand",
+     340,
+     756,
+     180,
+     4
+    ],
+    [
+     "sand",
+     344,
+     752,
+     172,
+     4
+    ],
+    [
+     "clay",
+     640,
+     796,
+     260,
+     4
+    ],
+    [
+     "clay",
+     644,
+     792,
+     252,
+     4
+    ],
+    [
+     "clay",
+     648,
+     788,
+     244,
+     4
+    ],
+    [
+     "clay",
+     652,
+     784,
+     236,
+     4
+    ],
+    [
+     "clay",
+     656,
+     780,
+     228,
+     4
+    ],
+    [
+     "clay",
+     660,
+     776,
+     220,
+     4
+    ],
+    [
+     "clay",
+     664,
+     772,
+     212,
+     4
+    ],
+    [
+     "clay",
+     668,
+     768,
+     204,
+     4
+    ],
+    [
+     "clay",
+     672,
+     764,
+     196,
+     4
+    ],
+    [
+     "clay",
+     676,
+     760,
+     188,
+     4
+    ],
+    [
+     "clay",
+     680,
+     756,
+     180,
+     4
+    ],
+    [
+     "clay",
+     684,
+     752,
+     172,
+     4
+    ],
+    [
+     "erase",
+     980,
+     800,
+     160,
+     60
+    ],
+    [
+     "water",
+     980,
+     800,
+     160,
+     60
+    ],
+    [
+     "erase",
+     1220,
+     800,
+     160,
+     60
+    ],
+    [
+     "lava",
+     1220,
+     800,
+     160,
+     60
+    ],
+    [
+     "hard",
+     1460,
+     720,
+     80,
+     80
+    ],
+    [
+     "bedrock",
+     1600,
+     720,
+     80,
+     80
+    ],
+    [
+     "copper",
+     1760,
+     740,
+     24,
+     60
+    ],
+    [
+     "bedrock",
+     0,
+     960,
+     1920,
+     120
+    ]
+   ],
+   "spawn": [
+    "floor",
+    150,
+    700
+   ],
+   "scripts": [
+    "idle",
+    "traverse_long"
+   ],
+   "state": "cling",
+   "note": "every material in a row: a bed of sand, a bank of clay, a pool of water, a pool of lava (nothing to the gecko yet: it falls in and stands on the bottom), a block of hard rock, a block of bedrock, a vein of copper, a stone and a clump of clay, bedrock 160 px under the floor; the brush and the keys try them",
+   "lumps": [
+    [
+     "boulder",
+     1850,
+     700,
+     10
+    ],
+    [
+     "clay",
+     1880,
+     700,
+     7
+    ]
+   ],
+   "sim_only": true
   }
  }
 }

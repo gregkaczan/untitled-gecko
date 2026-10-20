@@ -56,11 +56,20 @@ SCRIPTS = {
     # Nothing at all: the idle animations play.
     "idle": [step(13.0, Z)],
     "swim_across": [step(6.0, R), step(2.5, U), step(1.5, R)],
-    "dig_45": [step(0.4, Z), step(3.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
-    "dig_shaft": [step(0.4, Z), step(3.0, Z, chew=True, aim=[0, 140]), step(1.0, Z)],
-    "dig_level": [step(0.4, Z), step(3.0, Z, chew=True, aim=[140, 0]), step(1.0, Z)],
-    "dig_turns": [step(0.4, Z), step(2.0, Z, chew=True, aim=[120, 120]), step(2.0, Z, chew=True, aim=[140, -60]),
-                  step(2.0, Z, chew=True, aim=[0, 140]), step(2.0, Z, chew=True, aim=[-140, 0]), step(0.5, Z)],
+    # Digging is a bite every 0.4 s and a creep of 45 px/s behind it,
+    # so a 100 px dig takes a few seconds.
+    "dig_45": [step(0.4, Z), step(6.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
+    "dig_shaft": [step(0.4, Z), step(6.0, Z, chew=True, aim=[0, 140]), step(1.0, Z)],
+    "dig_level": [step(0.4, Z), step(6.0, Z, chew=True, aim=[140, 0]), step(1.0, Z)],
+    "dig_turns": [step(0.4, Z), step(4.0, Z, chew=True, aim=[120, 120]), step(4.0, Z, chew=True, aim=[140, -60]),
+                  step(4.0, Z, chew=True, aim=[0, 140]), step(4.0, Z, chew=True, aim=[-140, 0]), step(0.5, Z)],
+    # Over the sand bed to the trench, a dig down into it, a wait for
+    # the sand to pour in round the body.
+    "sand_dig": [step(7.5, R), step(4.0, Z, chew=True, aim=[0, 140]), step(3.0, Z)],
+    # Under the hopper: a bite up into its plate (the cursor 18 px up,
+    # within CHEW_REACH, so the body does not creep after it), a wait
+    # while the sand pours over the body, then a walk out to the left.
+    "hopper": [step(0.5, Z), step(1.0, Z, chew=True, aim=[0, -18]), step(6.0, Z), step(5.0, L), step(1.0, Z)],
 }
 
 BASES = {
@@ -71,7 +80,7 @@ BASES = {
 scenes = {}
 
 
-def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=None, reach=None):
+def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=None, reach=None, lumps=None, sim_only=False):
     sc = {"base": base, "terrain": terrain, "spawn": spawn, "scripts": scripts}
     if end:
         sc["end"] = end
@@ -81,7 +90,23 @@ def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=N
         sc["state"] = state
     if note:
         sc["note"] = note
+    if lumps:
+        sc["lumps"] = lumps
+    if sim_only:
+        # Needs the particle world (loose grains, lava): the headless
+        # suite skips it, tools/record.sh runs it.
+        sc["sim_only"] = True
     scenes[name] = sc
+
+
+def bed(kind, x0, x1, h):
+    """A bed of kind (sand, clay) on the floor from x0 to x1, h px tall,
+    its ends sloped a cell a row, so a heap of grains starts at rest."""
+    ops = []
+    for i in range(h // 4):
+        inset = 4 * i
+        ops.append([kind, x0 + inset, F - 4 * (i + 1), (x1 - x0) - 2 * inset, 4])
+    return ops
 
 
 # 1. Flat floor
@@ -248,6 +273,28 @@ add("squeeze_window_12", [["fill", 1000, C, 12, F - C - 52], ["fill", 1000, F - 
 add("squeeze_ragged", [["ragged", 500, 600, 660, 600, 8, 5], ["room", 300, 540, 200, 68], ["room", 660, 540, 300, 68]],
     ["floor", 400, 600], ["traverse"], base="solid", state="cling", reach=[690, 0, 1920, 1080],
     note="a ragged chewed passage 11 to 20 px tall at floor level between two rooms, 160 px long")
+
+# 14. Loose matter and the other materials, in the particle world only
+# (sim_only: in the bitmap, sand is ground like rock). Sand and clay
+# are loose grains that sleep until undermined, then pour; the gecko
+# walks on them as on rock, bites into them, is buried by them, and
+# burrows through them. Hard rock takes several bites, bedrock none.
+add("sand_bed", bed("sand", 700, 1200, 64) + [["erase", 1300, F, 240, 100], ["sand", 1300, F, 240, 100], ["bedrock", 1300, F + 100, 240, 16]],
+    ["floor", 500, 700], ["traverse_long", "sand_dig"], state="cling", sim_only=True, reach=[1500, 0, 1920, 1080],
+    note="a bed of sand 64 px tall on the floor, then a trench of sand level with the floor on a plate of bedrock: walked over and back; sand_dig bites down into the trench and waits for the sand to pour in")
+# The plate is one row of rock: a bite from the pocket's floor reaches
+# 36 px up, its centre on that row, so the hole is the bite's width.
+add("sand_hopper", [["fill", 820, 500, 360, 268], ["sand", 900, 548, 200, 216]],
+    ["floor", 1000, 790], ["hopper"], state="cling", sim_only=True, reach=[0, 0, 800, 1080],
+    note="a hopper of sand in a rock block over a 32 px pocket, a 4 px plate under it: a bite up from the pocket's floor opens the plate, the sand pours over the gecko, which burrows out to the left")
+add("materials", bed("sand", 300, 560, 48) + bed("clay", 640, 900, 48)
+    + [["erase", 980, F, 160, 60], ["water", 980, F, 160, 60],
+       ["erase", 1220, F, 160, 60], ["lava", 1220, F, 160, 60],
+       ["hard", 1460, F - 80, 80, 80], ["bedrock", 1600, F - 80, 80, 80],
+       ["copper", 1760, F - 60, 24, 60], ["bedrock", 0, F + 160, 1920, 120]],
+    ["floor", 150, 700], ["idle", "traverse_long"], state="cling", sim_only=True,
+    lumps=[["boulder", 1850, 700, 10], ["clay", 1880, 700, 7]],
+    note="every material in a row: a bed of sand, a bank of clay, a pool of water, a pool of lava (nothing to the gecko yet: it falls in and stands on the bottom), a block of hard rock, a block of bedrock, a vein of copper, a stone and a clump of clay, bedrock 160 px under the floor; the brush and the keys try them")
 
 out = {"bases": BASES, "scripts": SCRIPTS, "scenes": scenes}
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

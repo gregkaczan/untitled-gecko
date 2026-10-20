@@ -14,7 +14,7 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN
 const uint O_WD = 1641736u;
 const uint O_LD = 1771336u;
 const uint O_CD = 1900936u;
-const uint O_CT = 2073870u;   // cell class per pixel, read back by the gecko: 0 air, 1 water, 2 solid, 3 lava, 16 + id a chunk's cell
+const uint O_CT = 2073870u;   // cell class per pixel, read back by the gecko: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
 const uint O_BD = 2203470u;   // bond records: [chunk id, ...] per particle (see sim.gd)
 const uint BD = 20u;
 
@@ -80,8 +80,12 @@ void main() {
     if (rx < 0 || rx >= int(rw) || ry < 0 || ry >= int(rh)) return;
 
     // Cell class for the CPU world queries. Solid beats water beats air;
-    // fire, smoke, bullets and mites leave no class. A chunk's cells
-    // carry its id, so the CPU can tell a lump from the ground and
+    // fire, smoke, bullets and mites leave no class. Static solid (rock,
+    // hard rock, bedrock, copper: anything a yield of 5 or more holds in
+    // place, pbd_predict) is 2; a loose grain (sand, clay, the stone of
+    // a broken lump) is 4, so the gecko can tell a sand bed from rock
+    // and pbd_finalize's rock wall does not freeze a heap. A chunk's
+    // cells carry its id, so the CPU can tell a lump from the ground and
     // which lump it is. A lump's lattice turns as it rolls, and a turned
     // lattice leaves cells empty, so each of its particles claims every
     // cell whose centre is within a lattice half-diagonal of it, which
@@ -91,7 +95,10 @@ void main() {
         uint cls = 0u;
         if (mat == 1u) cls = 1u;
         else if (mat == 10u) cls = 3u;
-        else if (mat < 8u || mat == 12u) cls = (chunk != 0u) ? 16u + chunk : 2u;
+        else if (mat < 8u || mat == 12u) {
+            float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 2.0;
+            cls = (chunk != 0u) ? 16u + chunk : ((yield_s >= 5.0) ? 2u : 4u);
+        }
         if (chunk != 0u) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dx = -1; dx <= 1; dx++) {
@@ -254,7 +261,7 @@ void main() {
         cr += wisp;
         cg += wisp * 0.7; // wisps are warm-tinted (less green than red)
 
-    // --- Standard materials (sand, clay, rock, wood, ores) ---
+    // --- Standard materials (sand, clay, rock, stone, hard rock, copper, bedrock) ---
     // (lava mat 10 redirected to density buffer above, composited by render_water)
     } else {
         // Base color from material property table
@@ -268,8 +275,9 @@ void main() {
         float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
         float h2 = hash11(variation * 419.2 + float(id) * 0.0047);
         // Stone (mat 4) varies less: a lump reads as one pale thing
-        // against the ground's grain.
-        float var_strength = (mat == 4u) ? 0.07 : 0.22;
+        // against the ground's grain. Hard rock (5) and bedrock (7) are
+        // smoother still, so a seam of either reads as one slab.
+        float var_strength = (mat == 4u) ? 0.07 : ((mat == 5u) ? 0.10 : ((mat == 7u) ? 0.04 : 0.22));
         cr += (h0 - 0.5) * var_strength;
         cg += (h1 - 0.5) * var_strength;
         cb += (h2 - 0.5) * var_strength;
@@ -287,14 +295,11 @@ void main() {
             cg += 0.03;
         }
 
-        // Iron: cool metallic sparkle with rare bright glints (15% chance)
+        // Hard rock: a few pale flecks, so it reads as a different stone
+        // from the plain rock round it, not just a darker patch of it.
         if (mat == 5u) {
-            float sparkle = hash11(px * 0.19 + py * 0.23 + variation) * 0.2;
-            cr += sparkle * 0.6;
-            cg += sparkle * 0.7;
-            cb += sparkle * 1.0; // blue-shifted sparkle for steel look
-            float glint = step(0.85, hash11(variation * 41.7 + float(id) * 0.007)) * 0.3;
-            cr += glint; cg += glint; cb += glint; // white glint
+            float fleck = step(0.94, hash11(variation * 41.7 + float(id) * 0.007)) * 0.14;
+            cr += fleck; cg += fleck; cb += fleck * 1.1;
         }
         // Copper: warm patina with orange-tinted glints (18% chance)
         if (mat == 6u) {
@@ -304,14 +309,10 @@ void main() {
             float glint = step(0.82, hash11(variation * 53.3 + float(id) * 0.009)) * 0.25;
             cr += glint; cg += glint * 0.7; // warm glint (less green)
         }
-        // Gold: frequent sparkles (45% chance) + warm golden glints (20% chance)
+        // Bedrock: faint level banding, a slab laid down in sheets.
         if (mat == 7u) {
-            float sparkle = hash11(px * 0.23 + py * 0.31 + variation);
-            float bright = step(0.55, sparkle) * 0.35;
-            cr += bright;
-            cg += bright * 0.85; // slightly less green to keep golden hue
-            float glint = step(0.80, hash11(variation * 67.1 + float(id) * 0.003)) * 0.4;
-            cr += glint; cg += glint * 0.9; cb += glint * 0.2;
+            float band = sin(py * 0.11 + hash11(floor(py / 24.0)) * 3.0) * 0.025;
+            cr += band; cg += band; cb += band * 1.3;
         }
 
         // Depth gradient: particles lower in the world are subtly darker (up to 20%)
@@ -323,9 +324,7 @@ void main() {
 
     // Ores and lava emit their own light so they're visible even in darkness
     float ore_glow = 0.0;
-    if (mat == 5u) ore_glow = 0.12;  // iron: faint glow
     if (mat == 6u) ore_glow = 0.10;  // copper: faint glow
-    if (mat == 7u) ore_glow = 0.20;  // gold: moderate glow
     // mat 10 (lava) redirected to density buffer above; rendered by render_water
     if (mat == 12u) ore_glow = 0.15; // purple ore: moderate glow
 

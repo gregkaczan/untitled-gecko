@@ -32,6 +32,12 @@ const STEP_TURN_DOT := -0.6    # A step's blocking normal may lean this far past
 const GRAB_MIN_S := 0.15       # Least input along a blocking surface that turns the body onto it (a curved face tilts it)
 const CHEW_R := 11.0           # Mean radius of one bite; each bite varies around it
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
+const CHEW_PERIOD := 0.4       # Seconds per bite: the jaw opens through the cycle and the bite lands as it shuts
+const CHEW_SNAP := 0.25        # The last part of the cycle, over which the jaw shuts
+const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
+const BURROW_SLOW := 0.3       # Walking speed through loose grains (a bed of sand), as a fraction of the walk
+const PUSH_R_FRONT := 8.0      # Radius of the body's push on loose grains, head to mid-body (sim_map.gd)
+const PUSH_R_BACK := 5.0       # And mid-body to the tail's root
 const DIG_DEAD := 10.0         # A cursor closer than this to the body centre gives no dig direction
 const LEVEL_SNAP := 0.26       # A dig direction within ~15 degrees of a world axis snaps to it
 const DIG_LOOK := 44.0         # Rock within this along the dig direction means the body turns onto it (past a bite's reach)
@@ -239,6 +245,9 @@ var _n_streak := 0             # Ticks the raw normal has kept turning the same 
 var _n_sign := 0.0
 var _n_alt := 0                # Ticks the raw normal has alternated its turn direction
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
+var _chew_t := 0.0             # Seconds into the bite cycle while chewing
+var _digging := false          # Chewing with rock within DIG_LOOK of the bite: the walk slows to the dig
+var _burrowing := false        # This tick the walk went on through loose grains (sand, clay)
 var _squeeze := false          # In a passage narrower than the body: less clearance, slow, the body thinned
 var _sq_r := BODY_R            # The clearance while squeezing
 var _sq_in := false            # The body centre has been inside the passage
@@ -314,6 +323,9 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_gulp = 0.0
 	_gape = 0.0
 	_agape = 0.0
+	_chew_t = 0.0
+	_digging = false
+	_burrowing = false
 	_push_ticks = 0
 	_n_target = up_dir
 	_grab_n = Vector2.ZERO
@@ -353,10 +365,11 @@ func _physics_process(dt: float) -> void:
 	chewing = _read_chew() and not tongue_out and not _lmb
 	if chewing:
 		var aim := _aim_dir()
+		var dir: Vector2
 		if aim == Vector2.ZERO:
 			# No cursor (a gamepad, or the demo pilot without an aim): bite
 			# the way the input points, straight ahead with none.
-			_chew(inp.normalized() if inp.length() > 0.2 else _tangent() * facing)
+			dir = inp.normalized() if inp.length() > 0.2 else _tangent() * facing
 		else:
 			# The mouth follows the cursor. With no key held the body creeps
 			# after the bite, so a held button and a pointed cursor tunnel
@@ -364,7 +377,20 @@ func _physics_process(dt: float) -> void:
 			if inp.length() <= 0.2 and _cursor().distance_to(pos) > CHEW_REACH:
 				inp = aim
 			_dig_aim = aim
-			_chew(_within_look(aim))
+			dir = _within_look(aim)
+		# One bite a CHEW_PERIOD: the jaw opens through the cycle
+		# (_update_gape) and the bite lands as it shuts, so digging is
+		# eating, bite by bite, and no faster than the jaw. With rock in
+		# reach of the bites the walk slows to the dig (DIG_SPEED); in
+		# the open the chew key costs nothing.
+		_chew_t += dt
+		if _chew_t >= CHEW_PERIOD:
+			_chew_t -= CHEW_PERIOD
+			_chew(dir)
+		_digging = map.ray_hit(pos, dir, DIG_LOOK) != null
+	else:
+		_chew_t = 0.0
+		_digging = false
 	var in_water: bool = map.water_near(pos, 1)
 	if in_water and not clinging and not swimming and not tongue_anchored:
 		swimming = true
@@ -386,6 +412,7 @@ func _physics_process(dt: float) -> void:
 	_update_tongue(dt)
 	_update_gape(dt)
 	_update_chain(dt)
+	_push_body()
 	_update_look(dt)
 	_update_feet(dt)
 	_update_idle(inp, dt)
@@ -397,6 +424,15 @@ func _physics_process(dt: float) -> void:
 	queue_redraw()
 	_under.queue_redraw()
 	_debug_layer.queue_redraw()
+
+
+# The body's push on loose grains: two capsules along the drawn chain,
+# head to mid-body and mid-body to the tail's root, so sand poured on
+# the gecko piles on its back and a burrowing body shoves the grains
+# aside (sim_map.gd; the bitmap has no grains).
+func _push_body() -> void:
+	var pts := chain.points
+	map.body_capsules(pts[0], pts[3], PUSH_R_FRONT, pts[3], pts[6], PUSH_R_BACK)
 
 
 # The drawn body's base: what the camera follows, since the body centre
@@ -520,10 +556,12 @@ func _dig_normal() -> Vector2:
 	if absf(da) < 0.05:
 		# Square to the body: the side nearer the world's up, so a level
 		# tunnel out of a shaft is walked on its floor, and nose first when
-		# that is square too (a shaft straight down from a floor).
+		# that is square too (a shaft straight down from a floor, or
+		# straight up at a ceiling): the up that lays the walking line,
+		# the way the gecko faces, along the dig.
 		da = Vector2.UP.dot(a)
 		if absf(da) < 0.05:
-			return _tangent() * facing
+			return Vector2(_dig_aim.y, -_dig_aim.x) * facing
 	return a if da > 0.0 else -a
 
 
@@ -650,11 +688,24 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		facing = signf(s)
 	_s = s
 	var top := WALK_SPEED * (SQUEEZE_SLOW if _squeeze else 1.0)
+	if _digging:
+		top = minf(top, DIG_SPEED)
+	if _burrowing:
+		top = minf(top, WALK_SPEED * BURROW_SLOW)
 	speed_along = move_toward(speed_along, s * top, WALK_ACCEL * dt)
 	# The walk's collision sees lumps whatever the senses do.
 	var ignoring: bool = map.ignore_chunks
 	map.ignore_chunks = false
 	var blocked := not _step(tangent * speed_along * dt)
+	# Loose grains (a bed of sand, a bank of clay) are no wall: a move
+	# they alone block goes on through them, slowed, the body's push
+	# shoving them aside (sim_map.gd). Rock beyond them still stops it.
+	_burrowing = false
+	if blocked and _block_cell != null and s != 0.0 and map.loose_at_world(_block_cell):
+		map.ignore_loose = true
+		blocked = not _step(tangent * speed_along * dt)
+		map.ignore_loose = false
+		_burrowing = not blocked
 	map.ignore_chunks = ignoring
 	_blocked = blocked
 	# Stopped by a loose lump: shove it along, the whole lump moved as
@@ -681,8 +732,10 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	_last_probe = p
 	# A body centre inside rock (a spawn in a wall, a brush fill, a bite
 	# that missed) is pushed out along the probe normal before anything
-	# else is decided, squeezed or not.
-	if p.found and p.dist < _clear_r() - 1.0:
+	# else is decided, squeezed or not. Not out of loose grains: a buried
+	# body keeps its place, the body's push clearing the grains round
+	# it, where this nudge would float it up through sand pouring in.
+	if p.found and p.dist < _clear_r() - 1.0 and not map.loose_at_world(p.nearest):
 		# Rock all round (a passage) cancels the probe normal: then away
 		# from the nearest cell, never blindly along up into the far wall.
 		var out_dir: Vector2 = p.normal
@@ -1093,7 +1146,14 @@ func _hold_tongue() -> void:
 func _update_gape(dt: float) -> void:
 	_agape = maxf(_agape - dt, 0.0)
 	var want := _gape_want or _agape > 0.0
-	_gape = move_toward(_gape, YAWN_GAPE if want else 0.0, YAWN_GAPE / (EAT_OPEN if want else EAT_CLOSE) * dt)
+	if chewing and not want:
+		# Chewing: the jaw opens over the bite cycle and shuts over its
+		# last CHEW_SNAP, the bite landing as it closes.
+		var u := _chew_t / CHEW_PERIOD
+		var open := u / (1.0 - CHEW_SNAP) if u < 1.0 - CHEW_SNAP else (1.0 - u) / CHEW_SNAP
+		_gape = YAWN_GAPE * clampf(open, 0.0, 1.0)
+	else:
+		_gape = move_toward(_gape, YAWN_GAPE if want else 0.0, YAWN_GAPE / (EAT_OPEN if want else EAT_CLOSE) * dt)
 	_gape_want = false
 
 
@@ -2217,5 +2277,5 @@ func debug_text() -> String:
 	var state := "cling" if clinging else ("swim" if swimming else "air")
 	if tongue_anchored and not clinging:
 		state = "pull"
-	return "%s%s%s  tongue %s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
-		state, " chew" if chewing else "", " bridge" if _bridging else "", _tongue_state(), planted, up.x, up.y, speed_along, vel.x, vel.y]
+	return "%s%s%s%s  tongue %s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
+		state, " chew" if chewing else "", " burrow" if _burrowing else "", " bridge" if _bridging else "", _tongue_state(), planted, up.x, up.y, speed_along, vel.x, vel.y]

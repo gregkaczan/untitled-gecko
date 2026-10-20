@@ -19,6 +19,13 @@ const CAVE := Color(0.045, 0.04, 0.06)
 const WATER := Color(0.07, 0.15, 0.30)
 const WATER_TOP := Color(0.18, 0.32, 0.48)
 const COPPER := Color(0.85, 0.47, 0.14)   # A vein's cells, drawn bright so they read as glowing
+const SAND := Color(0.42, 0.36, 0.23)     # A bed or heap of sand: ground here, loose grains that flow in the sim
+const CLAY := Color(0.33, 0.22, 0.14)
+const LAVA := Color(0.80, 0.28, 0.05)     # A pool: neither solid nor water here, a glowing liquid in the sim
+const LAVA_TOP := Color(0.98, 0.62, 0.20)
+const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
+const BEDROCK := Color(0.10, 0.09, 0.13)  # Rock no bite opens
+const HARD_GIVE := 0.4         # Chance a bite takes a cell of hard rock (the sim's material table says the same)
 const WATER_Y := 222           # Cells: empty cells below this row inside the basin are water
 
 # Cell values
@@ -26,9 +33,15 @@ const CELL_AIR := 0
 const CELL_ROCK := 1
 const CELL_WATER := 2
 const CELL_COPPER := 3         # Rock to walk on and chew, drawn as a glowing vein; the sim makes it copper
+const CELL_SAND := 4           # Loose sand: ground like rock here, grains that flow and pour in the sim
+const CELL_CLAY := 5           # Loose clay: the same, sticky and slow in the sim
+const CELL_LAVA := 6           # Lava: a drawn pool here (neither solid nor water), a liquid that glows in the sim
+const CELL_HARD := 7           # Hard rock: a bite takes HARD_GIVE of its cells
+const CELL_BEDROCK := 8        # Bedrock: no bite opens it
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
+var ignore_loose := false      # The walk's collision burrowing: loose grains are no wall (sim_map.gd; nothing loose here)
 
 var _img: Image
 var _tex: ImageTexture
@@ -131,7 +144,18 @@ func is_solid(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return true
 	var v := solid[y * W + x]
-	return v == CELL_ROCK or v == CELL_COPPER
+	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK
+
+
+# Loose grains live in the particle world only (sim_map.gd): here a bed
+# of sand is ground like rock, so the headless suite's runs stay as they
+# were.
+func is_loose(_x: int, _y: int) -> bool:
+	return false
+
+
+func loose_at_world(_p: Vector2) -> bool:
+	return false
 
 
 func is_water(x: int, y: int) -> bool:
@@ -187,6 +211,11 @@ func spawn_boulder(_p: Vector2, _radius: float) -> int:
 
 func spawn_clay(_p: Vector2, _radius: float) -> int:
 	return 0
+
+
+# The body's push on loose grains is the particle world's (sim_map.gd).
+func body_capsules(_a0: Vector2, _a1: Vector2, _ra: float, _b0: Vector2, _b1: Vector2, _rb: float) -> void:
+	pass
 
 
 func spawn_sand(_p: Vector2, _radius: float) -> void:
@@ -329,6 +358,16 @@ func copper_rect(r: Rect2) -> void:
 	_set_rect(r, CELL_COPPER)
 
 
+# A world-space rectangle, or a disc, of one cell kind (sand, clay, lava,
+# hard rock, bedrock): the scenes' material ops.
+func material_rect(r: Rect2, kind: int) -> void:
+	_set_rect(r, kind)
+
+
+func material_circle(p: Vector2, radius: float, kind: int) -> void:
+	_paint_circle(p, radius, kind)
+
+
 # The map as a PNG, one pixel per cell (GECKO_DUMP_MAP).
 func save_png(path: String) -> void:
 	if _img:
@@ -414,15 +453,18 @@ func fill_rect(r: Rect2) -> void:
 	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
 
 
-func erase_circle(p: Vector2, radius: float) -> void:
-	_paint_circle(p, radius, 0)
+# A bite: the circle's cells to air, but for bedrock, which stays, and
+# hard rock, of which a bite takes HARD_GIVE of the cells. The brush
+# (force) takes anything.
+func erase_circle(p: Vector2, radius: float, force := false) -> void:
+	_paint_circle(p, radius, CELL_AIR, not force)
 
 
 func fill_circle(p: Vector2, radius: float) -> void:
-	_paint_circle(p, radius, 1)
+	_paint_circle(p, radius, CELL_ROCK)
 
 
-func _paint_circle(p: Vector2, radius: float, value: int) -> void:
+func _paint_circle(p: Vector2, radius: float, value: int, bite := false) -> void:
 	var cx := int(floor(p.x / CELL))
 	var cy := int(floor(p.y / CELL))
 	var n := int(ceil(radius / CELL))
@@ -430,29 +472,46 @@ func _paint_circle(p: Vector2, radius: float, value: int) -> void:
 		for x in range(cx - n, cx + n + 1):
 			if x < 0 or y < 0 or x >= W or y >= H:
 				continue
-			if Vector2((x + 0.5) * CELL, (y + 0.5) * CELL).distance_to(p) < radius:
-				solid[y * W + x] = value
+			if Vector2((x + 0.5) * CELL, (y + 0.5) * CELL).distance_to(p) >= radius:
+				continue
+			if bite:
+				var v := solid[y * W + x]
+				if v == CELL_BEDROCK or (v == CELL_HARD and randf() >= HARD_GIVE):
+					continue
+			solid[y * W + x] = value
 	_repaint(cx - n - 1, cy - n - 1, cx + n + 1, cy + n + 1)
 
 
 # Rock gets a grain from the noise and a lighter rim where it meets air,
-# so the surface the gecko walks on reads at a glance. Water is flat with
-# a lighter surface row.
+# so the surface the gecko walks on reads at a glance. Water and lava
+# are flat with a lighter surface row. Sand and clay get the grain in
+# their own colours, hard rock and bedrock a fainter rim.
 func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 	if _img == null:
 		return
 	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
 		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			var v := solid[y * W + x]
 			var col := CAVE
 			if is_water(x, y):
 				col = WATER_TOP if not is_water(x, y - 1) and not is_solid(x, y - 1) else WATER
-			elif solid[y * W + x] == CELL_COPPER:
+			elif v == CELL_LAVA:
+				col = LAVA_TOP if y > 0 and solid[(y - 1) * W + x] == CELL_AIR else LAVA
+			elif v == CELL_COPPER:
 				col = COPPER
 			elif is_solid(x, y):
 				var rim := not (is_solid(x - 1, y) and is_solid(x + 1, y) and is_solid(x, y - 1) and is_solid(x, y + 1))
-				if rim:
-					col = RIM
-				else:
-					col = ROCK + ROCK_VAR * _noise.get_noise_2d(x * 0.7, y * 0.7)
+				var grain := _noise.get_noise_2d(x * 0.7, y * 0.7)
+				match v:
+					CELL_SAND:
+						col = SAND + ROCK_VAR * grain
+					CELL_CLAY:
+						col = CLAY + ROCK_VAR * grain
+					CELL_HARD:
+						col = HARD.lightened(0.12) if rim else HARD + ROCK_VAR * grain * 0.5
+					CELL_BEDROCK:
+						col = BEDROCK.lightened(0.12) if rim else BEDROCK
+					_:
+						col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)
 	_dirty = true

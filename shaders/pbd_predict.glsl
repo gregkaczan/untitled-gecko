@@ -25,6 +25,9 @@ const uint NB = 8u;
 const uint NONE = 0xFFFFFFFFu;
 const uint O_CAP = 2059339u;
 const uint N_CAP = 8u;
+// Cell classes per render pixel, last tick's (render_write.glsl): 0 air,
+// 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell.
+const uint O_CT = 2073870u;
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }    // Read float from flat uint SSBO
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); } // Write float to flat uint SSBO
@@ -252,6 +255,30 @@ void main() {
     }
 
     bool awake = has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral || mates_moving || pulled;
+
+    // --- Loose grains fall when undermined. The solver only moves what
+    //     is awake, and a grain at rest sleeps, so a bite under a bed of
+    //     sand left the sand hanging. A sleeping grain (sand, clay, the
+    //     stone of a broken lump: yield under 5, no bonds) wakes when
+    //     the cell under it, or either cell diagonally under it, read
+    //     as open (air, water, lava) last tick. A heap flows until no
+    //     face is steeper than the cells' diagonal, then sleeps again;
+    //     a hole's rim caves in from the row above, so a hopper empties
+    //     through a cone. ---
+    if (!awake && !bonded && mat < 8u && mat != 1u && yield_s < 5.0) {
+        float psz = rf(O_P + 18u);
+        int rw = int(rf(O_P + 16u)), rh = int(rf(O_P + 17u));
+        int rx = int(floor(px / psz)), ry = int(floor(py / psz));
+        if (rx >= 0 && rx < rw && ry >= 0 && ry + 1 < rh) {
+            uint row = O_CT + uint(ry + 1) * uint(rw);
+            for (int s = -1; s <= 1 && !awake; s++) {
+                int sx = rx + s;
+                if (sx < 0 || sx >= rw) continue;
+                uint under = buf.d[row + uint(sx)];
+                if (under == 0u || under == 1u || under == 3u) awake = true;
+            }
+        }
+    }
     if (bonded) buf.d[bd + 1u] = awake ? 1u : 0u;
 
     // --- Explosion slot 1 ---

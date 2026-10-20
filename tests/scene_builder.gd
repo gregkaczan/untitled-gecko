@@ -11,7 +11,11 @@
 # dir], ["specks", seed, x0, x1, y, count] loose cells on the line y,
 # ["cell", x, y, v], ["water", x, y, w, h], ["tunnel", x0, y0, x1, y1,
 # r] and ["ragged", x0, y0, x1, y1, r, seed] carve a bored or chewed
-# tunnel, ["funnel", x, y, w, depth] a V slot in a floor.
+# tunnel, ["funnel", x, y, w, depth] a V slot in a floor. The other
+# materials as rects: ["sand", x, y, w, h], ["clay", ...] (loose, flow
+# in the particle world, ground in the bitmap), ["lava", ...], ["hard",
+# ...] (rock that takes several bites), ["bedrock", ...] (rock no bite
+# opens); ["sand_disc", x, y, r] and ["clay_disc", ...] as discs.
 # Spawns: ["floor", x, y] on the first rock below (x, y), ["ceiling",
 # x, y] under the first rock above, ["wall_left", x, y] on the first
 # rock to the left, ["wall_right", x, y], ["at", x, y] exactly.
@@ -158,6 +162,10 @@ static func _apply(map: Node2D, op: Array) -> void:
 			map.water_rect(_rect(op, 1))
 		"copper":
 			map.copper_rect(_rect(op, 1))
+		"sand", "clay", "lava", "hard", "bedrock":
+			map.material_rect(_rect(op, 1), _kind(map, String(op[0])))
+		"sand_disc", "clay_disc":
+			map.material_circle(Vector2(op[1], op[2]), float(op[3]), _kind(map, String(op[0]).trim_suffix("_disc")))
 		"tunnel":
 			var a := Vector2(op[1], op[2])
 			var b := Vector2(op[3], op[4])
@@ -186,6 +194,22 @@ static func _apply(map: Node2D, op: Array) -> void:
 				map.erase_rect(Rect2(float(op[1]) - w * 0.5, float(op[2]) + i * 4.0, w, 4.0))
 		_:
 			push_error("unknown terrain op " + String(op[0]))
+
+
+static func _kind(map: Node2D, name: String) -> int:
+	match name:
+		"sand":
+			return map.CELL_SAND
+		"clay":
+			return map.CELL_CLAY
+		"lava":
+			return map.CELL_LAVA
+		"hard":
+			return map.CELL_HARD
+		"bedrock":
+			return map.CELL_BEDROCK
+		_:
+			return map.CELL_ROCK
 
 
 # The scene's loose lumps, on the world as built (the bitmap world's

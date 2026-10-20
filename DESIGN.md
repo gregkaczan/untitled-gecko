@@ -7,8 +7,8 @@ This repo answers the first question in that document's next steps: is
 moving the gecko around a cave fun on its own? The world is the GPU
 particle sim from untitled-idle-shooter (`sim.gd`, `shaders/*.glsl`),
 read back every tick as one cell class per 4 px render pixel (air,
-water, solid, lava) into the same 480x270 grid the gecko's queries run
-on (`sim_map.gd`). The CPU bitmap stand-in (`cave_map.gd`) is still
+water, static solid, lava, loose grain, a lump's id) into the same
+480x270 grid the gecko's queries run on (`sim_map.gd`). The CPU bitmap stand-in (`cave_map.gd`) is still
 there behind `GECKO_WORLD=bitmap`: it starts instantly, runs headless,
 and the particle world is built from its generator. `chain.gd`,
 `blob_layer.gd` and the metaball shader also come from the shooter.
@@ -27,10 +27,35 @@ comes apart where bonds are broken or stretched past their limit (clay
 sooner than stone), and its cells read back as 16 + the chunk id, so
 the CPU can tell a lump from the ground and trace the piece the tongue
 is stuck to. The tongue's drag and the walk's shove (a pull on a whole
-chunk), a swallow and a strike's break are capsule slots of their own.
+chunk), a swallow and a strike's break are capsule slots of their own,
+and so is the body: two capsules along the drawn chain that shove
+loose grains out of their way every tick, so sand poured on the gecko
+piles on its back instead of passing through it.
 The local rendering
 device does not exist headless, so sim runs need the window (movie
 mode is fine, on a virtual display too).
+
+Materials (`sim.gd`'s table, the shooter's with two slots renamed):
+sand and clay are loose grains, rock, hard rock, copper and bedrock
+are static (held in place by their yield), stone is the loose stuff of
+lumps, water and lava liquids. Each has a give, the chance a bite
+takes a particle: all of rock, two fifths of hard rock (a hole takes
+several bites), none of bedrock; the brush takes anything. A grain at
+rest sleeps, and wakes when the cell under it reads open, or when it
+could slide (the cell beside it and the one under that both open), so
+a bed of sand stays put until it is undermined, then pours and slumps
+to the cells' diagonal (`pbd_predict.glsl`); without this the solver,
+which moves only what is awake, left sand hanging over a bite. Loose
+grains read back as their own class, so the rule that stops loose
+matter entering static solid (`pbd_finalize.glsl`) lets a heap flow,
+and the gecko can tell sand from rock: ground to its senses (walked
+on, climbed, bitten), and no wall to its walk, which goes on through
+grains at a third of its speed with the body's push shoving them
+aside (burrowing: a buried gecko digs itself out by walking). The
+bitmap stand-in has every kind as a cell (`cave_map.gd`), sand and
+clay as ground like rock, lava as a drawn pool, so the headless suite
+is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
+`hard`, `bedrock`) and discs. The gecko does nothing about lava yet.
 
 ## Rules the gecko follows
 
@@ -71,12 +96,18 @@ mode is fine, on a virtual display too).
   surface is right under it, in which case the feet step again. An
   unplanted foot closes on its rest spot at a set speed, never in one
   snap, and a stretched leg keeps enough blobs along it to stay one limb.
-- Chewing bites a 13 px circle toward the cursor; with no key held the
-  body creeps after the bite, turning its up vector so its walking line
-  follows the bite when the bite line finds rock (head first down a
-  shaft). The aim snaps to a world axis within 15 degrees. Gamepad and
-  the demo pilot bite in the input direction, anchored to the row the
-  gecko stands on, so a tunnel comes out level.
+- Chewing is eating: a bite every 0.4 s, the jaw opening through the
+  cycle and the bite (a circle of about 11 px, a little off and a
+  little different each time) landing as it shuts, toward the cursor.
+  With rock in reach of the bites the walk slows to 45 px/s, so a
+  tunnel is eaten through at about a third of walking speed, slower
+  through hard rock (each bite takes two fifths of it) and not at all
+  through bedrock; in the open the chew key costs nothing. With no key
+  held the body creeps after the bite, turning its up vector so its
+  walking line follows the bite when the bite line finds rock (head
+  first down a shaft). The aim snaps to a world axis within 15
+  degrees. Gamepad and the demo pilot bite in the input direction,
+  anchored to the row the gecko stands on, so a tunnel comes out level.
 - Under a ceiling low enough to touch, the body rides halfway between
   floor and ceiling, so a tunnel its own height does not wedge it. A
   body centre that ends up inside rock is pushed out before anything
@@ -98,8 +129,14 @@ mode is fine, on a virtual display too).
   swimming there is nothing to brace on, so the tongue reels the gecko
   in whichever buttons are down. Chewing waits while the tongue is
   out. There is no spit.
-- Loose lumps (B and C drop a boulder or a clump of clay at the cursor,
-  N a heap of sand, which is plain loose sand and flows; the generated
+- Loose grains (a bed or heap of sand, a bank of clay: N drops a heap
+  at the cursor and held pours one) are ground to the senses, walked
+  on, climbed and bitten like rock, but no wall to the walk: a move
+  that only grains block goes on through them at a third of walking
+  speed, the body's push shoving them aside. Sand poured on the gecko
+  piles on its back and buries it, and it walks out.
+- Loose lumps (B and C drop a boulder or a clump of clay at the cursor;
+  the generated
   cave has a few of each) are solid to stand on, stepped over when
   they are pebbles (6 cells or fewer) and climbed when wedged; on the
   ground the gecko's senses (the surface rays, the probe, the gap and
@@ -297,9 +334,11 @@ quits, for a look at the layout.
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots
 the tongue: a tap strikes, a hold grapples, and with the right button
-held as well it sticks and drags. Right mouse chews at the cursor. Ctrl+right erases, middle
+held as well it sticks and drags. Right mouse chews at the cursor. Ctrl+right erases (anything,
+bedrock too), middle
 fills, wheel sizes the brush; B, C and N drop a boulder, a clump of
-clay or a heap of sand at the cursor, half the brush's size. R starts
+clay or a heap of sand at the cursor, half the brush's size, and N
+held pours sand there. R starts
 the cave again (a fresh chamber when in a generated one), 1 and 2
 pick the gecko's pixel grid.
 Tab loads the next scene from the movement suite (built in whichever
@@ -330,14 +369,22 @@ movie-mode frames into a contact sheet cropped around the gecko.
 
 The movement suite is the regression gate for any movement change:
 
-- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 102 scenes
+- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 105 scenes
   built from terrain primitives on the bitmap map, each with a spawn and
   scripted input: flat floor, slopes, steps, bumps, corners, overhangs,
   gaps, crevices, ceilings, tunnels, landings, water, generated caves,
   cursor digs, squeezes (low passages, slots, a chewed passage, holes
   at the floor through walls 12 and 24 px thick, a hole 40 px up a wall
-  entered from the climb) and an idle stand on the flat for the idle
-  animations. `GECKO_SCENE=name[:script]` runs one and quits when the
+  entered from the climb), an idle stand on the flat for the idle
+  animations, and three for the particle world only (`sim_only`, run
+  with `tools/record.sh`): `sand_bed`, a bed of sand on the floor and
+  a trench of it on bedrock, walked over and back and dug into;
+  `sand_hopper`, a hopper of sand over a low pocket whose plate is
+  bitten open from below, the sand pouring over the gecko, which
+  burrows out; `materials`, every material in a row (sand, clay,
+  water, lava, hard rock, bedrock, copper, a stone and a clump of
+  clay) for the brush and the keys to try. `GECKO_SCENE=name[:script]`
+  runs one and quits when the
   script ends; `GECKO_SEED` fixes the random bites and steps.
 - `tools/suite.sh [filter]` runs every scene headless at fixed fps
   (about twelve seconds for the lot, `JOBS` in parallel) into `runs/`

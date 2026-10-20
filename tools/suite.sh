@@ -34,6 +34,8 @@ run_one() {
   local spec="$1"
   local dir="$OUT/${spec/:/\/}"
   mkdir -p "$dir"
+  # Godot would otherwise import every recorded frame as a texture.
+  touch "$OUT/.gdignore"
   if [[ "$FRAMES" == 1 && "$ONSCREEN" != 1 ]] && command -v xvfb-run >/dev/null; then
     rm -f "$dir"/f*.png
     VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \

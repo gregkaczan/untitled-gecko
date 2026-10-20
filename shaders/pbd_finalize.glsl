@@ -8,7 +8,7 @@ const uint GW = 160u, GH = 90u, MPC = 32u, PC = 129600u;
 const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN = 1512136u;
 const uint O_NF = 2030536u;
 const uint O_NP = 2059336u;
-const uint O_CT = 2073870u;   // cell class per render pixel, last tick's (render_write.glsl): 2 is static solid
+const uint O_CT = 2073870u;   // cell class per render pixel, last tick's (render_write.glsl): 2 is static solid, 4 a loose grain
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); }
@@ -169,8 +169,9 @@ void main() {
     // density constraint alone lets water, sand and a lump's particles
     // seep through the rock lattice (rock's rest density is above its
     // lattice's, so it pulls neighbours in), and sealed sand and deep
-    // water spread through the walls. A chunk's cells (16 and up) are
-    // not static: lumps still meet each other through the solver.
+    // water spread through the walls. A chunk's cells (16 and up) and
+    // loose grains (4) are not static: lumps and heaps still meet each
+    // other through the solver.
     if (yield_s < 5.0 && mat != 8u && mat != 9u) {
         float psz = rf(O_P + 18u);
         uint rw = uint(rf(O_P + 16u)), rh = uint(rf(O_P + 17u));

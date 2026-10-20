@@ -12,7 +12,7 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN
 const uint O_WD = 1641736u;
 const uint O_LD = 1771336u;
 const uint O_CD = 1900936u;
-const uint O_CT = 2073870u;   // cell class per pixel: 0 air, 1 water, 2 solid, 3 lava
+const uint O_CT = 2073870u;   // cell class per pixel: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 

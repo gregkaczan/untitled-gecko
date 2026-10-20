@@ -219,16 +219,20 @@ void main() {
         uint slot = O_CAP + c * 8u;
         if (rf(slot + 6u) < 0.5) continue;
         // Modes below -1.5 are chunk events, pbd_predict's; a pusher (-1,
-        // the gecko walking into a lump) is nothing to the ground.
+        // the gecko's body) is nothing to the ground or to a lump.
         float mode = rf(slot + 7u);
         if (mode < -1.5) continue;
-        if (mode < -0.5 && yield_s >= 5.0) continue;
+        if (mode < -0.5 && (yield_s >= 5.0 || bonded)) continue;
         vec2 cpos = vec2(rf(slot), rf(slot + 1u));
         vec2 cdir = vec2(rf(slot + 2u), rf(slot + 3u));
         float cr = rf(slot + 4u), chl = rf(slot + 5u);
         vec2 c_a = cpos - cdir * chl;
         vec2 c_b = cpos + cdir * chl;
-        if (capsule_dist(vec2(px, py), c_a, c_b) < cr + 5.0) near_cap = true;
+        // A bite loosens the grains round it; the body's pusher wakes
+        // only what it is actually in, so walking over a bed of sand
+        // leaves the bed asleep.
+        float reach = (mode < -0.5) ? 0.0 : 5.0;
+        if (capsule_dist(vec2(px, py), c_a, c_b) < cr + reach) near_cap = true;
     }
 
     bool near_any_drill = near_drill || near_cap;
@@ -509,12 +513,18 @@ void main() {
             if (melt > 0.0) {
                 // Melter: ground erodes at the melt rate and nothing is pushed,
                 // so the ground thins out in place instead of piling up.
+                // The rate is scaled by how the material gives to a bite
+                // (the table's column 9: 1 for most, less for hard rock,
+                // 0 for bedrock, which no bite opens); a melt of 2 or more
+                // is the brush, which takes anything.
                 bool ground = (mat_i < 8u && mat_i != 1u) || mat_i == 12u;
                 if (ground) {
+                    float rate = 1.0;
+                    if (melt < 1.5) rate = melt * ((mat_i < 8u) ? rf(O_M + mat_i * 12u + 9u) : 1.0);
                     uint hsh = (id * 2654435761u) ^ (tick * 2246822519u);
                     hsh = hsh * 747796405u + 2891336453u;
                     float rnd = float(hsh >> 16u) / 65535.0;
-                    if (rnd < melt) {
+                    if (rnd < rate) {
                         if (mat_i == 12u) push_impact(px, py, KIND_PURPLE);
                         kill_particle(b);
                         buf.d[bd] = 0u;
@@ -524,15 +534,10 @@ void main() {
                 }
                 continue;
             } else {
-                // A pusher (the gecko's body walking into a lump) moves
-                // loose material only; the ground it stands on stays.
-                if (melt < -0.5 && yield_s >= 5.0) continue;
-                if (mat_i >= 5u && mat_i <= 7u) {
-                    // Ore: remove the particle and add to the global ore counters.
-                    kill_particle(b);
-                    atomicAdd(buf.d[O_M + 9u + (mat_i - 5u)], 1u);
-                    return;
-                }
+                // A pusher (the gecko's body, mode -1) shoves loose grains
+                // out of its way and nothing else: the ground it stands on
+                // stays, and a lump is moved as one by the pull slot.
+                if (melt < -0.5 && (yield_s >= 5.0 || bonded)) continue;
                 if (mat_i == 12u) {
                     // Purple ore detonates when carved.
                     push_impact(px, py, KIND_PURPLE);

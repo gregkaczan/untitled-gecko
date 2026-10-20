@@ -16,9 +16,10 @@
 # hits on a tap, grapples on a hold, and sticks and drags it in when the
 # right button is held too; right alone chews toward the cursor, and
 # with no key held the gecko
-# tunnels after the bite. B, C and N drop a boulder, a clump of clay or
-# a heap of sand at the cursor, half the brush's size. The generated
-# cave gets a few lumps and heaps of its own (_scatter_chunks).
+# tunnels after the bite, a bite every CHEW_PERIOD. B, C and N drop a
+# boulder, a clump of clay or a heap of sand at the cursor, half the
+# brush's size, and N held pours sand there. The generated cave gets a
+# few lumps and heaps of its own (_scatter_chunks).
 # GECKO_DEMO=1 in the environment replaces the keyboard with a scripted
 # walk so movie-mode frames show the gecko moving without anyone at the keys.
 # GECKO_SCENE=name[:script] runs a test scene from tests/scenes.json the
@@ -425,7 +426,7 @@ func _physics_process(dt: float) -> void:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0:
-		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand   R again   Tab test scene   F1 debug"
+		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
 
@@ -557,14 +558,15 @@ func _process(_dt: float) -> void:
 	if over_panel or get_tree().paused:
 		pass
 	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and Input.is_key_pressed(KEY_CTRL):
-		map.erase_circle(m, brush_r)
+		map.erase_circle(m, brush_r, true)
 	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 		map.fill_circle(m, brush_r)
 	if not over_panel and Input.is_action_just_pressed("drop_boulder"):
 		map.spawn_boulder(m, maxf(brush_r * 0.5, 4.0))
 	if not over_panel and Input.is_action_just_pressed("drop_clay"):
 		map.spawn_clay(m, maxf(brush_r * 0.5, 4.0))
-	if not over_panel and Input.is_action_just_pressed("drop_sand"):
+	# N held pours: the heap tops itself up every frame as it flows away.
+	if not over_panel and Input.is_action_pressed("drop_sand"):
 		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
 	if Input.is_action_just_pressed("regenerate"):
 		if _in_level():

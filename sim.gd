@@ -2,9 +2,17 @@
 # down to what the gecko needs. Every particle is a 4 px block; one SSBO
 # holds parameters, the material table, the spatial hash, the particles,
 # the render buffers, and at its tail a cell-class buffer (air, water,
-# solid, lava per render pixel) that render_write.glsl fills and the CPU
-# reads back every tick. That readback is the gecko's whole world: the
-# same 480x270 grid the bitmap stand-in used.
+# static solid, lava, loose grain per render pixel) that render_write.glsl
+# fills and the CPU reads back every tick. That readback is the gecko's
+# whole world: the same 480x270 grid the bitmap stand-in used.
+#
+# Materials, from the shooter's table: sand (loose, flows), water, clay
+# (loose, sticky), rock (static), stone (the loose stuff of lumps), hard
+# rock (static, slow to chew), copper (static, a vein), bedrock (static,
+# no bite opens it); lava (material 10, never sleeps, glows) is hard
+# coded in the shaders. A grain of sand or clay at rest sleeps, and wakes
+# when the cell under it opens (pbd_predict.glsl), so a bed of sand
+# stays put until it is undermined and then pours.
 #
 # After the cell classes comes a bond record per particle: chunks (a
 # boulder, a stone, a clump of clay) are lumps of loose material whose
@@ -64,12 +72,21 @@ const MAT_WATER := 1
 const MAT_CLAY := 2
 const MAT_ROCK := 3
 const MAT_STONE := 4                             # The shooter's wood slot: loose stone, the stuff of boulders
+const MAT_HARD := 5                              # The shooter's iron slot: hard rock, several bites to open
 const MAT_COPPER := 6                            # A vein: rock that glows, from the map's copper cells
+const MAT_BEDROCK := 7                           # The shooter's gold slot: rock no bite opens
+const MAT_LAVA := 10                             # Hard coded in the shaders, as in the shooter
+const CT_SOLID := 2                              # Cell class of static solid (rock, hard rock, bedrock, copper)
+const CT_LOOSE := 4                              # Cell class of a loose grain (sand, clay, stone off a lump)
 
-# Capsule slots: 0 to 3 melt (chew and brush, in turn), then the pull
-# (the tongue's drag, the walk's shove), and one-shot events (eat, break).
+# Capsule slots: 0 to 3 melt (chew and brush, in turn), the body's two
+# pushers (loose grains shoved out of its way), the pull (the tongue's
+# drag, the walk's shove), and one-shot events (eat, break).
+const SLOT_BODY_A := 4
 const SLOT_PULL := 5
 const SLOT_EVENT := 6
+const SLOT_BODY_B := 7
+const MELT_BRUSH := 2.0                          # A melt mode past 1.5 takes bedrock too (pbd_delta.glsl)
 
 const SHADER_FILES := [
 	"pbd_predict", "grid_clear", "grid_insert",
@@ -106,7 +123,7 @@ var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
-	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl, render_clear.glsl and pbd_finalize.glsl")
+	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
 	assert(O_BD == 2203470, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
@@ -209,10 +226,36 @@ func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length:
 	_capsules.encode_float(base + 28, mode)
 
 
-# Deletes every ground particle in the circle on the next tick.
-func melt_circle(pos: Vector2, radius: float, slot: int) -> void:
-	set_capsule(slot, pos, Vector2.RIGHT, radius, 0.0, true, 1.0)
+# A bite: deletes the ground particles in the circle on the next tick,
+# each with the chance its material gives (the table's give column:
+# all of rock, a part of hard rock, none of bedrock). The brush (force)
+# takes everything.
+func melt_circle(pos: Vector2, radius: float, slot: int, force := false) -> void:
+	set_capsule(slot, pos, Vector2.RIGHT, radius, 0.0, true, MELT_BRUSH if force else 1.0)
 	_capsule_once[slot] = true
+
+
+# The gecko's body as two capsules (head to mid-body, mid-body to the
+# tail's root) that shove loose grains out of their way every tick, so
+# sand poured on the gecko piles on its back instead of passing through
+# it, and a body burrowing through a heap pushes the grains aside. The
+# ground and lumps are untouched (pbd_delta.glsl, mode -1).
+func set_body_capsules(a0: Vector2, a1: Vector2, ra: float, b0: Vector2, b1: Vector2, rb: float) -> void:
+	_set_segment(SLOT_BODY_A, a0, a1, ra)
+	_set_segment(SLOT_BODY_B, b0, b1, rb)
+
+
+func clear_body_capsules() -> void:
+	set_capsule(SLOT_BODY_A, Vector2.ZERO, Vector2.DOWN, 1.0, 1.0, false)
+	set_capsule(SLOT_BODY_B, Vector2.ZERO, Vector2.DOWN, 1.0, 1.0, false)
+
+
+func _set_segment(slot: int, a: Vector2, b: Vector2, radius: float) -> void:
+	var mid := (a + b) * 0.5
+	var d := b - a
+	var half := d.length() * 0.5
+	var dir := d / (half * 2.0) if half > 0.001 else Vector2.RIGHT
+	set_capsule(slot, mid, dir, radius, half, true, -1.0)
 
 
 # Moves the whole of chunk id along dir at speed (px/s) on the next
@@ -406,7 +449,6 @@ func _update_params() -> void:
 	p.encode_float(156, 0.0)      # [39] active particle counter
 	_rd.buffer_update(_buf, 0, 160, p)
 	_rd.buffer_update(_buf, O_CAP * 4, _capsules.size(), _capsules)
-	_rd.buffer_update(_buf, (O_M + 9) * 4, 12, _zero12)
 	_rd.buffer_update(_buf, (O_P + 34) * 4, 4, _zero4)
 	_rd.buffer_update(_buf, O_FB * 4, 12, _zero12)
 
@@ -477,26 +519,35 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 	_wf(data, O_P + 17, float(RENDER_H))
 	_wf(data, O_P + 18, PIXEL_SZ)
 
-	# [rest_density, stiffness, viscosity, cohesion, friction, yield, R, G, B, pad, pad, pad]
+	# [rest_density, stiffness, viscosity, cohesion, friction, yield, R, G, B, give, pad, pad]
+	# A yield of 5 or more holds a particle in place as rock is held
+	# (pbd_predict.glsl): the static materials. Give is the chance a
+	# bite takes a particle (pbd_delta.glsl): 1 for most, less for hard
+	# rock, 0 for bedrock.
 	# Sand: pale and warm, so a heap of it reads apart from the ground.
-	var sand :=   [3.0, 1.0, 0.02,  0.0, 0.3, 0.0, 0.64, 0.56, 0.38, 0.0, 0.0, 0.0]
-	var water :=  [1.8, 1.2, 0.008, 0.0, 0.0, 0.0, 0.15, 0.40, 0.85, 0.0, 0.0, 0.0]
-	var clay :=   [3.5, 0.8, 0.15,  0.4, 0.4, 0.2, 0.55, 0.38, 0.25, 0.0, 0.0, 0.0]
-	var rock :=   [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.34, 0.29, 0.25, 0.0, 0.0, 0.0]
+	var sand :=    [3.0, 1.0, 0.02,  0.0, 0.3, 0.0, 0.64, 0.56, 0.38, 1.0, 0.0, 0.0]
+	var water :=   [1.8, 1.2, 0.008, 0.0, 0.0, 0.0, 0.15, 0.40, 0.85, 1.0, 0.0, 0.0]
+	var clay :=    [3.5, 0.8, 0.15,  0.4, 0.4, 0.2, 0.55, 0.38, 0.25, 1.0, 0.0, 0.0]
+	var rock :=    [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.34, 0.29, 0.25, 1.0, 0.0, 0.0]
 	# Stone: the 4 px lattice's own density, no yield (its bonds hold
 	# the shape), some friction so a lump stops rolling; pale, so a lump
 	# stands out from the ground it lies on.
-	var wood :=   [3.0, 1.2, 0.02,  0.0, 0.5, 0.0, 0.60, 0.58, 0.54, 0.0, 0.0, 0.0]
-	var iron :=   [3.8, 1.5, 0.00,  0.6, 0.5, 2.0, 0.30, 0.55, 0.90, 0.0, 0.0, 0.0]
-	# Copper: a yield of 5 or more holds a particle in place as rock is
-	# held (pbd_predict.glsl), so a vein stays in its wall.
-	var copper := [3.5, 1.3, 0.00,  0.5, 0.4, 8.0, 0.95, 0.50, 0.10, 0.0, 0.0, 0.0]
-	var gold :=   [4.5, 1.8, 0.00,  0.7, 0.6, 2.5, 1.00, 0.88, 0.08, 0.0, 0.0, 0.0]
-	var mats := [sand, water, clay, rock, wood, iron, copper, gold]
+	var stone :=   [3.0, 1.2, 0.02,  0.0, 0.5, 0.0, 0.60, 0.58, 0.54, 1.0, 0.0, 0.0]
+	# Hard rock: rock in all but colour (cooler, darker) and give, so a
+	# hole takes several bites.
+	var hard :=    [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.27, 0.27, 0.31, 0.4, 0.0, 0.0]
+	# Copper: static, so a vein stays in its wall.
+	var copper :=  [3.5, 1.3, 0.00,  0.5, 0.4, 8.0, 0.95, 0.50, 0.10, 1.0, 0.0, 0.0]
+	# Bedrock: no bite opens it; the dark slab under everything.
+	var bedrock := [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.19, 0.18, 0.23, 0.0, 0.0, 0.0]
+	var mats := [sand, water, clay, rock, stone, hard, copper, bedrock]
 	for mi in mats.size():
 		for fi in 12:
 			_wf(data, O_M + mi * 12 + fi, mats[mi][fi])
 
+	# The cell classes start as the map says (the first predict pass
+	# reads them before any render pass has written them), so a bed of
+	# sand does not see air under it and wake on the first tick.
 	var idx := 0
 	for yi in RENDER_H:
 		for xi in RENDER_W:
@@ -512,11 +563,15 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 			else:
 				var x := clampf(xi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_W - 1.0)
 				var y := clampf(yi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_H - 1.0)
-				var mat := MAT_ROCK
-				if kind == CaveMap.CELL_WATER:
-					mat = MAT_WATER
-				elif kind == CaveMap.CELL_COPPER:
-					mat = MAT_COPPER
+				var mat := material_of(kind)
+				var cls := CT_SOLID
+				if mat == MAT_WATER:
+					cls = 1
+				elif mat == MAT_LAVA:
+					cls = 3
+				elif mat == MAT_SAND or mat == MAT_CLAY:
+					cls = CT_LOOSE
+				data.encode_u32((O_CT + yi * RENDER_W + xi) * 4, cls)
 				_wf(data, b + 0, x)
 				_wf(data, b + 1, y)
 				_wf(data, b + 4, x)
@@ -527,6 +582,27 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 			_wf(data, b + 6, 0.0)
 			idx += 1
 	return data
+
+
+# The material a cell of the map's kind is built from.
+static func material_of(kind: int) -> int:
+	match kind:
+		CaveMap.CELL_WATER:
+			return MAT_WATER
+		CaveMap.CELL_COPPER:
+			return MAT_COPPER
+		CaveMap.CELL_SAND:
+			return MAT_SAND
+		CaveMap.CELL_CLAY:
+			return MAT_CLAY
+		CaveMap.CELL_LAVA:
+			return MAT_LAVA
+		CaveMap.CELL_HARD:
+			return MAT_HARD
+		CaveMap.CELL_BEDROCK:
+			return MAT_BEDROCK
+		_:
+			return MAT_ROCK
 
 
 func _wf(data: PackedByteArray, offset: int, value: float) -> void:

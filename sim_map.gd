@@ -5,7 +5,8 @@
 # deletes particles, a fill spawns them. Chunks (loose lumps) read back
 # as 16 + their id per cell, so the gecko can tell a lump from the
 # ground, trace the piece the tongue is stuck to, push it, drag it,
-# break it and swallow it.
+# break it and swallow it. Loose grains (sand, clay) read back as their
+# own class: ground to the senses, no wall to a body burrowing through.
 extends "res://cave_map.gd"
 
 var sim: Node2D
@@ -44,7 +45,18 @@ func is_solid(x: int, y: int) -> bool:
 	var c := _cls(x, y)
 	if c >= sim.CT_CHUNK:
 		return not ignore_chunks
-	return c == 2 or c == 3
+	if c == sim.CT_LOOSE:
+		return not ignore_loose
+	return c == sim.CT_SOLID
+
+
+# A loose grain's cell (sand, clay, the stone of a broken lump).
+func is_loose(x: int, y: int) -> bool:
+	return _cls(x, y) == sim.CT_LOOSE
+
+
+func loose_at_world(p: Vector2) -> bool:
+	return is_loose(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
 
 
 func is_water(x: int, y: int) -> bool:
@@ -98,10 +110,16 @@ func chunk_piece(id: int, p: Vector2, limit := 400) -> PackedVector2Array:
 
 
 # Chew and brush share four melt slots in turn, so several bites in one
-# tick all land.
-func erase_circle(p: Vector2, radius: float) -> void:
-	sim.melt_circle(p, radius, _slot)
+# tick all land. A bite takes what the material gives (all of rock, a
+# part of hard rock, none of bedrock); the brush (force) takes anything.
+func erase_circle(p: Vector2, radius: float, force := false) -> void:
+	sim.melt_circle(p, radius, _slot, force)
 	_slot = (_slot + 1) % 4
+
+
+# The body's push on loose grains: two capsules along it, every tick.
+func body_capsules(a0: Vector2, a1: Vector2, ra: float, b0: Vector2, b1: Vector2, rb: float) -> void:
+	sim.set_body_capsules(a0, a1, ra, b0, b1, rb)
 
 
 func pull_chunk(id: int, tip: Vector2, dir: Vector2, speed: float) -> void:
@@ -141,3 +159,11 @@ func fill_rect(r: Rect2) -> void:
 
 func copper_rect(r: Rect2) -> void:
 	sim.fill_rect(r, sim.MAT_COPPER)
+
+
+func material_rect(r: Rect2, kind: int) -> void:
+	sim.fill_rect(r, sim.material_of(kind))
+
+
+func material_circle(p: Vector2, radius: float, kind: int) -> void:
+	sim.fill_circle(p, radius, sim.material_of(kind))

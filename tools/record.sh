@@ -14,7 +14,9 @@ cd "$(dirname "$0")/.."
 spec="$1"
 dir="frames/${spec/:/\/}"
 mkdir -p "$dir"
-rm -f "$dir"/f*.png
+# Godot would otherwise import every recorded frame as a texture.
+touch frames/.gdignore
+rm -f "$dir"/f*.png "$dir"/f*.png.import
 export GODOT="${GODOT:-$HOME/.local/bin/godot}"
 if [[ "${ONSCREEN:-0}" == 1 ]]; then
   GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
