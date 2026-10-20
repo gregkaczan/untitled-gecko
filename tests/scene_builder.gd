@@ -29,8 +29,10 @@
 class_name SceneBuilder
 extends RefCounted
 
+const CaveMapScript = preload("res://cave_map.gd")
 const PATH := "res://tests/scenes.json"
 const LEVELS_DIR := "res://levels"
+const STAMPS_DIR := "res://decor/stamps"
 
 
 # Every level file in levels/ (the clutch, and what the editor saves).
@@ -196,10 +198,11 @@ static func _apply(map: Node2D, op: Array) -> void:
 		"sand", "clay", "lava", "hard", "bedrock":
 			map.material_rect(_rect(op, 1), _kind(map, String(op[0])))
 		"decor":
-			# ["decor", name, x, y, "floor" | "ceiling"]: a stamp from DECOR
-			# set cell by cell on the first floor below (x, y), or hanging
-			# from the first ceiling above, only where there is air.
-			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor")
+			# ["decor", name, x, y, "floor" | "ceiling", flags]: a stamp (a
+			# PNG in decor/stamps, or a DECOR table) set cell by cell on the
+			# first floor below (x, y), or hanging from the first ceiling
+			# above, only where there is air; flags "h" mirrors, "v" flips.
+			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor", String(op[5]) if op.size() > 5 else "")
 		"moss":
 			# ["moss", x, y, w, h]: the rock faces inside the rect are coated.
 			map.coat_moss(_rect(op, 1))
@@ -303,19 +306,129 @@ static func _column(map: Node2D, x: float, y0: float, y1: float, w: float, seed_
 		map.fill_rect(Rect2(cx - rw * 0.5, y0 + r * cell, rw, cell))
 
 
-# For the editor: a stamp or a cone placed by hand.
-static func stamp(map: Node2D, name: String, at: Vector2, where: String) -> void:
-	_stamp(map, name, at, where)
+# The stamps drawn as PNGs (decor/stamps; tools/decor_split.py cuts
+# them into pieces): name -> {w, h, cells, img}, the cells px, py in
+# the image and the kind of each (CaveMap.CELL_DECOR plus the palette
+# colour nearest the pixel; the pale greens of a shroom group glow). Read
+# from the files themselves, once, so no import is needed and the
+# headless suite sees them too.
+const GLOW_GROUPS := ["cluster", "tall_a", "tall_b", "shroom_s"]
+const GLOW_COLOURS := [11, 12]
+static var _png_stamps := {}
+static var _png_loaded := false
+
+
+static func png_stamps() -> Dictionary:
+	if _png_loaded:
+		return _png_stamps
+	_png_loaded = true
+	var dir := DirAccess.open(STAMPS_DIR)
+	if dir == null:
+		return _png_stamps
+	var names: Array = []
+	for f in dir.get_files():
+		if f.ends_with(".png"):
+			names.append(f.trim_suffix(".png"))
+	names.sort()
+	for name in names:
+		var bytes := FileAccess.get_file_as_bytes(STAMPS_DIR + "/" + name + ".png")
+		if bytes.is_empty():
+			continue
+		var img := Image.new()
+		if img.load_png_from_buffer(bytes) != OK:
+			continue
+		_png_stamps[name] = _stamp_from_image(name, img)
+	return _png_stamps
+
+
+static func _stamp_from_image(name: String, img: Image) -> Dictionary:
+	img.convert(Image.FORMAT_RGBA8)
+	var w := img.get_width()
+	var h := img.get_height()
+	var cells := PackedInt32Array()
+	var glows := stamp_group(name) in GLOW_GROUPS
+	var pal: Array[Color] = CaveMapScript.DECOR_PALETTE
+	for y in h:
+		for x in w:
+			var c := img.get_pixel(x, y)
+			if c.a < 0.5:
+				continue
+			var best := 0
+			var bd := INF
+			for i in pal.size():
+				var d := (pal[i].r - c.r) ** 2 + (pal[i].g - c.g) ** 2 + (pal[i].b - c.b) ** 2
+				if d < bd:
+					bd = d
+					best = i
+			cells.append(x)
+			cells.append(y)
+			cells.append(CaveMapScript.decor_kind(best, glows and best in GLOW_COLOURS))
+	return {"w": w, "h": h, "cells": cells, "img": img}
+
+
+# A stamp's group: its name without the take number and the piece
+# (cluster_2_p1 is cluster), so the editor can pick among a group.
+static func stamp_group(name: String) -> String:
+	var t := name.split("_")
+	while t.size() > 1:
+		var last: String = t[t.size() - 1]
+		var piece := last.length() >= 2 and (last[0] == "p" or last[0] == "s") and last.substr(1).is_valid_int()
+		if last.is_valid_int() or piece:
+			t.remove_at(t.size() - 1)
+		else:
+			break
+	return "_".join(t)
+
+
+# For the editor: a stamp or a cone placed by hand. Returns the cells set.
+static func stamp(map: Node2D, name: String, at: Vector2, where: String, flags := "") -> Array:
+	return _stamp(map, name, at, where, flags)
 
 
 static func cone(map: Node2D, at: Vector2, h: float, down: bool) -> void:
 	_cones(map, at.x - 2.0, at.x + 2.0, at.y, 1, int(at.x) + int(at.y), h, h, 1.0 if down else -1.0)
 
 
-static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> void:
-	if not DECOR.has(name):
-		push_error("unknown decor " + name)
-		return
+# The world rect a stamp would cover at `at`, air or not: the editor's
+# brush keeps stamps apart by it.
+static func stamp_rect(map: Node2D, name: String, at: Vector2, where: String) -> Rect2:
+	var cell: float = map.CELL
+	var w := 0
+	var h := 0
+	var png: Dictionary = png_stamps().get(name, {})
+	if not png.is_empty():
+		w = png.w
+		h = png.h
+	elif DECOR.has(name):
+		var s := maxi(int(round(4.0 / cell)), 1)
+		var x0 := 0
+		var x1 := 0
+		var y1 := 0
+		for c in DECOR[name]:
+			x0 = mini(x0, c[0])
+			x1 = maxi(x1, c[0])
+			y1 = maxi(y1, c[1])
+		w = (x1 - x0 + 1) * s
+		h = y1 * s
+	else:
+		return Rect2(at, Vector2.ZERO)
+	var cx := int(floor(at.x / cell)) - w / 2
+	var cy: int
+	if where == "ceiling":
+		cy = int(floor(map.ceiling_above(at).y / cell))
+	else:
+		cy = int(floor(map.floor_below(at).y / cell)) - h
+	return Rect2(cx * cell, cy * cell, w * cell, h * cell)
+
+
+# A stamp at `at`: a PNG stamp stands on the first floor below the point
+# (its bottom row on the floor) or hangs from the first ceiling above
+# (its top row under it), as drawn; flags "h" mirrors it, "v" turns it
+# upside down. A DECOR table is on the 4 px grid (each entry a block of s
+# by s cells on a finer one) and hangs upside down from a ceiling. Only
+# air cells are set. Returns the cells set, [x, y, kind] each.
+static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags := "") -> Array:
+	var out: Array = []
 	var cell: float = map.CELL
 	var cx := int(floor(at.x / cell))
 	var cy: int
@@ -327,8 +440,29 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> voi
 	else:
 		var f: Vector2 = map.floor_below(at)
 		cy = int(floor(f.y / cell))       # The first solid row of the floor
-	# The tables are on the 4 px grid: each entry fills a block of s by s
-	# cells on a finer one, so a stamp keeps its size in px.
+	var png: Dictionary = png_stamps().get(name, {})
+	if not png.is_empty():
+		var w: int = png.w
+		var h: int = png.h
+		var cells: PackedInt32Array = png.cells
+		var mirror := flags.contains("h")
+		var flip := flags.contains("v")
+		for i in range(0, cells.size(), 3):
+			var px := cells[i]
+			var py := cells[i + 1]
+			if mirror:
+				px = w - 1 - px
+			if flip:
+				py = h - 1 - py
+			var x := cx + px - w / 2
+			var y := cy - (h - py) if dir < 0 else cy + 1 + py
+			if not map.is_solid(x, y) and not map.is_water(x, y):
+				map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), cells[i + 2])
+				out.append([x, y, cells[i + 2]])
+		return out
+	if not DECOR.has(name):
+		push_error("unknown decor " + name)
+		return out
 	var s := maxi(int(round(4.0 / cell)), 1)
 	for c in DECOR[name]:
 		for j in s:
@@ -337,6 +471,8 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> voi
 				var y: int = cy + dir * (c[1] * s + j)
 				if not map.is_solid(x, y) and not map.is_water(x, y):
 					map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
+					out.append([x, y, int(c[2])])
+	return out
 
 
 static func _kind(map: Node2D, name: String) -> int:

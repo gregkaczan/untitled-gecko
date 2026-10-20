@@ -19,6 +19,7 @@ signal sense_changed(cell: float)   # The senses' grid: 2 px (the sim's cells) o
 signal crumb_changed(n: int)        # Crumbs of up to n cells are air to the senses and loosened by the body's touch; 0 for none
 signal overlay_changed(on: bool)
 signal light_changed(on: bool)
+signal anim_requested(name: String)   # The gecko's sprite animations (decor/gecko/wake): "curl" to sleep, "wake" up (main.gd play_anim)
 
 const WIDTH := 300.0
 
@@ -61,6 +62,11 @@ func _ready() -> void:
 	col.add_child(row)
 	row.add_child(_button("Main cave", func() -> void: main_cave.emit()))
 	row.add_child(_button("Reload", func() -> void: reload.emit()))
+	var anim_row := HBoxContainer.new()
+	col.add_child(anim_row)
+	anim_row.add_child(_label("Anim"))
+	anim_row.add_child(_button("Curl", func() -> void: anim_requested.emit("curl")))
+	anim_row.add_child(_button("Wake", func() -> void: anim_requested.emit("wake")))
 
 	col.add_child(HSeparator.new())
 	col.add_child(_heading("World"))

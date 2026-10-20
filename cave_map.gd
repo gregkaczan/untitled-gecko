@@ -55,6 +55,25 @@ const CELL_SHROOM := 9         # Glowshroom: decor that is ground to the gecko a
 const CELL_MOSS := 10          # Slippery moss: a coat on rock, solid, but the feet cannot hold it off a floor; a bite takes it
 const CELL_CRUMBLE := 11       # Crumbling rock: gives way under a hold of a second (gecko.gd), to grains in the sim
 const CELL_GAS := 12           # A gas pocket: air that bursts when a bite opens it (main.gd)
+const CELL_DECOR := 16         # Decor, 16 to 47: a stamp's pixel (tests/scene_builder.gd), its colour DECOR_PALETTE[kind - 16 & 15], a glow from 32 up; solid, ground to the gecko, gone with a bite
+const DECOR_PALETTE: Array[Color] = [   # The decor stamps' 16 colours (decor/palette.png; render_write.glsl holds the same)
+	Color(0.024, 0.043, 0.016),
+	Color(0.114, 0.176, 0.086),
+	Color(0.137, 0.224, 0.118),
+	Color(0.212, 0.255, 0.145),
+	Color(0.251, 0.325, 0.180),
+	Color(0.286, 0.333, 0.161),
+	Color(0.278, 0.373, 0.220),
+	Color(0.388, 0.416, 0.267),
+	Color(0.451, 0.557, 0.369),
+	Color(0.565, 0.584, 0.431),
+	Color(0.580, 0.616, 0.455),
+	Color(0.631, 0.702, 0.529),
+	Color(0.710, 0.804, 0.608),
+	Color(0.804, 0.824, 0.655),
+	Color(0.839, 0.871, 0.702),
+	Color(0.945, 0.933, 0.788),
+]
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
@@ -162,7 +181,7 @@ func is_solid(x: int, y: int) -> bool:
 		return true
 	var v := solid[y * W + x]
 	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK \
-			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE
+			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE or v >= CELL_DECOR
 
 
 # Loose grains live in the particle world only (sim_map.gd): here a bed
@@ -587,6 +606,11 @@ func fill_above_line(a: Vector2, b: Vector2) -> void:
 	_repaint(x0 - 1, 0, x1 + 1, H - 1)
 
 
+# A decor cell's kind: a palette colour and whether it glows.
+static func decor_kind(colour: int, glow: bool) -> int:
+	return CELL_DECOR + (colour & 15) + (16 if glow else 0)
+
+
 # One cell at a world point.
 func set_cell_world(p: Vector2, value: int) -> void:
 	var x := int(floor(p.x / CELL))
@@ -696,6 +720,9 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 					CELL_CRUMBLE:
 						col = CRUMBLE.lightened(0.12) if rim else CRUMBLE + ROCK_VAR * grain
 					_:
-						col = RIM if rim else ROCK + ROCK_VAR * grain
+						if v >= CELL_DECOR:
+							col = DECOR_PALETTE[(v - CELL_DECOR) & 15]   # A stamp's pixel, as drawn
+						else:
+							col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)
 	_dirty = true

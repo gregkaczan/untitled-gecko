@@ -216,6 +216,7 @@ var feet: Array[Foot] = []
 var look := Vector2.RIGHT      # Where the head points: toward the mouse, within LOOK_LIMIT of the body line
 var _pos_s := Vector2.ZERO     # Body centre with its across-surface bounce filtered out, for the drawn body
 var input_override = null      # Vector2 from the demo pilot, null for real input
+var body_hidden := false            # The body not drawn: a sprite animation stands in (main.gd play_anim)
 var jump_override := false
 var chew_override := false
 var lmb_override := false      # Demo pilot's left button
@@ -2250,8 +2251,8 @@ func _push_blobs() -> void:
 				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
 	var marks := _face(list)
 	_leg_blobs(list, 1.0, BODY_COLOR)
-	blobs.set_blobs(list)
-	blobs.set_marks(marks)
+	blobs.set_blobs([] if body_hidden else list)
+	blobs.set_marks([] if body_hidden else marks)
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:

@@ -430,16 +430,28 @@ What the first slice adds on top of the movement, each a first version
   the pools (the sim's own water, a drip sound when they land), a bite
   throws up a puff of dust, a swimming gecko blows bubbles (both the
   shooter's smoke particles, short-lived).
-- Decor as stamps: `["decor", name, x, y, "floor" | "ceiling"]` in a
-  scene's terrain sets a pattern of cells on the first floor below the
-  point or hanging from the first ceiling above it, from a table of
-  cell patterns (`tests/scene_builder.gd` DECOR). The glowshrooms are
-  the first: material 12 in the sim (the shooter's purple ore slot made
-  static, pale green and a light), cell kind 9 in the bitmap, ground
-  to the gecko, gone with a bite. The intent is that drawn parts (small
-  images with a palette that maps colours to cell kinds) replace the
-  tables, placed by hand in the level's list now and by a map editor
-  later, and destructible for free because they become cells.
+- Decor as stamps: `["decor", name, x, y, "floor" | "ceiling", flags]`
+  in a scene's terrain sets a stamp's cells on the first floor below
+  the point (its bottom row on the floor) or hanging from the first
+  ceiling above it (its top row under it), only into air. A stamp is a
+  PNG in `decor/stamps/` (`tests/scene_builder.gd` png_stamps reads
+  the files themselves, so no import is needed): each pixel becomes a
+  decor cell, kind 16 plus the nearest of the 16 colours in
+  `cave_map.gd` DECOR_PALETTE, plus 16 for a glow on the pale greens of
+  the shroom groups; flags "h" mirrors it, "v" turns it over. In the
+  sim a decor cell is material 12 with its fraction in a band of 0.003
+  per colour (`sim.gd` FRAC_BAND, `render_write.glsl` DECOR_PAL), a
+  glow band seeding the light pass in its own colour; the table
+  glowshrooms (cell kind 9, DECOR in the scene builder, on the 4 px
+  grid and hanging upside down) sit above the bands (FRAC_SHROOM) and
+  look as before. Decor cells are solid, ground to the gecko, gone
+  with a bite. The PNGs are Retro Diffusion takes (`decor/rd/`;
+  `tools/decor_process.py` cleans them and maps them to the palette)
+  cut into pieces by `tools/decor_split.py`: a cluster's single
+  mushrooms (`_p<n>`), slices of the moss clumps and the hanging moss
+  (`_s<n>`), so a brush can scatter them; a stamp and its pieces share
+  a group, the name before the take number. `levels/decor_gallery.json`
+  shows one of each.
 - Dripstone, procedural from a seed: `["stalactites" | "stalagmites",
   x0, x1, y, n, seed, hmin, hmax]` grows n cones of rock off a ceiling
   or floor line, `["column", x, y0, y1, w, seed]` a stalagnate with a
@@ -516,22 +528,56 @@ on), `notch_climb` (the same bites on bare rock), `crumble_wall`,
 
 ## The map editor
 
-F2 opens the editor (`editor.gd`), a panel down the left: paints (every
-cell kind), stamps (the decor table's glowshrooms, a stalactite or
-stalagmite of the brush's size, a vine of four times the brush's
-length, a slug), the spawn point and the exit (dragged), the brush size
-(the wheel too), and Save, Load and Blank by name. The left button
-paints, the right erases. Every edit goes to the live world (the
-particle sim: an erase this tick and a fill the next, once the readback
-shows the cells empty; or the bitmap) and to an authoring cell map, the
-CPU map the sim was built from, kept for this. Save writes
+F2 opens the editor (`editor.gd`), a panel down the left (it scrolls):
+paints (every cell kind); decor (every stamp in `decor/stamps/` as an
+icon, its name on hover); stamps (the table glowshrooms, a stalactite
+or stalagmite of the brush's size, a vine of four times the brush's
+length, a slug); the spawn point and the exit (dragged); the brush
+size ([ and ] too); undo and redo (Ctrl+Z, Ctrl+Y); and the files. The
+left button paints, the right erases (and drops the decor it covers).
+
+The decor brush: dragged along a floor or a ceiling it sets a stamp
+wherever the next one, grown by the spacing slider, would stand clear
+of every placed one, so a sweep lays a bed of moss or a row of shrooms
+without overlaps; "Random in group" picks any of the stamp's group
+(the takes and the pieces of one name) for each, "Mirror at random"
+flips half of them, "Anchor" chooses the surface (nearest, floor,
+ceiling); "Free" places one per click, wherever, overlapping or not.
+Every placed stamp is kept with its rect for the spacing rule and
+saved in the level file's "decor" list, from which a loaded level
+seeds the list again.
+
+Undo: a stroke (button down to up) is one step, a copy of the authored
+cells and the editor's lists before it (40 kept); undo puts the cells
+back and rebuilds the live world from them (the sim's particles made
+anew, the vines, slugs and exit set again), the gecko staying where it
+is.
+
+Files: the list of `levels/*.json`; Load builds the one selected (or
+named), New starts a blank room under the name typed, Save writes the
+current level's name, Save as the name typed. A level with strokes
+since its save asks for a second press before Load or New drops them;
+a star after the name in the title marks it. The clutch, generated by
+`tools/gen_clutch.py`, refuses Save and takes Save as, so the
+generator stays the source. `GECKO_EDIT=1` opens the editor at start.
+
+The camera: the wheel zooms about the cursor, without a limit either
+way (the camera's whole-pixel grid follows the zoom, and a view wider
+than the world centres on it), the middle button pans, Home brings it
+back to the gecko at the game's zoom, as leaving the editor does.
+
+Every edit goes to the live world (the particle sim: an erase this tick
+and a fill the next, once the readback shows the cells empty; a stamp's
+cells filled one by one; or the bitmap) and to an authoring cell map,
+the CPU map the sim was built from, kept for this. Save writes
 `levels/<name>.cells.png` (one pixel a cell, its kind in the red
 channel, exact) and `levels/<name>.json`: a base of those cells and one
-scene on it with the spawn, the exit, the vines and lumps, and the
-slugs. Every `levels/*.json` loads like the clutch (Tab cycles them,
-the suite runs any with scripts), so a painted level is a level.
-Painted gas pockets are found from the cells. `GECKO_EDIT_TEST=1`
-runs a headless round trip of save and load.
+scene on it with the spawn, the exit, the vines and lumps, the slugs
+and the decor list. Every `levels/*.json` loads like the clutch (Tab
+cycles them, the suite runs any with scripts), so a painted level is a
+level. Painted gas pockets are found from the cells. `GECKO_EDIT_TEST=1`
+runs a headless round trip: paint, stamps, a PNG stamp undone and
+redone, save and load.
 
 ## Controls
 
@@ -551,7 +597,10 @@ vector, probe reach, feet, bite) and a panel down the right of the
 screen with the scene list to click into, main cave and reload, the
 cave seed and New cave for a generated chamber, the brush radius, the
 time scale, pause and a single-tick
-step, the pixel grid and the overlay toggle, and the gecko's state.
+step, the pixel grid and the overlay toggle, Curl and Wake (the gecko's
+sprite animations from `decor/gecko/wake`, played over the hidden body
+on the floor under it: curl to sleep and stay so, wake to stand, a
+reset ending either), and the gecko's state.
 The world's mouse actions ignore the mouse while it is over the panel.
 
 ## Checking it without a hand on the keys

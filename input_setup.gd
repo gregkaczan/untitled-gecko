@@ -5,7 +5,8 @@
 # grid: 2 px like the rock, or the default 1 px. Tab loads the next test
 # scene from tests/scenes.json, Shift+Tab goes back to the generated cave.
 # B, C and N drop a boulder, a clump of clay or a heap of sand at the
-# cursor. The mouse is
+# cursor. In the map editor (F2) Ctrl+Z and Ctrl+Y undo and redo, Home
+# brings the camera back, [ and ] size the brush. The mouse is
 # the gecko's tongue and chew (see gecko.gd), with the brush on Ctrl and
 # the middle button.
 class_name InputSetup
@@ -31,6 +32,12 @@ static func ensure_actions() -> void:
 	_add("drop_boulder", [_key(KEY_B)])
 	_add("drop_clay", [_key(KEY_C)])
 	_add("drop_sand", [_key(KEY_N)])
+	# The map editor (editor.gd): undo and redo, the camera home, the brush.
+	_add("edit_undo", [_key(KEY_Z, false, true)])
+	_add("edit_redo", [_key(KEY_Y, false, true)])
+	_add("edit_home", [_key(KEY_HOME)])
+	_add("brush_up", [_key(KEY_BRACKETRIGHT)])
+	_add("brush_down", [_key(KEY_BRACKETLEFT)])
 
 
 static func _add(action: String, events: Array, deadzone := 0.4) -> void:
@@ -47,10 +54,12 @@ static func _key_axis(action: String, keys: Array, axis: JoyAxis, value: float) 
 	_add(action, events, 0.25)
 
 
-static func _key(key: Key, shift := false) -> InputEventKey:
+static func _key(key: Key, shift := false, ctrl := false) -> InputEventKey:
 	var ev := InputEventKey.new()
 	ev.physical_keycode = key
 	ev.shift_pressed = shift
+	ev.ctrl_pressed = ctrl
+	ev.command_or_control_autoremap = ctrl
 	return ev
 
 

@@ -34,6 +34,8 @@ const CAMERA_ZOOM := 2.0
 const CAMERA_EASE := 16.0      # How fast the camera closes on the gecko (per second), once it has fallen behind
 const CAM_LOCK_SPEED := 220.0  # Up to this speed (px/s) the camera scrolls exactly with the drawn body, so an ordinary walk or climb keeps the body on the same screen pixels
 const CAM_GRID := 1.0 / CAMERA_ZOOM  # The camera sits on whole screen pixels: half a world pixel at this zoom
+const UNDO_MAX := 40           # Strokes the editor keeps for undo (each a copy of the authored cells)
+const EDIT_ZOOM_STEP := 1.25   # The editor's wheel: the zoom multiplied or divided by this a notch
 const GLOW_COLOR := Color(1.0, 0.82, 0.58)   # The gecko's own light, warm and small (the sim's light pass)
 const GLOW_R := 14.0                         # Px round the head seeded at full glow; the spread carries it on
 const DAYLIGHT := Color(0.85, 0.92, 1.0)     # The light at the exit's crack
@@ -200,6 +202,8 @@ var _slugs: Array = []          # slug.gd: the glow slugs in the level
 var _gas: Array = []            # Rect2 of each sealed gas pocket still to burst (the scene's gas ops)
 var _editor: CanvasLayer        # editor.gd: the map editor's panel (F2)
 var _editing := false
+var _cam_grid := CAM_GRID       # The camera's grid, 1 / zoom: CAM_GRID at the game's zoom, finer or coarser once the editor zooms
+var _edit_cam := false          # The editor zoomed or panned: the camera stays put, no follow, until Home
 var _author: CaveMap            # The cells as authored: the bitmap map itself, or the CPU map the sim was built from, kept for the editor
 var _fills: Array = []          # Editor paints waiting for the sim's erase to land: [p, r, kind]
 var _won := false              # The gecko reached the exit: the camera pulls back
@@ -259,6 +263,13 @@ func _ready() -> void:
 		_backdrop.attach_far(sim)
 	gecko.blobs = blobs
 	add_child(gecko)
+	_anim = Sprite2D.new()
+	_anim.centered = false
+	_anim.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_anim.scale = Vector2(2.0, 2.0)   # A frame's pixel is a gecko pixel, 2 world px
+	_anim.z_index = 6                 # Over the blob layer, unlit like the gecko
+	_anim.visible = false
+	add_child(_anim)
 	_camera = Camera2D.new()
 	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	_camera.limit_left = 0
@@ -322,9 +333,17 @@ func _ready() -> void:
 	_panel.light_changed.connect(func(on: bool) -> void:
 		if sim:
 			sim.set_light(on))
+	_panel.anim_requested.connect(play_anim)
 	if picked.is_empty() and _demo_name == "":
 		_pick_level()
 	_reset()
+	if OS.get_environment("GECKO_ANIM") != "":
+		play_anim(OS.get_environment("GECKO_ANIM"))   # A look at an animation without a hand on the panel
+	if OS.get_environment("GECKO_EDIT") != "":
+		# Straight into the map editor (a look at its panel without a hand on F2).
+		_editing = true
+		_editor.visible = true
+		_editor.refresh()
 	if OS.get_environment("GECKO_EDIT_TEST") != "":
 		# The editor's save and load, headless: paint, stamp, save, load,
 		# count the kinds, quit (tools and the memory notes).
@@ -348,6 +367,7 @@ func _ready() -> void:
 
 
 func _reset() -> void:
+	_anim_stop()
 	if not _scene.is_empty():
 		if sim:
 			# The scene is built on a CPU map and the particles are made
@@ -362,30 +382,8 @@ func _reset() -> void:
 			_author = gen
 		else:
 			SceneBuilder.build(map, _scene, _scene_bases)
-		_vines.clear()
-		for v in SceneBuilder.spawn_lumps(map, _scene):
-			_vines[v[0]] = {"top": v[1], "load": 0.0}
-		_clear_slugs()
-		var k := 0
-		for at in SceneBuilder.slug_points(_scene):
-			var s := Slug.new()
-			s.setup(map, at, 31 + k)
-			add_child(s)
-			_slugs.append(s)
-			k += 1
-		_exit = SceneBuilder.exit_rect(_scene)
-		if sim:
-			sim.set_daylight(_exit, DAYLIGHT)
-		_sound.set_exit(_exit)
-		_ambience.reset()
-		_ambience.set_drip_zones(SceneBuilder.ops_of(_scene, _scene_bases, "drips"))
-		_gas.clear()
-		for op in SceneBuilder.ops_of(_scene, _scene_bases, "gas"):
-			_gas.append(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])))
-		_gas_from_cells()
-		map.clear_currents()
-		for op in SceneBuilder.ops_of(_scene, _scene_bases, "current"):
-			map.add_current(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])), Vector2(float(op[5]), float(op[6])), float(op[7]))
+		_dress_world()
+		_edit_decor = _decor_entries(_scene.get("decor", []))
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
 		_camera_home()
@@ -423,6 +421,43 @@ func _reset() -> void:
 		_scatter_chunks(spawn)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
 	_cam_reset()
+
+
+# What stands in the built cells: the scene's vines and lumps and the
+# editor's, the slugs, the exit and its daylight, the drip zones, the
+# gas pockets and the currents. The scene's reset and the editor's
+# rebuild after an undo share it.
+func _dress_world() -> void:
+	_vines.clear()
+	var lumps: Array = []
+	lumps.append_array(_scene.get("lumps", []))
+	lumps.append_array(_edit_lumps)
+	for v in SceneBuilder.spawn_lumps(map, {"lumps": lumps}):
+		_vines[v[0]] = {"top": v[1], "load": 0.0}
+	_clear_slugs()
+	var slug_pts: Array = []
+	slug_pts.append_array(_scene.get("slugs", []))
+	slug_pts.append_array(_edit_slugs)
+	var k := 0
+	for at in SceneBuilder.slug_points({"slugs": slug_pts}):
+		var s := Slug.new()
+		s.setup(map, at, 31 + k)
+		add_child(s)
+		_slugs.append(s)
+		k += 1
+	_exit = _edit_exit if _edit_exit.has_area() else SceneBuilder.exit_rect(_scene)
+	if sim:
+		sim.set_daylight(_exit, DAYLIGHT)
+	_sound.set_exit(_exit)
+	_ambience.reset()
+	_ambience.set_drip_zones(SceneBuilder.ops_of(_scene, _scene_bases, "drips"))
+	_gas.clear()
+	for op in SceneBuilder.ops_of(_scene, _scene_bases, "gas"):
+		_gas.append(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])))
+	_gas_from_cells()
+	map.clear_currents()
+	for op in SceneBuilder.ops_of(_scene, _scene_bases, "current"):
+		map.add_current(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])), Vector2(float(op[5]), float(op[6])), float(op[7]))
 
 
 # A flat room for the tongue demos (particle world only): a stone small
@@ -510,6 +545,7 @@ func _physics_process(dt: float) -> void:
 			get_tree().set_deferred("paused", true)
 			_panel.set_paused(true)
 	_update_slugs(dt)
+	_anim_tick(dt)
 	if sim and not _fills.is_empty():
 		# Editor paints: the erase of a tick ago has landed, the cells
 		# read empty, the fill can spawn into them.
@@ -542,7 +578,7 @@ func _physics_process(dt: float) -> void:
 	if _debug:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
-	elif _hint_t < 10.0:
+	elif _hint_t < 10.0 and not _editing:
 		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
@@ -558,6 +594,19 @@ func _edit_self_test() -> void:
 	edit_stamp("stalactite", Vector2(1300.0, 170.0), 12.0)
 	edit_stamp("vine", Vector2(1400.0, 300.0), 12.0)
 	edit_stamp("slug", Vector2(1500.0, 790.0), 12.0)
+	# A PNG stamp as one stroke, undone and redone: the decor cells go and come back.
+	var n0 := _count_kinds_from(CaveMap.CELL_DECOR)
+	edit_begin()
+	edit_stamp("cluster_0", Vector2(800.0, 790.0), 12.0, "floor", "h")
+	var placed := edit_can_place("cluster_0", Vector2(800.0, 790.0), "floor", 4.0)
+	edit_end()
+	var n1 := _count_kinds_from(CaveMap.CELL_DECOR)
+	print("EDIT: " + edit_undo())
+	var n2 := _count_kinds_from(CaveMap.CELL_DECOR)
+	print("EDIT: " + edit_redo())
+	var n3 := _count_kinds_from(CaveMap.CELL_DECOR)
+	print("EDIT: decor cells %d, after stamp %d, after undo %d, after redo %d, spot taken %s, entries %d" % [n0, n1, n2, n3, str(not placed), _edit_decor.size()])
+	var undo_ok := n0 == 0 and n1 > 100 and n2 == 0 and n3 == n1 and not placed and _edit_decor.size() == 2
 	print("EDIT: " + edit_spawn(Vector2(500.0, 780.0)))
 	print("EDIT: " + edit_exit(Rect2(1700.0, 700.0, 60.0, 60.0)))
 	print("EDIT: " + save_level("edtest"))
@@ -569,23 +618,125 @@ func _edit_self_test() -> void:
 	var counts2 := {}
 	for v in _author.solid:
 		counts2[v] = counts2.get(v, 0) + 1
-	print("EDIT: kinds after load ", counts2, " gas pockets ", _gas.size(), " slugs ", _slugs.size(), " spawn ", gecko.pos, " exit ", _exit)
-	print("EDIT TEST " + ("OK" if counts == counts2 else "DIFFERS"))
+	print("EDIT: kinds after load ", counts2, " gas pockets ", _gas.size(), " slugs ", _slugs.size(), " spawn ", gecko.pos, " exit ", _exit, " decor entries ", _edit_decor.size())
+	print("EDIT TEST " + ("OK" if counts == counts2 and undo_ok and _edit_decor.size() == 2 else "DIFFERS"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.json"))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.cells.png"))
 	get_tree().quit()
 
 
+func _count_kinds_from(kind: int) -> int:
+	var n := 0
+	for v in _author.solid:
+		if v >= kind:
+			n += 1
+	return n
+
+
 # --- The editor's hands on the world (editor.gd) ---
+
+var _edit_lumps: Array = []     # Vines and lumps placed in the editor, for the saved level
+var _edit_slugs: Array = []
+var _edit_decor: Array = []     # The decor stamps placed, {name, x, y, where, flags, rect}: the brush keeps new ones clear of them, the level file lists them
+var _edit_spawn := Vector2.INF
+var _edit_exit := Rect2()
+var _level_name := ""           # The level loaded or saved last: what Save writes
+var _level_cells := false       # That level is a cells file the editor wrote, so Save may overwrite it; a generated level (the clutch) takes Save as
+var _dirty := false             # Strokes since the last save or load
+var _undo: Array = []           # Strokes, oldest first: the authored cells and the editor's lists before each
+var _redo: Array = []
+var _stroke: Dictionary = {}    # The state when the button went down, until it comes up
+
+
+# A stroke: from the button going down to its coming up. What changed
+# in between is one undo step: a copy of the authored cells (518 KB at
+# 2 px cells, UNDO_MAX of them at most) and the editor's lists.
+func edit_begin() -> void:
+	if _author == null or not _stroke.is_empty():
+		return
+	_stroke = _edit_state()
+
+
+func edit_end() -> void:
+	if _stroke.is_empty():
+		return
+	var before := _stroke
+	_stroke = {}
+	if _edit_changed(before, _edit_state()):
+		_undo.append(before)
+		while _undo.size() > UNDO_MAX:
+			_undo.pop_front()
+		_redo.clear()
+		_dirty = true
+
+
+func _edit_state() -> Dictionary:
+	return {"cells": _author.solid.duplicate(), "decor": _edit_decor.duplicate(true), "lumps": _edit_lumps.duplicate(true),
+			"slugs": _edit_slugs.duplicate(true), "spawn": _edit_spawn, "exit": _edit_exit}
+
+
+func _edit_changed(a: Dictionary, b: Dictionary) -> bool:
+	return a.cells != b.cells or a.decor != b.decor or a.lumps != b.lumps or a.slugs != b.slugs or a.spawn != b.spawn or a.exit != b.exit
+
+
+func edit_undo() -> String:
+	if _undo.is_empty():
+		return "nothing to undo"
+	_redo.append(_edit_state())
+	_edit_restore(_undo.pop_back())
+	return "undone, %d left" % _undo.size()
+
+
+func edit_redo() -> String:
+	if _redo.is_empty():
+		return "nothing to redo"
+	_undo.append(_edit_state())
+	_edit_restore(_redo.pop_back())
+	return "redone"
+
+
+func edit_can_undo() -> bool:
+	return not _undo.is_empty()
+
+
+func edit_can_redo() -> bool:
+	return not _redo.is_empty()
+
+
+# The world as it was: the authored cells back, the live world rebuilt
+# from them (the sim's particles made anew, as at a reset), the vines,
+# slugs and exit set again from the lists. The gecko stays where it is.
+func _edit_restore(st: Dictionary) -> void:
+	_edit_decor = st.decor.duplicate(true)
+	_edit_lumps = st.lumps.duplicate(true)
+	_edit_slugs = st.slugs.duplicate(true)
+	_edit_spawn = st.spawn
+	_edit_exit = st.exit
+	_author.solid = st.cells.duplicate()
+	_fills.clear()
+	if sim:
+		map.build_cells(_author.solid)
+		_backdrop.build(_author.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
+	else:
+		_author.repaint_all()
+	_dress_world()
+	_dirty = true
+
 
 # A circle of kind at p: the live world and the authoring map alike.
 # In the sim the circle is erased now and filled next tick, once the
-# readback shows it empty (fill_circle spawns only into air).
+# readback shows it empty (fill_circle spawns only into air). Air drops
+# the decor entries it covers.
 func edit_paint(p: Vector2, r: float, kind: int) -> void:
 	if _author == null:
 		return
 	if kind == CaveMap.CELL_AIR:
 		_author.erase_circle(p, r, true)
+		var kept: Array = []
+		for d in _edit_decor:
+			if not (d.rect as Rect2).grow(r).has_point(p):
+				kept.append(d)
+		_edit_decor = kept
 	else:
 		_author.material_circle(p, r, kind)
 	if sim:
@@ -596,11 +747,31 @@ func edit_paint(p: Vector2, r: float, kind: int) -> void:
 		_gas_from_cells()
 
 
-# A stamp at p: decor on the surface under or over the cursor (whichever
-# is nearer), a dripstone cone of the brush's size, a vine of the brush's
-# length times four hanging from the ceiling above, a slug on the
-# nearest surface. Returns the name placed.
-func edit_stamp(name: String, p: Vector2, r: float) -> void:
+# The surface a stamp at p goes on: the nearer of the floor below and
+# the ceiling above when the editor says "nearest".
+func edit_where(p: Vector2, where: String) -> String:
+	if where != "nearest":
+		return where
+	var fl: Vector2 = map.floor_below(p)
+	var ce: Vector2 = map.ceiling_above(p)
+	return "floor" if (fl.y - p.y) <= (p.y - ce.y) else "ceiling"
+
+
+# Whether a stamp at p would stand clear of every placed one by spacing
+# px (the brush's rule, unless it is set free).
+func edit_can_place(name: String, p: Vector2, where: String, spacing: float) -> bool:
+	var r := SceneBuilder.stamp_rect(map, name, p, edit_where(p, where)).grow(spacing)
+	for d in _edit_decor:
+		if r.intersects(d.rect):
+			return false
+	return true
+
+
+# A stamp at p: a decor stamp (a PNG or a table) on the surface, a
+# dripstone cone of the brush's size, a vine of the brush's length
+# times four hanging from the ceiling above, a slug on the nearest
+# surface. flags: "h" mirrors a PNG stamp, "v" flips it.
+func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags := "") -> void:
 	if _author == null:
 		return
 	match name:
@@ -625,39 +796,33 @@ func edit_stamp(name: String, p: Vector2, r: float) -> void:
 			if sim:
 				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down)
 		_:
-			var fl: Vector2 = map.floor_below(p)
-			var ce: Vector2 = map.ceiling_above(p)
-			var where := "floor" if (fl.y - p.y) <= (p.y - ce.y) else "ceiling"
-			SceneBuilder.stamp(_author, name, p, where)
+			var w := edit_where(p, where)
+			var rect := SceneBuilder.stamp_rect(map, name, p, w)
+			var cells: Array = SceneBuilder.stamp(_author, name, p, w, flags)
+			if cells.is_empty():
+				return
+			_edit_decor.append({"name": name, "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": rect})
 			if sim:
-				_stamp_live(name, p, where)
+				# Into the live sim: each cell set is filled on the next
+				# tick (fill_circle at a cell's centre with the cell's
+				# radius takes that cell alone).
+				var cell := CaveMap.CELL_FULL
+				for c in cells:
+					_fills.append([Vector2((c[0] + 0.5) * cell, (c[1] + 0.5) * cell), cell, c[2]])
 
 
-# A stamp into the live sim: its cells spawned one by one (set_cell is
-# the bitmap's; the sim fills).
-func _stamp_live(name: String, p: Vector2, where: String) -> void:
-	var before := _author.solid.duplicate()
-	# The authoring map already has the stamp: find its cells by the
-	# difference and fill those in the sim.
-	var cell := CaveMap.CELL_FULL
-	for i in before.size():
-		pass
-	var tmp := CaveMap.new()
-	tmp.blank()
-	tmp.solid = before
-	SceneBuilder.stamp(tmp, name, p, where)
-	for i in tmp.solid.size():
-		if tmp.solid[i] != before[i]:
-			var x := i % CaveMap.W_FULL
-			var y := i / CaveMap.W_FULL
-			_fills.append([Vector2((x + 0.5) * cell, (y + 0.5) * cell), 2.0, tmp.solid[i]])
-	tmp.free()
-
-
-var _edit_lumps: Array = []     # Vines and lumps placed in the editor, for the saved level
-var _edit_slugs: Array = []
-var _edit_spawn := Vector2.INF
-var _edit_exit := Rect2()
+# The decor list from a level's "decor" entries, [name, x, y, where, flags]
+# each, with their rects on the built map.
+func _decor_entries(list: Array) -> Array:
+	var out: Array = []
+	for d in list:
+		if d.size() < 4:
+			continue
+		var p := Vector2(float(d[1]), float(d[2]))
+		var w := String(d[3])
+		var flags := String(d[4]) if d.size() > 4 else ""
+		out.append({"name": String(d[0]), "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": SceneBuilder.stamp_rect(map, String(d[0]), p, w)})
+	return out
 
 
 func edit_spawn(p: Vector2) -> String:
@@ -676,13 +841,92 @@ func edit_exit(r: Rect2) -> String:
 	return "exit %d, %d, %d x %d" % [int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)]
 
 
+# The editor's camera: the wheel zooms about the cursor, without a
+# limit either way, the middle button pans; Home (edit_home) brings
+# it back to the gecko at the game's zoom. The camera's grid follows
+# the zoom, so the view still moves by whole screen pixels.
+func edit_zoom(factor: float, screen: Vector2) -> void:
+	var half := get_viewport().get_visible_rect().size * 0.5
+	var under := _camera.get_screen_center_position() + (screen - half) / _camera.zoom.x
+	var z := clampf(_camera.zoom.x * factor, 0.02, 64.0)
+	_camera.zoom = Vector2(z, z)
+	_edit_take_camera()
+	_cam = under - (screen - half) / z
+	_cam_target = _cam
+	_follow()
+
+
+func edit_pan(screen_delta: Vector2) -> void:
+	_edit_take_camera()
+	_cam -= screen_delta / _camera.zoom.x
+	_cam_target = _cam
+	_follow()
+
+
+func _edit_take_camera() -> void:
+	if not _edit_cam:
+		_cam = _camera.get_screen_center_position()
+		_edit_cam = true
+		_camera.limit_left = -CAM_LIMIT
+		_camera.limit_top = -CAM_LIMIT
+		_camera.limit_right = CAM_LIMIT
+		_camera.limit_bottom = CAM_LIMIT
+	_cam_grid = 1.0 / _camera.zoom.x
+	if _backdrop:
+		_backdrop.set_grid(_cam_grid)
+
+
+func edit_home() -> void:
+	if _won:
+		return
+	_camera_home()
+	_cam_reset()
+
+
+func edit_zoom_text() -> String:
+	return "zoom %.2f" % _camera.zoom.x
+
+
+# --- Level files ---
+
+# The levels in levels/, by name.
+func level_names() -> Array:
+	var out: Array = []
+	for path in SceneBuilder.level_files():
+		out.append(String(path).get_file().trim_suffix(".json"))
+	return out
+
+
+func level_name() -> String:
+	return _level_name
+
+
+func level_dirty() -> bool:
+	return _dirty
+
+
+# Whether Save may write levels/<name>.json: a new name, or a level the
+# editor wrote (a cells file). A generated level keeps its generator.
+func level_writable(name: String) -> bool:
+	_ensure_scenes()
+	var bases: Dictionary = _scene_all.get("bases", {})
+	if not bases.has(name):
+		return true
+	for op in bases[name]:
+		if String(op[0]) == "cells":
+			return true
+	return false
+
+
 # Writes levels/<name>.cells.png (the authored cells) and levels/<name>.json:
 # a base of those cells and one scene on it with the spawn, the exit, the
-# vines and lumps, and the slugs. The game and the suite load it like
-# the clutch (tests/scene_builder.gd level_files).
+# vines and lumps, the slugs and the decor list. The game and the suite
+# load it like the clutch (tests/scene_builder.gd level_files).
 func save_level(name: String) -> String:
 	if _author == null or name == "":
 		return "nothing to save"
+	if not level_writable(name):
+		return name + " is generated (tools): save as another name"
 	var dir := "res://levels/"
 	var png := dir + name + ".cells.png"
 	_author.save_cells_png(ProjectSettings.globalize_path(png))
@@ -693,7 +937,10 @@ func save_level(name: String) -> String:
 	var slugs: Array = []
 	slugs.append_array(_scene.get("slugs", []))
 	slugs.append_array(_edit_slugs)
-	var sc := {"base": name, "spawn": spawn, "lumps": lumps, "slugs": slugs}
+	var decor: Array = []
+	for d in _edit_decor:
+		decor.append([d.name, d.x, d.y, d.where, d.flags])
+	var sc := {"base": name, "spawn": spawn, "lumps": lumps, "slugs": slugs, "decor": decor}
 	var ex := _edit_exit if _edit_exit.has_area() else _exit
 	if ex.has_area():
 		sc["exit"] = [ex.position.x, ex.position.y, ex.size.x, ex.size.y]
@@ -703,6 +950,10 @@ func save_level(name: String) -> String:
 		return "cannot write " + dir + name + ".json"
 	f.store_string(JSON.stringify(level, " "))
 	f.close()
+	_level_name = name
+	_level_cells = true
+	_dirty = false
+	_scene_all = {}
 	return "saved " + name
 
 
@@ -718,27 +969,117 @@ func load_level(name: String) -> String:
 	_scene_i = scenes.keys().find(name)
 	_demo_step = -1
 	gecko.input_override = null
-	_edit_lumps.clear()
-	_edit_slugs.clear()
-	_edit_spawn = Vector2.INF
-	_edit_exit = Rect2()
+	_edit_clear()
+	_level_name = name
+	_level_cells = level_writable(name)
 	_reset()
 	return "loaded " + name
 
 
 # An empty rock world to paint in: a blank scene with a room to stand in.
-func blank_level() -> String:
+func blank_level(name := "") -> String:
 	_scene = {"base": "room", "terrain": [], "spawn": ["floor", 960, 700], "lumps": [], "slugs": []}
 	_scene_bases = {"room": [["blank"], ["room", 0, 160, 1920, 640]]}
 	_scene_i = -1
 	_demo_step = -1
 	gecko.input_override = null
+	_edit_clear()
+	_level_name = name
+	_level_cells = true
+	_reset()
+	return "new level " + name if name != "" else "blank"
+
+
+func _edit_clear() -> void:
 	_edit_lumps.clear()
 	_edit_slugs.clear()
+	_edit_decor.clear()
 	_edit_spawn = Vector2.INF
 	_edit_exit = Rect2()
-	_reset()
-	return "blank"
+	_undo.clear()
+	_redo.clear()
+	_stroke = {}
+	_dirty = false
+
+
+# --- The gecko's sprite animations (the debug panel's Curl and Wake) ---
+
+const ANIM_DIR := "res://decor/gecko/wake"
+const ANIM_FRAMES := 17        # wake_1x_00 (curled asleep) to wake_1x_16 (the standing sprite)
+const ANIM_STEP := 0.16        # Seconds a frame shows
+var _anim: Sprite2D
+var _anim_tex: Array = []
+var _anim_name := ""           # "" none, "wake" curled to standing, "curl" the reverse, held asleep at its end
+var _anim_t := 0.0
+var _anim_input = null         # The gecko's input override before the animation froze it
+
+
+func _anim_load() -> void:
+	if not _anim_tex.is_empty():
+		return
+	for i in ANIM_FRAMES:
+		var bytes := FileAccess.get_file_as_bytes("%s/wake_1x_%02d.png" % [ANIM_DIR, i])
+		var img := Image.new()
+		if bytes.is_empty() or img.load_png_from_buffer(bytes) != OK:
+			push_error("no animation frame %d in %s" % [i, ANIM_DIR])
+			_anim_tex.clear()
+			return
+		_anim_tex.append(ImageTexture.create_from_image(img))
+
+
+# Plays the wake-up (curled asleep to standing, then the gecko draws
+# itself again) or the curl (the same backwards, held asleep until a
+# wake or a reset) at the gecko's place on the floor, the sprite on the
+# gecko's 2 px grid and facing its way; the gecko is hidden and takes no
+# input meanwhile.
+func play_anim(name: String) -> void:
+	_anim_load()
+	if _anim_tex.is_empty() or _anim == null:
+		return
+	if _anim_name == "":
+		_anim_input = gecko.input_override
+		gecko.input_override = Vector2.ZERO
+	_anim_name = name
+	_anim_t = 0.0
+	gecko.body_hidden = true
+	_anim.visible = true
+	_anim_place()
+	_anim_show()
+
+
+func _anim_place() -> void:
+	var fl: Vector2 = map.floor_below(gecko.pos)
+	# The canvas is 48 by 24 at 2 px a pixel, the feet on its row 22.
+	var top := Vector2(gecko.pos.x - 48.0, fl.y - 44.0)
+	_anim.position = (top / 2.0).floor() * 2.0
+	_anim.flip_h = gecko.facing > 0.0   # Drawn facing left
+
+
+func _anim_show() -> void:
+	var i := clampi(int(_anim_t / ANIM_STEP), 0, ANIM_FRAMES - 1)
+	_anim.texture = _anim_tex[i if _anim_name == "wake" else ANIM_FRAMES - 1 - i]
+
+
+func _anim_tick(dt: float) -> void:
+	if _anim_name == "":
+		return
+	_anim_t += dt
+	if _anim_t >= ANIM_FRAMES * ANIM_STEP:
+		if _anim_name == "wake":
+			_anim_stop()
+			return
+		_anim_t = (ANIM_FRAMES - 1) * ANIM_STEP   # Asleep: the curled frame held
+	_anim_show()
+
+
+func _anim_stop() -> void:
+	if _anim_name == "":
+		return
+	_anim_name = ""
+	_anim.visible = false
+	gecko.body_hidden = false
+	gecko.input_override = _anim_input
+	_anim_input = null
 
 
 # Gas pockets from the authored cells (painted ones have no op): each
@@ -884,19 +1225,29 @@ func _follow() -> void:
 		_camera.position = _cam
 		_camera.zoom = _camera.zoom.lerp(Vector2(WIN_ZOOM, WIN_ZOOM), k)
 		return
+	if _editing and _edit_cam:
+		# The editor's camera: where the wheel and the middle button put it.
+		_camera.position = _cam_clamped((_cam / _cam_grid).round() * _cam_grid)
+		_cam_target = gecko.draw_pos()
+		_seat_off = Vector2.ZERO
+		_cam_seat = _camera.position
+		blobs.set_origin(_cam_seat.posmodv(Vector2(blobs.pixel_sz, blobs.pixel_sz)))
+		if _backdrop:
+			_backdrop.follow(_camera.position)
+		return
 	var target := gecko.draw_pos()
 	_cam += (target - _cam_target).limit_length(CAM_LOCK_SPEED * dt)
 	_cam_target = target
 	_cam = _cam.lerp(target, 1.0 - exp(-CAMERA_EASE * dt))
-	_camera.position = _cam_clamped((_cam / CAM_GRID).round() * CAM_GRID)
+	_camera.position = _cam_clamped((_cam / _cam_grid).round() * _cam_grid)
 	# The seat moves to the lag's nearest screen pixel only once the lag
 	# has left the seat by a whole one: the camera's own rounding to the
 	# grid puts a quarter pixel of noise on the lag, which would rock a
 	# seat at a boundary between two pixels.
 	var lag := target - _camera.position
 	for k in 2:
-		if absf(lag[k] - _seat_off[k]) >= CAM_GRID:
-			_seat_off[k] = roundf(lag[k] / CAM_GRID) * CAM_GRID
+		if absf(lag[k] - _seat_off[k]) >= _cam_grid:
+			_seat_off[k] = roundf(lag[k] / _cam_grid) * _cam_grid
 	_cam_seat = _camera.position + _seat_off
 	blobs.set_origin(_cam_seat.posmodv(Vector2(blobs.pixel_sz, blobs.pixel_sz)))
 	if _backdrop:
@@ -907,7 +1258,7 @@ func _follow() -> void:
 func _cam_reset() -> void:
 	_cam = gecko.draw_pos()
 	_cam_target = _cam
-	_camera.position = _cam_clamped((_cam / CAM_GRID).round() * CAM_GRID)
+	_camera.position = _cam_clamped((_cam / _cam_grid).round() * _cam_grid)
 	_seat_off = Vector2.ZERO
 	_cam_seat = _camera.position
 	blobs.set_origin(_cam_seat.posmodv(Vector2(blobs.pixel_sz, blobs.pixel_sz)))
@@ -919,7 +1270,14 @@ func _cam_reset() -> void:
 # stays on whole screen pixels.
 func _cam_clamped(p: Vector2) -> Vector2:
 	var half := get_viewport().get_visible_rect().size * 0.5 / _camera.zoom
-	half = (half / CAM_GRID).ceil() * CAM_GRID
+	half = (half / _cam_grid).ceil() * _cam_grid
+	if _editing and _edit_cam:
+		# The editor's view may be wider than the world: then it is centred on it.
+		var world := Vector2(CaveMap.W_FULL * CaveMap.CELL_FULL, CaveMap.H_FULL * CaveMap.CELL_FULL)
+		var out := p
+		for k in 2:
+			out[k] = world[k] * 0.5 if half[k] * 2.0 >= world[k] else clampf(p[k], half[k], world[k] - half[k])
+		return out
 	return Vector2(clampf(p.x, _camera.limit_left + half.x, _camera.limit_right - half.x),
 			clampf(p.y, _camera.limit_top + half.y, _camera.limit_bottom - half.y))
 
@@ -939,6 +1297,10 @@ func _win() -> void:
 # The camera back on the gecko at the game's zoom, held to the world.
 func _camera_home() -> void:
 	_won = false
+	_edit_cam = false
+	_cam_grid = CAM_GRID
+	if _backdrop:
+		_backdrop.set_grid(_cam_grid)
 	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	_camera.limit_left = 0
 	_camera.limit_top = 0
@@ -1092,6 +1454,10 @@ func _process(_dt: float) -> void:
 	if Input.is_action_just_pressed("edit_toggle"):
 		_editing = not _editing
 		_editor.visible = _editing
+		if _editing:
+			_editor.refresh()
+		else:
+			edit_home()
 	if Input.is_action_just_pressed("debug_toggle"):
 		_debug = not _debug
 		_panel.visible = _debug
@@ -1106,6 +1472,8 @@ func _process(_dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _editing:
+		return   # The editor's wheel zooms (editor.gd)
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			brush_r = minf(brush_r + 4.0, 80.0)

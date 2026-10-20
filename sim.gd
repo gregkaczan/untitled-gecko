@@ -112,6 +112,8 @@ const CT_SLICK := 5                              # Cell class of moss: rock in i
 const CT_CRUMBLE := 6                            # Cell class of crumbling rock: the band below, gives way under a hold
 const FRAC_MOSS := 0.097                         # Rock's fraction for moss (render_write.glsl reads the bands)
 const FRAC_CRUMBLE := 0.092
+const FRAC_BAND := 0.003                         # A decor cell (mat 12, CaveMap.CELL_DECOR and up) sits at 0.0015 + band * 0.003: the band's low four bits its palette colour, 16 and up a glow (render_write.glsl)
+const FRAC_SHROOM := 0.098                       # The table glowshroom (kind 9): mat 12 above the bands, the old green flesh
 const FRAC_MAX := 0.89                           # Random fractions stay under 0.089, below the bands
 const MODE_WAKE := -5.0                          # Capsule mode: nudges loose grains awake (pbd_delta.glsl)
 
@@ -780,15 +782,18 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 
 
 # The fraction a cell of the map's kind is built with, or -1 for random:
-# moss and crumbling rock are rock in a band of their own.
+# moss and crumbling rock are rock in a band of their own, a decor cell
+# mat 12 in the band of its colour, the table glowshroom above them.
 static func frac_of(kind: int) -> float:
 	match kind:
 		CaveMap.CELL_MOSS:
 			return FRAC_MOSS
 		CaveMap.CELL_CRUMBLE:
 			return FRAC_CRUMBLE
+		CaveMap.CELL_SHROOM:
+			return FRAC_SHROOM
 		_:
-			return -1.0
+			return FRAC_BAND * (float(kind - CaveMap.CELL_DECOR) + 0.5) if kind >= CaveMap.CELL_DECOR else -1.0
 
 
 # Two currents at most (pbd_predict.glsl): [rect, dir, speed] each.
@@ -841,7 +846,7 @@ static func material_of(kind: int) -> int:
 		CaveMap.CELL_MOSS, CaveMap.CELL_CRUMBLE:
 			return MAT_ROCK
 		_:
-			return MAT_ROCK
+			return MAT_SHROOM if kind >= CaveMap.CELL_DECOR else MAT_ROCK
 
 
 func _wf(data: PackedByteArray, offset: int, value: float) -> void:

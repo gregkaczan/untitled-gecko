@@ -18,6 +18,9 @@ const uint O_CT = 8294670u;   // cell class per pixel, read back by the gecko: 0
 const uint O_BD = 8813070u;   // bond records: [chunk id, ...] per particle (see sim.gd)
 const uint O_EM = 21254670u;   // emission per cell for the light pass (light_seed.glsl): copper and lava glow
 const uint BD = 20u;
+// The decor stamps' palette (cave_map.gd DECOR_PALETTE): a mat 12 particle in a
+// fraction band under 0.097 is one of these, band & 15; a band of 16 and up glows.
+const vec3 DECOR_PAL[16] = vec3[16](vec3(0.024, 0.043, 0.016), vec3(0.114, 0.176, 0.086), vec3(0.137, 0.224, 0.118), vec3(0.212, 0.255, 0.145), vec3(0.251, 0.325, 0.180), vec3(0.286, 0.333, 0.161), vec3(0.278, 0.373, 0.220), vec3(0.388, 0.416, 0.267), vec3(0.451, 0.557, 0.369), vec3(0.565, 0.584, 0.431), vec3(0.580, 0.616, 0.455), vec3(0.631, 0.702, 0.529), vec3(0.710, 0.804, 0.608), vec3(0.804, 0.824, 0.655), vec3(0.839, 0.871, 0.702), vec3(0.945, 0.933, 0.788));
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -84,14 +87,22 @@ void main() {
     // lava a lot, a glowshroom (12) green with a slow breath, each
     // mushroom (a 16 px patch) in its own phase. The light pass
     // spreads it from here.
-    if (mat == 6u || mat == 10u || mat == 12u) {
-        vec3 em = (mat == 6u) ? vec3(0.55, 0.28, 0.08) : ((mat == 10u) ? vec3(1.0, 0.45, 0.10) : vec3(0.25, 0.85, 0.35));
-        if (mat == 12u) {
+    // A decor cell (mat 12 in a band) glows only in a glow band, in its own colour.
+    bool emits = (mat == 6u || mat == 10u);
+    vec3 em = (mat == 6u) ? vec3(0.55, 0.28, 0.08) : vec3(1.0, 0.45, 0.10);
+    if (mat == 12u) {
+        float f = fract(mat_f);
+        if (f >= 0.097) { emits = true; em = vec3(0.25, 0.85, 0.35); }
+        else {
+            uint band = uint(f / 0.003);
+            if (band >= 16u) { emits = true; em = DECOR_PAL[band & 15u] * 0.9; }
+        }
+        if (emits) {
             float phase = hash11(floor(px / 16.0) * 7.1 + floor(py / 16.0) * 13.3) * 6.2832;
             em *= 0.72 + 0.28 * sin(rf(O_P + 36u) * 0.045 + phase);
         }
-        atomicMax(buf.d[O_EM + uint(ry) * rw + uint(rx)], packUnorm4x8(vec4(em, 1.0)));
     }
+    if (emits) atomicMax(buf.d[O_EM + uint(ry) * rw + uint(rx)], packUnorm4x8(vec4(em, 1.0)));
 
     // Cell class for the CPU world queries. Solid beats water beats air;
     // fire, smoke, bullets and mites leave no class. Static solid (rock,
@@ -237,7 +248,7 @@ void main() {
         cg += wisp * 0.7; // wisps are warm-tinted (less green than red)
 
     // --- Glowshroom (mat 12): pale green flesh, a lighter cap edge by the hash ---
-    } else if (mat == 12u) {
+    } else if (mat == 12u && fract(mat_f) >= 0.097) {
         float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
         float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
         cr = 0.42 + (h0 - 0.5) * 0.12;
@@ -245,6 +256,12 @@ void main() {
         cb = 0.46 + (h0 - 0.5) * 0.10;
         float speck = step(0.85, hash11(variation * 53.3 + float(id) * 0.009)) * 0.15;
         cr += speck; cg += speck; cb += speck;
+
+    // --- Decor (mat 12 in a band): a stamp's pixel in its palette colour, a touch of jitter ---
+    } else if (mat == 12u) {
+        vec3 c = DECOR_PAL[uint(fract(mat_f) / 0.003) & 15u];
+        float j = (hash11(variation * 127.1 + float(id) * 0.0013) - 0.5) * 0.04;
+        cr = c.r + j; cg = c.g + j; cb = c.b + j;
 
     // --- Standard materials (sand, clay, rock, stone, hard rock, copper, bedrock) ---
     // (lava mat 10 redirected to density buffer above, composited by render_water)
