@@ -294,6 +294,8 @@ var _squeeze := false          # In a passage narrower than the body: less clear
 var _pricked_t := 0.0          # Seconds left of a prick's recoil, during which the keys do not steer the fall
 var _sq_r := BODY_R            # The clearance while squeezing
 var _sq_max := SQUEEZE_MAX      # Widest the passage may read, with the body in it, before the squeeze is released: SQUEEZE_BLOCKED for one entered from a blocked walk
+var _sq_cw := -1.0             # The corridor's width (px) in a squeeze, for the trace; -1 for none
+var _tube_full := 0            # Segments drawn as a tube this tick with neither end thinned a pixel (the trace; always 0 by the rule in _push_blobs, a guard)
 var _sq_in := false            # The body centre has been inside the passage
 var _sq_wide := 0              # Ticks in a row the passage has read wide
 var _sq_wait := 0              # Ticks at the mouth without getting in
@@ -521,13 +523,13 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
 		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
-		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, cp, fs])
+		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, cp, fs])
 
 
 # in, out, stuck, grapple, drag, strain, back: what the tongue is doing (trace, panel).
@@ -1614,6 +1616,7 @@ func _begin_squeeze(h: float, u: Vector2, line: Vector2, wide := SQUEEZE_MAX) ->
 
 func _end_squeeze() -> void:
 	_squeeze = false
+	_sq_cw = -1.0
 	_sq_enter = false
 	_sq_in = false
 	_sq_wide = 0
@@ -1760,6 +1763,7 @@ func _update_squeeze() -> void:
 	# passed rather than stopped at, at the mouth as much as inside. The
 	# body is kept on that corridor's middle.
 	var c := _corridor()
+	_sq_cw = c.hi - c.lo + 1.0 if c.ok else -1.0
 	var line_mid: float = r.mid
 	# Wide: the straight corridor takes the body at its full clearance,
 	# so the squeeze has nothing left to do. A squeeze entered from a
@@ -2261,6 +2265,7 @@ func _push_blobs() -> void:
 	var gulp_at := -1.0
 	if _gulp > 0.0:
 		gulp_at = (1.0 - _gulp / GULP_TIME) * 4.0
+	_tube_full = 0
 	for i in chain.size():
 		var r_i: float = _draw_r[i]
 		if gulp_at >= 0.0:
@@ -2276,6 +2281,8 @@ func _push_blobs() -> void:
 			# splats render fatter than one blob of the same radius, and a
 			# body read as narrow but barely thinned (a passage of 20 px,
 			# squeezed into from a blocked walk) swelled past the walls.
+			if _draw_r[i] >= chain.radii[i] - 1.0 and _draw_r[i - 1] >= chain.radii[i - 1] - 1.0:
+				_tube_full += 1
 			for k in range(1, 4):
 				var t := k / 4.0
 				list.append([chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), BODY_COLOR])
