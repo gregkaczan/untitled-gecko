@@ -4,6 +4,8 @@
 # later changes only how `solid` gets filled. Queries: probe() finds the
 # nearest solid and the surface normal around a point, solid_near() checks
 # one anchor. Edits: erase_circle() and fill_circle() for the mouse brush.
+# The bitmap has no loose lumps: the chunk queries find none and the
+# chunk edits (push, pull, eat, break, spawn) do nothing.
 extends Node2D
 
 const W := 480
@@ -24,6 +26,7 @@ const CELL_ROCK := 1
 const CELL_WATER := 2
 
 var solid := PackedByteArray()
+var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
 
 var _img: Image
 var _tex: ImageTexture
@@ -152,6 +155,39 @@ func water_near(p: Vector2, n: int) -> bool:
 
 func is_solid_world(p: Vector2) -> bool:
 	return is_solid(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+
+
+# Loose lumps live in the particle world only (see sim_map.gd).
+func chunk_at_world(_p: Vector2) -> int:
+	return -1
+
+
+func chunk_piece(_id: int, _p: Vector2, _limit := 400) -> PackedVector2Array:
+	return PackedVector2Array()
+
+
+func pull_chunk(_id: int, _tip: Vector2, _dir: Vector2, _speed: float) -> void:
+	pass
+
+
+func eat_chunk(_id: int, _p: Vector2, _radius: float) -> void:
+	pass
+
+
+func break_circle(_p: Vector2, _radius: float) -> void:
+	pass
+
+
+func spawn_boulder(_p: Vector2, _radius: float) -> int:
+	return 0
+
+
+func spawn_clay(_p: Vector2, _radius: float) -> int:
+	return 0
+
+
+func spawn_sand(_p: Vector2, _radius: float) -> void:
+	pass
 
 
 # True when any cell within n of the one under p is solid.
@@ -365,11 +401,6 @@ func fill_rect(r: Rect2) -> void:
 
 
 func erase_circle(p: Vector2, radius: float) -> void:
-	_paint_circle(p, radius, 0)
-
-
-# A blast: on the bitmap just a hole; the particle world scatters debris.
-func blast(p: Vector2, radius: float) -> void:
 	_paint_circle(p, radius, 0)
 
 

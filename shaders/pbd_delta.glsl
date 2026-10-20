@@ -18,6 +18,12 @@ const uint N_CAP = 8u;
 // [3 + i*2] impact packed position (y << 12 | x), [4 + i*2] impact kind
 const uint O_FB = 2059403u;
 const uint MAX_IMPACTS = 32u;
+// Bond records (see pbd_predict and sim.gd O_BD): per particle [chunk
+// id, awake, bond count, pad, NB pairs of (mate index, rest length)].
+const uint O_BD = 2203470u;
+const uint BD = 20u;
+const uint NB = 8u;
+const uint NONE = 0xFFFFFFFFu;
 // Impact kinds 0..9 are bullet kinds. 15 marks a purple ore detonation.
 const uint KIND_PURPLE = 15u;
 
@@ -180,6 +186,12 @@ void main() {
 
     bool is_ephemeral = (mat_i == 8u || mat_i == 9u);
     bool has_velocity = (abs(vx) > 0.01 || abs(vy) > 0.01);
+    // Chunk bonds: a bonded particle takes part while its chunk is awake
+    // (pbd_predict's flag), even with no velocity of its own yet.
+    uint bd = O_BD + id * BD;
+    uint chunk = buf.d[bd];
+    bool bonded = chunk != 0u;
+    bool bond_awake = bonded && buf.d[bd + 1u] == 1u;
     bool drill_on = rf(O_P + 15u) > 0.5;
     bool near_drill = false;
 
@@ -206,6 +218,11 @@ void main() {
     for (uint c = 0u; c < N_CAP && !near_cap; c++) {
         uint slot = O_CAP + c * 8u;
         if (rf(slot + 6u) < 0.5) continue;
+        // Modes below -1.5 are chunk events, pbd_predict's; a pusher (-1,
+        // the gecko walking into a lump) is nothing to the ground.
+        float mode = rf(slot + 7u);
+        if (mode < -1.5) continue;
+        if (mode < -0.5 && yield_s >= 5.0) continue;
         vec2 cpos = vec2(rf(slot), rf(slot + 1u));
         vec2 cdir = vec2(rf(slot + 2u), rf(slot + 3u));
         float cr = rf(slot + 4u), chl = rf(slot + 5u);
@@ -215,7 +232,7 @@ void main() {
     }
 
     bool near_any_drill = near_drill || near_cap;
-    if (!has_velocity && !near_any_drill && !is_ephemeral) return;
+    if (!has_velocity && !near_any_drill && !is_ephemeral && !bond_awake) return;
     if (yield_s >= 5.0 && !near_any_drill) return;
 
     int cx = int(floor(px / cs));
@@ -312,6 +329,12 @@ void main() {
                 bool j_ephemeral = (mat_j == 8u || mat_j == 9u);
                 if (!is_ephemeral && j_ephemeral) continue;
                 bool cross_class = (is_ephemeral && !j_ephemeral);
+                if (bonded) {
+                    // Bond mates hold each other by their bonds alone.
+                    bool mate = false;
+                    for (uint k = 0u; k < NB; k++) if (buf.d[bd + 4u + k * 2u] == j) mate = true;
+                    if (mate) continue;
+                }
 
                 float jx = rf(bj + 4u), jy = rf(bj + 5u);
 
@@ -327,7 +350,10 @@ void main() {
                     float lambda_j = rf(bj + 6u);
                     vec2 g = kernel_grad(diff, r, h);
 
-                    delta_p += (lambda_i + lambda_j) * g / rho0;
+                    // A chunk is only ever pushed by what it touches, never
+                    // drawn into it, so a lump does not cling to a wall.
+                    float lam = bonded ? (min(lambda_i, 0.0) + min(lambda_j, 0.0)) : (lambda_i + lambda_j);
+                    delta_p += lam * g / rho0;
 
                     bool both_water = (mat_i == 1u && mat_j == 1u);
                     bool both_lava = (mat_i == 10u && mat_j == 10u);
@@ -353,6 +379,45 @@ void main() {
         }
     }
     } // end non-NPC
+
+    // --- Chunk bonds: distance constraints to the lattice mates, Jacobi
+    //     with over-relaxation. A bond whose mate is gone, broken off,
+    //     no longer lists this particle, or is stretched past its limit
+    //     is dropped; with the last bond gone the particle is a loose
+    //     grain again. Clay gives sooner than stone. ---
+    if (bonded) {
+        vec2 bond_dp = vec2(0.0);
+        float nb = 0.0;
+        float limit = (mat_i == 2u) ? 1.35 : 1.6;
+        for (uint k = 0u; k < NB; k++) {
+            uint j = buf.d[bd + 4u + k * 2u];
+            if (j == NONE) continue;
+            uint bj = O_PT + j * 8u;
+            uint bdj = O_BD + j * BD;
+            bool ok = rf(bj) > -500.0 && buf.d[bdj] == chunk;
+            if (ok) {
+                bool listed = false;
+                for (uint m = 0u; m < NB; m++) if (buf.d[bdj + 4u + m * 2u] == id) listed = true;
+                ok = listed;
+            }
+            vec2 d = vec2(px - rf(bj + 4u), py - rf(bj + 5u));
+            float r = length(d);
+            float rest = rf(bd + 5u + k * 2u);
+            if (ok && r > rest * limit) ok = false;
+            if (!ok) {
+                buf.d[bd + 4u + k * 2u] = NONE;
+                continue;
+            }
+            nb += 1.0;
+            if (r > 0.001) bond_dp += d / r * (rest - r) * 0.5;
+        }
+        if (nb > 0.0) {
+            delta_p += bond_dp * (1.5 / nb);
+        } else {
+            buf.d[bd] = 0u;
+        }
+        buf.d[bd + 2u] = uint(nb);
+    }
 
     if (convert_to_rock) {
         uint hash = id * 2654435761u;
@@ -452,12 +517,16 @@ void main() {
                     if (rnd < melt) {
                         if (mat_i == 12u) push_impact(px, py, KIND_PURPLE);
                         kill_particle(b);
+                        buf.d[bd] = 0u;
                         atomicAdd(buf.d[O_P + 22u], 1u); // melted this tick (CPU stat)
                         return;
                     }
                 }
                 continue;
             } else {
+                // A pusher (the gecko's body walking into a lump) moves
+                // loose material only; the ground it stands on stays.
+                if (melt < -0.5 && yield_s >= 5.0) continue;
                 if (mat_i >= 5u && mat_i <= 7u) {
                     // Ore: remove the particle and add to the global ore counters.
                     kill_particle(b);

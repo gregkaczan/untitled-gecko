@@ -6,6 +6,12 @@
 # reads back every tick. That readback is the gecko's whole world: the
 # same 480x270 grid the bitmap stand-in used.
 #
+# After the cell classes comes a bond record per particle: chunks (a
+# boulder, a stone, a clump of clay) are lumps of loose material whose
+# particles are bonded to their lattice neighbours, so the lump keeps
+# its shape, falls as one, can be pushed, dragged by the tongue, broken
+# by a strike and swallowed. A chunk's cells read back as 16 + its id.
+#
 # The particle count covers the full 1920x1080 (the shooter started at
 # its ground line), so every offset after O_PT differs from the shooter's
 # and the nine shaders carry the matching literals.
@@ -46,11 +52,23 @@ const O_FB := O_CAP + MAX_CAPSULES * 8
 const MAX_IMPACTS := 32
 const O_SC := O_FB + 3 + MAX_IMPACTS * 2
 const O_CT := O_SC + GW * GH                     # 2073870, see render_write.glsl
-const TOTAL_UINTS := O_CT + RENDER_W * RENDER_H
+const O_BD := O_CT + RENDER_W * RENDER_H         # 2203470, see pbd_predict.glsl
+const BD_STRIDE := 20                            # Per particle: chunk id, awake, bond count, pad, 8 x (mate, rest)
+const MAX_BONDS := 8
+const BOND_NONE := 0xFFFFFFFF
+const TOTAL_UINTS := O_BD + PARTICLE_COUNT * BD_STRIDE
+const CT_CHUNK := 16                             # Cell class 16 + id: a cell of chunk id
 
 const MAT_SAND := 0
 const MAT_WATER := 1
+const MAT_CLAY := 2
 const MAT_ROCK := 3
+const MAT_STONE := 4                             # The shooter's wood slot: loose stone, the stuff of boulders
+
+# Capsule slots: 0 to 3 melt (chew and brush, in turn), then the pull
+# (the tongue's drag, the walk's shove), and one-shot events (eat, break).
+const SLOT_PULL := 5
+const SLOT_EVENT := 6
 
 const SHADER_FILES := [
 	"pbd_predict", "grid_clear", "grid_insert",
@@ -63,6 +81,7 @@ const BACKDROP := Color(0.045, 0.04, 0.06)
 
 var cells := PackedByteArray()      # O_CT readback: one uint per render pixel
 var ready_to_run := false
+var chunks := {}                    # Chunk id -> {mat, count} as spawned (the GPU owns what is left of each)
 
 var _rd: RenderingDevice
 var _buf: RID
@@ -77,6 +96,8 @@ var _capsules := PackedByteArray()
 var _capsule_once: Array[bool] = []  # Slots to switch off after the next dispatch
 var _zero12 := PackedByteArray()
 var _zero4 := PackedByteArray()
+var _zero_bd := PackedByteArray()
+var _next_chunk := 1
 var _explosions: Array[Dictionary] = []
 var _dead: Array[int] = []           # Free particle slots
 var _tick := 0
@@ -85,6 +106,7 @@ var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
 	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl and render_clear.glsl")
+	assert(O_BD == 2203470, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
 	_capsules.resize(MAX_CAPSULES * 8 * 4)
@@ -92,6 +114,7 @@ func _ready() -> void:
 	_capsule_once.fill(false)
 	_zero12.resize(12)
 	_zero4.resize(4)
+	_zero_bd.resize(BD_STRIDE * 4)
 	_rd = RenderingServer.create_local_rendering_device()
 	for shader_name in SHADER_FILES:
 		var shader_file := load("res://shaders/%s.glsl" % shader_name) as RDShaderFile
@@ -124,6 +147,8 @@ func build(seed_value: int, kinds := PackedByteArray()) -> void:
 	_dead.clear()
 	_explosions.clear()
 	_capsules.fill(0)
+	chunks.clear()
+	_next_chunk = 1
 	var data := _create_initial_data(seed_value, kinds)
 	if _buf.is_valid():
 		_rd.buffer_update(_buf, 0, data.size(), data)
@@ -166,8 +191,12 @@ func trigger_explosion_at(pos: Vector2, radius: float, implode := false) -> void
 	_explosions.append({"pos": pos, "radius": radius, "implode": implode})
 
 
-# Slot layout: [pos.x, pos.y, dir.x, dir.y, radius, half_length, active, melt]
-func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length: float, active: bool, melt := 0.0) -> void:
+# Slot layout: [pos.x, pos.y, dir.x, dir.y, radius, half_length, active,
+# mode]. Mode 0 is a plain collider, above 0 a melter (that probability
+# per tick), -1 a pusher of loose material only, -2 a pull on chunk
+# half_length (dir, speed in radius), -3 eats chunk half_length within
+# radius, -4 breaks the bonds within radius.
+func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length: float, active: bool, mode := 0.0) -> void:
 	var base := i * 8 * 4
 	_capsules.encode_float(base + 0, pos.x)
 	_capsules.encode_float(base + 4, pos.y)
@@ -176,7 +205,7 @@ func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length:
 	_capsules.encode_float(base + 16, radius)
 	_capsules.encode_float(base + 20, half_length)
 	_capsules.encode_float(base + 24, 1.0 if active else 0.0)
-	_capsules.encode_float(base + 28, melt)
+	_capsules.encode_float(base + 28, mode)
 
 
 # Deletes every ground particle in the circle on the next tick.
@@ -185,13 +214,124 @@ func melt_circle(pos: Vector2, radius: float, slot: int) -> void:
 	_capsule_once[slot] = true
 
 
-func spawn_particle(pos: Vector2, mat: int) -> void:
+# Moves the whole of chunk id along dir at speed (px/s) on the next
+# tick; the tongue re-issues it every tick it drags, the walk every
+# tick it shoves a lump ahead of it. (Mode -1, a pusher capsule that
+# shoves loose particles out of its way, is in the shaders but unused:
+# it rolls or flattens a lump against itself instead of moving it.)
+func pull_chunk(id: int, tip: Vector2, dir: Vector2, speed: float) -> void:
+	set_capsule(SLOT_PULL, tip, dir, speed, float(id), true, -2.0)
+	_capsule_once[SLOT_PULL] = true
+
+
+# Deletes chunk id's particles within radius of pos on the next tick.
+func eat_chunk(id: int, pos: Vector2, radius: float) -> void:
+	set_capsule(SLOT_EVENT, pos, Vector2.RIGHT, radius, float(id), true, -3.0)
+	_capsule_once[SLOT_EVENT] = true
+
+
+# Breaks every bond within radius of pos on the next tick: a lump hit
+# there comes apart into grains, and in two if the circle cuts it.
+func break_circle(pos: Vector2, radius: float) -> void:
+	set_capsule(SLOT_EVENT, pos, Vector2.RIGHT, radius, 0.0, true, -4.0)
+	_capsule_once[SLOT_EVENT] = true
+
+
+# A particle at rest sleeps until something moves it; loose material
+# that should settle (a heap of sand) is spawned with a little velocity.
+func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO) -> void:
 	if _dead.is_empty() or not ready_to_run:
 		return
 	var idx: int = _dead.pop_back()
 	var encoded := float(mat) + _rng.randf_range(0.0, 0.99) * 0.1
-	var p := PackedFloat32Array([pos.x, pos.y, 0.0, 0.0, pos.x, pos.y, 0.0, encoded])
+	var p := PackedFloat32Array([pos.x, pos.y, vel.x, vel.y, pos.x, pos.y, 0.0, encoded])
 	_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, p.to_byte_array())
+	# A slot that once held a chunk's particle keeps its bonds: cleared.
+	_rd.buffer_update(_buf, (O_BD + idx * BD_STRIDE) * 4, _zero_bd.size(), _zero_bd)
+
+
+# A lump of loose material: one particle per cell (Vector2i render
+# cells), each bonded to its lattice neighbours, the eight around it, at
+# their rest distance. The lump holds its shape, falls, can be pushed or
+# dragged as one, and comes apart where its bonds are broken. Returns
+# the chunk id, or 0 when there are no cells or not enough free slots.
+func spawn_chunk(list: Array, mat: int) -> int:
+	if not ready_to_run or list.is_empty() or _dead.size() < list.size():
+		return 0
+	var id := _next_chunk
+	_next_chunk += 1
+	var index := {}
+	var at := {}
+	for c in list:
+		var idx: int = _dead.pop_back()
+		index[c] = idx
+		at[idx] = Vector2((c.x + 0.5) * PIXEL_SZ, (c.y + 0.5) * PIXEL_SZ)
+	for c in list:
+		var idx: int = index[c]
+		var p: Vector2 = at[idx]
+		var encoded := float(mat) + _rng.randf_range(0.0, 0.99) * 0.1
+		var rec := PackedFloat32Array([p.x, p.y, 0.0, 0.0, p.x, p.y, 0.0, encoded])
+		_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, rec.to_byte_array())
+		var bd := PackedByteArray()
+		bd.resize(BD_STRIDE * 4)
+		bd.encode_u32(0, id)
+		var n := 0
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				if dx == 0 and dy == 0:
+					continue
+				var m := Vector2i(c.x + dx, c.y + dy)
+				if n >= MAX_BONDS or not index.has(m):
+					continue
+				var j: int = index[m]
+				bd.encode_u32((4 + n * 2) * 4, j)
+				bd.encode_float((5 + n * 2) * 4, p.distance_to(at[j]))
+				n += 1
+		bd.encode_u32(8, n)
+		for k in range(n, MAX_BONDS):
+			bd.encode_u32((4 + k * 2) * 4, BOND_NONE)
+		_rd.buffer_update(_buf, (O_BD + idx * BD_STRIDE) * 4, bd.size(), bd)
+	chunks[id] = {"mat": mat, "count": list.size()}
+	return id
+
+
+# Loose sand on the air cells within radius of centre: a heap that
+# flows down and settles.
+func spawn_sand_disc(centre: Vector2, radius: float) -> void:
+	var cx := int(floor(centre.x / PIXEL_SZ))
+	var cy := int(floor(centre.y / PIXEL_SZ))
+	var n := int(ceil(radius / PIXEL_SZ)) + 1
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if x < 0 or y < 0 or x >= RENDER_W or y >= RENDER_H:
+				continue
+			if cells.size() >= RENDER_W * RENDER_H * 4 and cells.decode_u32((y * RENDER_W + x) * 4) != 0:
+				continue
+			var p := Vector2((x + 0.5) * PIXEL_SZ, (y + 0.5) * PIXEL_SZ)
+			if p.distance_to(centre) < radius:
+				spawn_particle(p + Vector2(_rng.randf_range(-0.5, 0.5), _rng.randf_range(-0.5, 0.5)), MAT_SAND, Vector2(0.0, 20.0))
+
+
+# A roughly round lump about centre: a disc with a wobbly edge, on the
+# air cells only, so it never overlaps the ground.
+func spawn_chunk_disc(centre: Vector2, radius: float, mat: int) -> int:
+	var list: Array = []
+	var cx := int(floor(centre.x / PIXEL_SZ))
+	var cy := int(floor(centre.y / PIXEL_SZ))
+	var n := int(ceil(radius / PIXEL_SZ)) + 1
+	var wobble := _rng.randf() * 100.0
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if x < 0 or y < 0 or x >= RENDER_W or y >= RENDER_H:
+				continue
+			if cells.size() >= RENDER_W * RENDER_H * 4 and cells.decode_u32((y * RENDER_W + x) * 4) != 0:
+				continue
+			var p := Vector2((x + 0.5) * PIXEL_SZ, (y + 0.5) * PIXEL_SZ)
+			var a := (p - centre).angle()
+			var edge := radius * (1.0 + 0.22 * sin(a * 3.0 + wobble) + 0.1 * sin(a * 5.0 - wobble))
+			if p.distance_to(centre) < edge:
+				list.append(Vector2i(x, y))
+	return spawn_chunk(list, mat)
 
 
 func fill_rect(r: Rect2, mat := MAT_ROCK) -> void:
@@ -337,11 +477,15 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 	_wf(data, O_P + 18, PIXEL_SZ)
 
 	# [rest_density, stiffness, viscosity, cohesion, friction, yield, R, G, B, pad, pad, pad]
-	var sand :=   [3.0, 1.0, 0.02,  0.0, 0.3, 0.0, 0.42, 0.36, 0.30, 0.0, 0.0, 0.0]
+	# Sand: pale and warm, so a heap of it reads apart from the ground.
+	var sand :=   [3.0, 1.0, 0.02,  0.0, 0.3, 0.0, 0.64, 0.56, 0.38, 0.0, 0.0, 0.0]
 	var water :=  [1.8, 1.2, 0.008, 0.0, 0.0, 0.0, 0.15, 0.40, 0.85, 0.0, 0.0, 0.0]
 	var clay :=   [3.5, 0.8, 0.15,  0.4, 0.4, 0.2, 0.55, 0.38, 0.25, 0.0, 0.0, 0.0]
 	var rock :=   [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.34, 0.29, 0.25, 0.0, 0.0, 0.0]
-	var wood :=   [2.2, 1.2, 0.06,  0.8, 0.5, 1.5, 0.45, 0.32, 0.18, 0.0, 0.0, 0.0]
+	# Stone: the 4 px lattice's own density, no yield (its bonds hold
+	# the shape), some friction so a lump stops rolling; pale, so a lump
+	# stands out from the ground it lies on.
+	var wood :=   [3.0, 1.2, 0.02,  0.0, 0.5, 0.0, 0.60, 0.58, 0.54, 0.0, 0.0, 0.0]
 	var iron :=   [3.8, 1.5, 0.00,  0.6, 0.5, 2.0, 0.30, 0.55, 0.90, 0.0, 0.0, 0.0]
 	var copper := [3.5, 1.3, 0.00,  0.5, 0.4, 1.5, 0.95, 0.50, 0.10, 0.0, 0.0, 0.0]
 	var gold :=   [4.5, 1.8, 0.00,  0.7, 0.6, 2.5, 1.00, 0.88, 0.08, 0.0, 0.0, 0.0]

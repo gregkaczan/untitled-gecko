@@ -107,15 +107,29 @@ const FLIP_CONFIRM := 4        # Ticks a big change of surface normal must persi
 const FLIP_DOT := 0.7          # A normal this far from the target (cosine, ~45 degrees) is a big change
 const HOLD_AFTER_GRAB := 15    # Ticks after a grab lands during which big changes of normal are ignored
 const LEG_BLOB_GAP := 4.5      # Largest spacing of the blobs along a leg, so a stretched leg stays one shape
-const HOLD_TIME := 0.12        # Mouse held longer than this shoots the tongue; a shorter press spits
+const HOLD_TIME := 0.12        # Left button held this long with the tongue landed: a grapple, not a strike
 const TONGUE_SPEED := 900.0
 const TONGUE_MAX := 160.0
-const PULL_SPEED := 360.0
+const PULL_SPEED := 360.0      # The body reeled in on the tongue (the grapple)
 const PULL_ACCEL := 2400.0
-const SPIT_SPEED := 520.0
-const SPIT_GRAVITY := 500.0
-const SPIT_R := 20.0           # Crater radius of a spit burst
-const SPIT_COOLDOWN := 0.25
+const STRIKE_R := 8.0          # Dent a tongue strike leaves in the ground
+const STRIKE_BREAK_R := 10.0   # Round the tip of a strike on a lump, its bonds break
+const PULL_MAX_CELLS := 80     # Biggest piece the tongue drags in (cells of 4 px, a turned lump fills more); a bigger one holds it
+const EAT_MAX_CELLS := 16      # Biggest piece swallowed when it reaches the mouth
+const EAT_REACH := 16.0        # A dragged piece this close to the mouth is swallowed, or let go
+const EAT_R := 28.0            # How far round the mouth the swallow reaches
+const CHUNK_PULL_SPEED := 150.0
+const PUSH_LUMP_SPEED := 60.0  # Speed a shoved lump is moved at, as one, ahead of the walk
+const PUSH_SPEED := 50.0       # Walking speed kept up behind a lump being shoved
+const PUSH_TRIES := 30         # Ticks of shoving a lump that does not move before it counts as a wall
+const PEBBLE_CELLS := 6        # A lump of this many cells or fewer is stepped over, not shoved
+const BRACE_BACK := 5.0        # Snout drawn back while the gecko strains on its tongue
+const GULP_TIME := 0.5         # Seconds a swallowed piece takes to travel down the body
+const YAWN_GAPE := 6.0         # Px the jaw drops at the widest (the yawn's mouth, used for the swallow)
+const EAT_OPEN := 0.09         # Seconds the mouth takes to open for a piece coming in
+const EAT_AGAPE := 0.1         # Seconds it stays open after the swallow
+const EAT_CLOSE := 0.07        # Seconds it takes to close
+const GAPE_LEAD := 12.0        # A piece this far beyond EAT_REACH already opens the mouth
 const SWIM_SPEED := 120.0      # Mean speed; the kick peaks above it, the glide falls below
 const SWIM_ACCEL := 700.0
 const SWIM_DRAG := 300.0
@@ -123,7 +137,7 @@ const SWIM_PERIOD := 0.7       # One kick and glide
 const SWIM_KICK := 0.35        # Fraction of the period the legs push
 const BODY_COLOR := Color(0.56, 0.63, 0.40)
 const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
-const SPIT_COLOR := Color(0.85, 0.95, 0.45)
+const MOUTH_COLOR := Color(0.24, 0.08, 0.10)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
 const EYE_COLOR := Color(0.08, 0.07, 0.06)
 
@@ -169,12 +183,21 @@ var tongue_anchored := false
 var tongue_retracting := false
 var tongue_tip := Vector2.ZERO
 var tongue_dir := Vector2.ZERO
-var spits: Array = []          # [position, velocity] per spit in flight
+var tongue_chunk := -1         # The lump the tongue is stuck to, -1 for the ground
+var tongue_mode := 0           # Stuck: 0 undecided (a tap or a hold), 1 grapple (the body reeled in), 2 drag (both buttons)
+var pulling := false           # This tick the tongue dragged a lump in (trace)
+var straining := false         # Stuck to something that will not come (trace, brace)
 var debug := false             # F1: overlay with up vector, probe reach, feet and bite
-var mouse_blocked := false     # The mouse is over the debug panel: no tongue, spit or chew from it
-var _mouse_held := -1.0        # Seconds the left button has been held, -1 when it is up
-var _tongue_spent := false     # A tongue that missed or let go stays in until the button is released
-var _spit_cd := 0.0
+var mouse_blocked := false     # The mouse is over the debug panel: no tongue or chew from it
+var _lmb := false              # This tick's left button
+var _lmb_was := false          # Last tick's, for the press edge
+var _press_t := 0.0            # Seconds the left button has been held since the shot
+var _gulp := 0.0               # Seconds left of a swallow travelling down the body
+var _gape := 0.0               # Px the mouth is open
+var _gape_want := false        # This tick a piece is coming in: the mouth opens
+var _agape := 0.0              # Seconds left of holding the mouth open after a swallow
+var _block_cell = null         # The cell that stopped this tick's walk, null when none
+var _push_ticks := 0           # Ticks in a row the walk has been shoving the same lump
 var _n_target := Vector2.UP    # Smoothed surface normal the up vector turns toward
 var _grab_n := Vector2.ZERO    # Normal of the surface the gecko is turning onto, zero when none
 
@@ -263,7 +286,13 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	tongue_out = false
 	tongue_anchored = false
 	tongue_retracting = false
-	spits.clear()
+	tongue_chunk = -1
+	pulling = false
+	straining = false
+	_gulp = 0.0
+	_gape = 0.0
+	_agape = 0.0
+	_push_ticks = 0
 	_n_target = up_dir
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
@@ -280,17 +309,23 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 func _physics_process(dt: float) -> void:
 	var inp := _read_input()
 	var jump := _read_jump()
-	chewing = _read_chew()
 	_blocked = false
 	_lifting = false
 	_squeezed_f = false
 	_s = 0.0
 	_n_dbg = Vector2.ZERO
 	_jumped = false
+	pulling = false
+	straining = false
+	_block_cell = null
 	no_cling = maxf(no_cling - dt, 0.0)
+	_gulp = maxf(_gulp - dt, 0.0)
 	_dig_aim = Vector2.ZERO
 	if not _squeeze:
 		_sq_r = move_toward(_sq_r, BODY_R, SQUEEZE_RECOVER)
+	_update_mouse(dt)
+	# The mouth is busy while the tongue is out or the left button is down.
+	chewing = _read_chew() and not tongue_out and not _lmb
 	if chewing:
 		var aim := _aim_dir()
 		if aim == Vector2.ZERO:
@@ -305,23 +340,26 @@ func _physics_process(dt: float) -> void:
 				inp = aim
 			_dig_aim = aim
 			_chew(_within_look(aim))
-	_update_mouse(dt)
-	_update_spits(dt)
 	var in_water: bool = map.water_near(pos, 1)
 	if in_water and not clinging and not swimming and not tongue_anchored:
 		swimming = true
 		vel *= 0.4
 	elif swimming and not in_water:
 		swimming = false
-	if tongue_anchored:
+	if tongue_anchored and not clinging:
 		_update_pull(dt)
 	elif swimming:
 		_update_swimming(inp, dt)
 	elif clinging:
+		if tongue_anchored:
+			# Braced on the tongue: the feet stay planted, nothing else moves.
+			inp = Vector2.ZERO
+			jump = false
 		_update_clinging(inp, jump, dt)
 	else:
 		_update_airborne(inp, dt)
 	_update_tongue(dt)
+	_update_gape(dt)
 	_update_chain(dt)
 	_update_look(dt)
 	_update_feet(dt)
@@ -353,7 +391,7 @@ func _read_input() -> Vector2:
 func _print_trace() -> void:
 	var hd := chain.head()
 	var state := "cling" if clinging else ("swim" if swimming else "air")
-	if tongue_anchored:
+	if tongue_anchored and not clinging:
 		state = "pull"
 	var fs := ""
 	for f in feet:
@@ -361,12 +399,28 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f;" % [(chain.points[i] - pos).dot(up), _draw_r[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d tng=%s tip=%.1f,%.1f cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
-		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0, cp, fs])
+		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
+		_tongue_state(), tongue_tip.x, tongue_tip.y, cp, fs])
+
+
+# in, out, stuck, drag, strain, back: what the tongue is doing (trace, panel).
+func _tongue_state() -> String:
+	if not tongue_out:
+		return "in"
+	if tongue_retracting:
+		return "back"
+	if pulling:
+		return "drag"
+	if straining:
+		return "strain"
+	if tongue_anchored:
+		return "grapple" if tongue_mode == 1 else "stuck"
+	return "out"
 
 
 func _read_jump() -> bool:
@@ -484,7 +538,21 @@ func _away_dir(tangent: Vector2) -> float:
 	return signf(tangent.y)
 
 
+# On the ground, loose lumps are not terrain to the senses (the surface
+# rays, the probe, the gap and wall tests): a lump ahead stops the walk
+# as a thing in the way and is shoved, not read as a slope and climbed.
+# They are terrain again standing on one, and after half a second of
+# shoving one that will not budge, which is then climbed like rock.
+# Collision (the walk's own steps) sees lumps either way.
 func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
+	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
+	var on_lump: bool = floor_pt != null and map.chunk_at_world(floor_pt) >= 0
+	map.ignore_chunks = not on_lump and _push_ticks < PUSH_TRIES
+	_cling_step(inp, jump, dt)
+	map.ignore_chunks = false
+
+
+func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	var tangent := _tangent()
 	var s := 0.0
 	if inp.length() > 0.2:
@@ -556,14 +624,31 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	_s = s
 	var top := WALK_SPEED * (SQUEEZE_SLOW if _squeeze else 1.0)
 	speed_along = move_toward(speed_along, s * top, WALK_ACCEL * dt)
+	# The walk's collision sees lumps whatever the senses do.
+	var ignoring: bool = map.ignore_chunks
+	map.ignore_chunks = false
 	var blocked := not _step(tangent * speed_along * dt)
+	map.ignore_chunks = ignoring
 	_blocked = blocked
+	# Stopped by a loose lump: shove it along, the whole lump moved as
+	# one the way the walk points (a push on its near particles alone
+	# rolls it up over the body, or flattens it), keeping a slow walk up
+	# behind it, for a while before treating it as a wall (a lump
+	# wedged against rock is climbed like one).
+	var shoving := false
+	var lump: int = map.chunk_at_world(_block_cell) if (blocked and _block_cell != null) else -1
+	if lump >= 0 and s != 0.0 and _push_ticks < PUSH_TRIES:
+		_push_ticks += 1
+		map.pull_chunk(lump, pos, tangent * facing, PUSH_LUMP_SPEED)
+		shoving = true
+	elif not blocked:
+		_push_ticks = 0
 	if blocked:
-		speed_along = 0.0
+		speed_along = s * PUSH_SPEED if shoving else 0.0
 		# Stopped by the lip of a passage narrower than the body, the way
 		# the press points: squeeze into it. The clearance drops to fit
 		# and the nudge below brings the body down (or up) to its middle.
-		if not _squeeze and not chewing and s != 0.0:
+		if not _squeeze and not chewing and not shoving and s != 0.0:
 			_passage_ahead()
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
@@ -639,7 +724,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		n = dig_n
 		if absf(up.angle_to(n)) > DIG_GRAB_ANGLE:
 			_grab_n = n
-	elif blocked and chewing:
+	elif blocked and (chewing or shoving):
 		n = Vector2.ZERO
 	elif blocked and not _squeeze:
 		n = _obstacle_normal(inp)
@@ -819,28 +904,51 @@ func _cursor() -> Vector2:
 	return get_global_mouse_position()
 
 
-# Left mouse: held past HOLD_TIME shoots the tongue at the cursor and
-# keeps it until release; a shorter press spits.
+# The tongue. A press of the left button shoots it at the cursor, and
+# where it lands it sticks while the button is down. A tap (released
+# before the tongue has been held HOLD_TIME, landed or not) strikes: a
+# dent in the ground, a lump broken where it is hit, and straight back.
+# Held longer alone, it is the grapple: the gecko lets go and is reeled
+# in to the anchor, and clings where it arrives. With the right button
+# (or the chew key) held as well it drags: the gecko braces on its
+# planted feet, a lump it can drag (PULL_MAX_CELLS) comes in and is
+# swallowed at the mouth if small enough, or let go there; the ground,
+# or a lump too big, holds the tongue taut until a button is released.
+# Airborne or swimming there is nothing to brace on, so the tongue
+# reels the gecko in whichever buttons are down.
 func _update_mouse(dt: float) -> void:
-	_spit_cd = maxf(_spit_cd - dt, 0.0)
-	var held := lmb_override if input_override != null else (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_blocked)
-	if held:
-		_mouse_held = 0.0 if _mouse_held < 0.0 else _mouse_held + dt
-		if not tongue_out and not _tongue_spent and _mouse_held >= HOLD_TIME:
-			_shoot_tongue()
-	else:
-		if _mouse_held >= 0.0 and _mouse_held < HOLD_TIME and not tongue_out:
-			_spit()
-		_mouse_held = -1.0
-		_tongue_spent = false
-		if tongue_out and not tongue_retracting:
-			_release_tongue()
+	_lmb = lmb_override if input_override != null else (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_blocked)
+	var pressed := _lmb and not _lmb_was
+	_lmb_was = _lmb
+	_press_t = 0.0 if pressed else _press_t + dt
+	if pressed and not tongue_out:
+		_shoot_tongue()
+	if not tongue_anchored:
+		return
+	var rmb := _read_chew()
+	if not _lmb:
+		# A tap that landed: the strike happens as the button comes up.
+		if tongue_mode == 0:
+			_strike()
+		_release_tongue()
+	elif tongue_mode == 2 and not rmb:
+		_release_tongue()
+	elif tongue_mode == 0:
+		if rmb:
+			tongue_mode = 2
+		elif _press_t >= HOLD_TIME:
+			tongue_mode = 1
+			if clinging:
+				clinging = false
+				_unplant()
 
 
 func _shoot_tongue() -> void:
 	tongue_out = true
 	tongue_anchored = false
 	tongue_retracting = false
+	tongue_chunk = -1
+	tongue_mode = 0
 	tongue_tip = _mouth()
 	tongue_dir = (_cursor() - tongue_tip).normalized()
 	if tongue_dir == Vector2.ZERO:
@@ -850,12 +958,12 @@ func _shoot_tongue() -> void:
 # Letting go: the tip flies back to the mouth before the tongue is gone.
 func _release_tongue() -> void:
 	tongue_anchored = false
+	tongue_chunk = -1
 	tongue_retracting = tongue_out
-	_tongue_spent = true
 
 
-# The tip flies out in 2 px steps until it meets rock or runs out of
-# tongue. An anchor whose rock gets destroyed lets go.
+# The tip flies out in 2 px steps until it meets something solid or
+# runs out of tongue, then sticks while the button is down, or strikes.
 func _update_tongue(dt: float) -> void:
 	if not tongue_out:
 		return
@@ -869,8 +977,7 @@ func _update_tongue(dt: float) -> void:
 			tongue_tip += (mouth - tongue_tip).normalized() * step
 		return
 	if tongue_anchored:
-		if not map.solid_near(tongue_tip, 1):
-			_release_tongue()
+		_hold_tongue()
 		return
 	var travelled := 0.0
 	var step := TONGUE_SPEED * dt
@@ -879,11 +986,13 @@ func _update_tongue(dt: float) -> void:
 		var next := tongue_tip + tongue_dir * inc
 		if map.is_solid_world(next):
 			tongue_tip = next
-			tongue_anchored = true
-			if clinging:
-				clinging = false
-				_unplant()
-			swimming = false
+			if _lmb:
+				tongue_anchored = true
+				tongue_chunk = map.chunk_at_world(next)
+				swimming = false
+			else:
+				_strike()
+				_release_tongue()
 			return
 		tongue_tip = next
 		travelled += inc
@@ -892,8 +1001,81 @@ func _update_tongue(dt: float) -> void:
 			return
 
 
+# The tip lands: a dent in the ground, or a lump broken where it is hit.
+func _strike() -> void:
+	if map.chunk_at_world(tongue_tip) >= 0:
+		map.break_circle(tongue_tip, STRIKE_BREAK_R)
+	else:
+		map.erase_circle(tongue_tip, STRIKE_R)
+
+
+# Stuck, with the gecko on the ground (airborne, _update_pull has the
+# tongue): waiting on a tap or a hold, or dragging. The tip rides the
+# lump's cells as it comes in.
+func _hold_tongue() -> void:
+	if not clinging:
+		return
+	if tongue_chunk < 0:
+		if not map.solid_near(tongue_tip, 1):
+			_release_tongue()
+		elif tongue_mode == 2:
+			straining = true
+		return
+	var piece: PackedVector2Array = map.chunk_piece(tongue_chunk, tongue_tip)
+	if piece.is_empty():
+		_release_tongue()
+		return
+	if tongue_mode != 2:
+		return
+	var mouth := _mouth()
+	var near_tip := tongue_tip
+	var best_tip := INF
+	var near_mouth := INF
+	for c in piece:
+		var d := c.distance_squared_to(tongue_tip)
+		if d < best_tip:
+			best_tip = d
+			near_tip = c
+		near_mouth = minf(near_mouth, c.distance_to(mouth))
+	tongue_tip = near_tip
+	if piece.size() > PULL_MAX_CELLS:
+		straining = true
+		return
+	if piece.size() <= EAT_MAX_CELLS:
+		# A piece small enough to swallow: the mouth opens as it nears,
+		# and once it is open and the piece at it, the piece is gone.
+		if near_mouth <= EAT_REACH + GAPE_LEAD:
+			_gape_want = true
+			if near_mouth <= EAT_REACH and _gape >= YAWN_GAPE - 0.01:
+				map.eat_chunk(tongue_chunk, mouth, EAT_R)
+				_gulp = GULP_TIME
+				_agape = EAT_AGAPE
+				_release_tongue()
+				return
+	elif near_mouth <= EAT_REACH:
+		_release_tongue()
+		return
+	var dir := (mouth - tongue_tip).normalized()
+	if dir != Vector2.ZERO:
+		map.pull_chunk(tongue_chunk, tongue_tip, dir, CHUNK_PULL_SPEED)
+		pulling = true
+
+
+# The mouth opens at EAT_OPEN's pace while a piece is coming in, stays
+# open EAT_AGAPE after the swallow, and closes at EAT_CLOSE's.
+func _update_gape(dt: float) -> void:
+	_agape = maxf(_agape - dt, 0.0)
+	var want := _gape_want or _agape > 0.0
+	_gape = move_toward(_gape, YAWN_GAPE if want else 0.0, YAWN_GAPE / (EAT_OPEN if want else EAT_CLOSE) * dt)
+	_gape_want = false
+
+
 # Reeling in: the body flies at the anchor and clings where it arrives.
+# An anchor whose rock gets destroyed lets go.
 func _update_pull(dt: float) -> void:
+	if not map.solid_near(tongue_tip, 1):
+		_release_tongue()
+		return
 	var to := tongue_tip - pos
 	var d := to.length()
 	var p: Dictionary = map.probe(pos, PROBE_R)
@@ -911,32 +1093,6 @@ func _update_pull(dt: float) -> void:
 		vel = Vector2.ZERO
 	no_cling = 0.1
 	up = _turn_toward(up, Vector2.UP, 4.0 * dt)
-
-
-func _spit() -> void:
-	if _spit_cd > 0.0:
-		return
-	_spit_cd = SPIT_COOLDOWN
-	var dir := (_cursor() - _mouth()).normalized()
-	if dir == Vector2.ZERO:
-		dir = look
-	spits.append([_mouth(), dir * SPIT_SPEED])
-
-
-func _update_spits(dt: float) -> void:
-	for i in range(spits.size() - 1, -1, -1):
-		var sp: Array = spits[i]
-		sp[1].y += SPIT_GRAVITY * dt
-		var from: Vector2 = sp[0]
-		var delta: Vector2 = sp[1] * dt
-		var hit = map.ray_hit(from, delta.normalized(), delta.length())
-		if hit != null:
-			map.blast(hit, SPIT_R)
-			spits.remove_at(i)
-			continue
-		sp[0] = from + delta
-		if sp[0].y > 1300.0 or sp[0].x < -200.0 or sp[0].x > 2200.0 or sp[0].y < -300.0:
-			spits.remove_at(i)
 
 
 func _land(n: Vector2) -> void:
@@ -1003,6 +1159,12 @@ func _step(delta: Vector2) -> bool:
 	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 	if cell == null or floor_pt == null or _lift_ticks >= LIFT_TICKS:
 		return false
+	# A loose lump is shoved, not climbed, unless it is a pebble or has
+	# not budged under half a second of shoving.
+	var lump: int = map.chunk_at_world(cell)
+	if lump >= 0 and _push_ticks < PUSH_TRIES \
+			and map.chunk_piece(lump, cell, PEBBLE_CELLS + 1).size() > PEBBLE_CELLS:
+		return false
 	# Mid-turn (an inside corner, an edge) the surface logic is already
 	# carrying the body round: no lifting on top of it.
 	if _up_rate > LIFT_TURN_MAX:
@@ -1027,6 +1189,15 @@ func _step(delta: Vector2) -> bool:
 # through ground. A body already inside rock (buried by the brush) is
 # let move so it can be pushed out.
 func _move(delta: Vector2) -> bool:
+	# Collision sees loose lumps whatever the senses are ignoring.
+	var ignoring: bool = map.ignore_chunks
+	map.ignore_chunks = false
+	var ok := _move_seeing_all(delta)
+	map.ignore_chunks = ignoring
+	return ok
+
+
+func _move_seeing_all(delta: Vector2) -> bool:
 	var length := delta.length()
 	if length < 0.001:
 		return true
@@ -1042,6 +1213,7 @@ func _move(delta: Vector2) -> bool:
 		if map.solid_within(next, r):
 			var cell = map.blocking_cell(pos, next, r)
 			_block_normal = (next - cell).normalized() if cell != null else -dir
+			_block_cell = cell
 			return false
 		pos = next
 		moved += step
@@ -1342,6 +1514,9 @@ func _reach_for_wall(inp: Vector2) -> Vector2:
 		var hit = map.ray_hit(pos, t * side, BODY_R + REACH)
 		if hit == null:
 			continue
+		# A loose lump is no wall to climb: the walk shoves it instead.
+		if map.chunk_at_world(hit) >= 0:
+			continue
 		var q: Dictionary = map.probe(hit - t * side * 3.0, 10.0)
 		var n: Vector2 = q.normal if q.found and q.normal != Vector2.ZERO else -t * side
 		if n.dot(up) > 0.75 or n.dot(up) < MAX_TURN_DOT:
@@ -1450,9 +1625,12 @@ func _update_chain(dt: float) -> void:
 			_pos_s += up * (across - signf(across) * BOB_MAX)
 		# At a wall the snout stops at the rock, drawn back along the body
 		# line, instead of being shoved aside by the push-out; it comes
-		# forward again at HEAD_RECOVER, not in one go.
-		var back := maxf(_head_back - HEAD_RECOVER * dt, 0.0)
-		var back_max := minf(HEAD_LEAD - 4.0, _head_back + HEAD_RETRACT * dt)
+		# forward again at HEAD_RECOVER, not in one go. Stuck on the
+		# tongue, the snout is held back as well: the gecko leaning back
+		# on its feet, bracing.
+		var brace := BRACE_BACK if (tongue_anchored and clinging) else 0.0
+		var back := move_toward(_head_back, brace, (HEAD_RETRACT if brace > _head_back else HEAD_RECOVER) * dt)
+		var back_max := minf(HEAD_LEAD - 4.0, maxf(back, _head_back + HEAD_RETRACT * dt))
 		var base := _pos_s + up * BODY_LIFT
 		target = base + t * facing * (HEAD_LEAD - back)
 		while back < back_max and map.solid_within(target, chain.radii[0] + BODY_GAP):
@@ -1718,8 +1896,15 @@ func _foot_draw(f: Foot) -> Vector2:
 func _push_blobs() -> void:
 	var list: Array = []
 	_leg_blobs(list, -1.0, FAR_LEG_COLOR)
+	# A swallowed piece travels down the body as a bulge.
+	var gulp_at := -1.0
+	if _gulp > 0.0:
+		gulp_at = (1.0 - _gulp / GULP_TIME) * 4.0
 	for i in chain.size():
-		list.append([chain.points[i], _draw_r[i], BODY_COLOR])
+		var r_i: float = _draw_r[i]
+		if gulp_at >= 0.0:
+			r_i += 3.5 * maxf(0.0, 1.0 - absf(i - gulp_at))
+		list.append([chain.points[i], r_i, BODY_COLOR])
 		if i == 0:
 			continue
 		if _thin_on[i] or _thin_on[i - 1]:
@@ -1739,12 +1924,21 @@ func _push_blobs() -> void:
 					list.append([chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, BODY_COLOR])
 			else:
 				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
-	list.append([chain.head() + look * SNOUT, 5.0, BODY_COLOR])
+	# The snout, lifted as the mouth opens; a jaw blob dropped below it
+	# and the dark inside of the mouth between them while it gapes.
+	var marks: Array = []
+	list.append([chain.head() + look * SNOUT + up * _gape * 0.5, 5.0, BODY_COLOR])
+	if _gape > 0.0:
+		list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + _gape * 0.5), 3.5, BODY_COLOR])
+		var across := _axis(up).abs()
+		var size: Vector2 = (Vector2.ONE - across) * 6.0 + across * (_gape + 1.0)
+		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs(list)
 	# The eye: one 4 px square on the blob layer's grid, drawn over the
 	# body by the layer itself, so it is as crisp as the body's pixels.
-	blobs.set_marks([[chain.points[0] + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0), 4.0, EYE_COLOR]])
+	marks.append([chain.points[0] + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0), 4.0, EYE_COLOR])
+	blobs.set_marks(marks)
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:
@@ -1772,14 +1966,15 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 func _draw() -> void:
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
-	for sp in spits:
-		draw_circle(sp[0], 3.0, SPIT_COLOR)
 
 
+# The tongue tapers from the mouth to its tip.
 func _draw_under() -> void:
 	if tongue_out:
-		_under.draw_line(_mouth(), tongue_tip, TONGUE_COLOR, 2.5)
-		_under.draw_circle(tongue_tip, 2.5, TONGUE_COLOR)
+		var mouth := _mouth()
+		var mid := mouth.lerp(tongue_tip, 0.5)
+		_under.draw_line(mouth, mid, TONGUE_COLOR, 3.0)
+		_under.draw_line(mid, tongue_tip, TONGUE_COLOR, 2.0)
 
 
 func _draw_debug() -> void:
@@ -1801,7 +1996,7 @@ func debug_text() -> String:
 		if f.planted:
 			planted += 1
 	var state := "cling" if clinging else ("swim" if swimming else "air")
-	if tongue_anchored:
+	if tongue_anchored and not clinging:
 		state = "pull"
-	return "%s%s%s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
-		state, " chew" if chewing else "", " bridge" if _bridging else "", planted, up.x, up.y, speed_along, vel.x, vel.y]
+	return "%s%s%s  tongue %s  feet %d/4  up (%.2f, %.2f)  speed %.0f  vel (%.0f, %.0f)" % [
+		state, " chew" if chewing else "", " bridge" if _bridging else "", _tongue_state(), planted, up.x, up.y, speed_along, vel.x, vel.y]

@@ -14,7 +14,9 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN
 const uint O_WD = 1641736u;
 const uint O_LD = 1771336u;
 const uint O_CD = 1900936u;
-const uint O_CT = 2073870u;   // cell class per pixel, read back by the gecko: 0 air, 1 water, 2 solid, 3 lava
+const uint O_CT = 2073870u;   // cell class per pixel, read back by the gecko: 0 air, 1 water, 2 solid, 3 lava, 16 + id a chunk's cell
+const uint O_BD = 2203470u;   // bond records: [chunk id, ...] per particle (see sim.gd)
+const uint BD = 20u;
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -78,13 +80,30 @@ void main() {
     if (rx < 0 || rx >= int(rw) || ry < 0 || ry >= int(rh)) return;
 
     // Cell class for the CPU world queries. Solid beats water beats air;
-    // fire, smoke, bullets and mites leave no class.
+    // fire, smoke, bullets and mites leave no class. A chunk's cells
+    // carry its id, so the CPU can tell a lump from the ground and
+    // which lump it is. A lump's lattice turns as it rolls, and a turned
+    // lattice leaves cells empty, so each of its particles claims every
+    // cell whose centre is within a lattice half-diagonal of it, which
+    // closes the gaps at any angle (the colour below does the same).
+    uint chunk = (mat < 8u || mat == 12u) ? buf.d[O_BD + id * BD] : 0u;
     {
         uint cls = 0u;
         if (mat == 1u) cls = 1u;
         else if (mat == 10u) cls = 3u;
-        else if (mat < 8u || mat == 12u) cls = 2u;
-        if (cls > 0u) atomicMax(buf.d[O_CT + uint(ry) * rw + uint(rx)], cls);
+        else if (mat < 8u || mat == 12u) cls = (chunk != 0u) ? 16u + chunk : 2u;
+        if (chunk != 0u) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    int cx = rx + dx, cy = ry + dy;
+                    if (cx < 0 || cx >= int(rw) || cy < 0 || cy >= int(rh)) continue;
+                    vec2 cc = vec2((float(cx) + 0.5) * psz, (float(cy) + 0.5) * psz);
+                    if (length(vec2(px, py) - cc) < 2.9) atomicMax(buf.d[O_CT + uint(cy) * rw + uint(cx)], cls);
+                }
+            }
+        } else if (cls > 0u) {
+            atomicMax(buf.d[O_CT + uint(ry) * rw + uint(rx)], cls);
+        }
     }
 
     if (mat == 1u) {
@@ -248,7 +267,9 @@ void main() {
         float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
         float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
         float h2 = hash11(variation * 419.2 + float(id) * 0.0047);
-        float var_strength = 0.22;
+        // Stone (mat 4) varies less: a lump reads as one pale thing
+        // against the ground's grain.
+        float var_strength = (mat == 4u) ? 0.07 : 0.22;
         cr += (h0 - 0.5) * var_strength;
         cg += (h1 - 0.5) * var_strength;
         cb += (h2 - 0.5) * var_strength;
@@ -264,19 +285,6 @@ void main() {
             float shimmer = hash11(px * 0.07 + py * 0.13 + variation) * 0.1;
             cb += 0.08 + shimmer;
             cg += 0.03;
-        }
-
-        // Wood: two sub-types split at variation=5 — green foliage vs brown bark
-        if (mat == 4u) {
-            if (variation >= 5.0) {
-                cr = 0.18 + (h0 - 0.5) * 0.12; // green leaves
-                cg = 0.50 + (h1 - 0.5) * 0.15;
-                cb = 0.12 + (h2 - 0.5) * 0.08;
-            } else {
-                cr = 0.42 + (h0 - 0.5) * 0.12; // brown trunk/bark
-                cg = 0.28 + (h1 - 0.5) * 0.08;
-                cb = 0.14 + (h2 - 0.5) * 0.06;
-            }
         }
 
         // Iron: cool metallic sparkle with rare bright glints (15% chance)
@@ -381,6 +389,18 @@ void main() {
     // Write to pixel buffer using atomicMax: packUnorm4x8 packs RGBA into a uint where
     // brighter colors produce higher uint values, so atomicMax naturally composites
     // the brightest (most visible) particle at each pixel — no depth buffer needed.
+    uint packed = packUnorm4x8(vec4(cr, cg, cb, 1.0));
+    if (chunk != 0u) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                int cx = rx + dx, cy = ry + dy;
+                if (cx < 0 || cx >= int(rw) || cy < 0 || cy >= int(rh)) continue;
+                vec2 cc = vec2((float(cx) + 0.5) * psz, (float(cy) + 0.5) * psz);
+                if (length(vec2(px, py) - cc) < 2.9) atomicMax(buf.d[O_RN + uint(cy) * rw + uint(cx)], packed);
+            }
+        }
+        return;
+    }
     uint pixel = uint(ry) * rw + uint(rx);
-    atomicMax(buf.d[O_RN + pixel], packUnorm4x8(vec4(cr, cg, cb, 1.0)));
+    atomicMax(buf.d[O_RN + pixel], packed);
 }

@@ -7,9 +7,10 @@
 # terrain's, or 4 px to share the rock's grid (keys 1 and 2 in main.gd).
 #
 # Usage per frame: set_blobs([[pos, radius, color], ...]), and
-# set_marks([[pos, size, color], ...]) for flat squares (an eye) drawn
-# over the composite on the same pixel grid, so they come out as crisp
-# as the body does. set_pixel_size(sz) switches the grid at runtime.
+# set_marks([[pos, size, color], ...]) for flat rectangles (an eye, a
+# mouth) drawn over the composite on the same pixel grid, so they come
+# out as crisp as the body does; size is a float for a square or a
+# Vector2. set_pixel_size(sz) switches the grid at runtime.
 extends Node2D
 
 const WORLD_W := 1920
@@ -81,8 +82,9 @@ func set_marks(marks: Array) -> void:
 func _draw_marks() -> void:
 	for m in _marks:
 		var p: Vector2 = (m[0] / pixel_sz).floor()
-		var n: float = maxf(roundf(m[1] / pixel_sz), 1.0)
-		_marks_canvas.draw_rect(Rect2(p, Vector2(n, n)), m[2])
+		var sz: Vector2 = m[1] if m[1] is Vector2 else Vector2(m[1], m[1])
+		var n: Vector2 = (sz / pixel_sz).round().max(Vector2.ONE)
+		_marks_canvas.draw_rect(Rect2(p, n), m[2])
 
 
 # Switch the blob grid: both viewports resize and the screen sprite

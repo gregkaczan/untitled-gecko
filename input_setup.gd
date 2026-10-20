@@ -4,8 +4,10 @@
 # E, Shift or the west face button chews. 1 and 2 pick the gecko's pixel
 # grid: 4 px like the rock, or the default 2 px. Tab loads the next test
 # scene from tests/scenes.json, Shift+Tab goes back to the generated cave.
-# The mouse is reserved for the tongue and spit later; for the spike the
-# buttons drive the terrain brush instead.
+# B, C and N drop a boulder, a clump of clay or a heap of sand at the
+# cursor. The mouse is
+# the gecko's tongue and chew (see gecko.gd), with the brush on Ctrl and
+# the middle button.
 class_name InputSetup
 extends RefCounted
 
@@ -25,6 +27,9 @@ static func ensure_actions() -> void:
 	_add("render_fine", [_key(KEY_2)])
 	_add("scene_next", [_key(KEY_TAB)])
 	_add("scene_main", [_key(KEY_TAB, true)])
+	_add("drop_boulder", [_key(KEY_B)])
+	_add("drop_clay", [_key(KEY_C)])
+	_add("drop_sand", [_key(KEY_N)])
 
 
 static func _add(action: String, events: Array, deadzone := 0.4) -> void:

@@ -6,8 +6,13 @@
 # for the gecko's pixel grid (4 px like the rock, or 2 px), Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the generated cave (the
 # keys drive the gecko in a scene loaded this way). The mouse buttons are
-# the gecko's: left tap spits, left hold is the tongue, right chews toward
-# the cursor, and with no key held the gecko tunnels after the bite.
+# the gecko's: a left press shoots the tongue, which strikes what it
+# hits on a tap, grapples on a hold, and sticks and drags it in when the
+# right button is held too; right alone chews toward the cursor, and
+# with no key held the gecko
+# tunnels after the bite. B, C and N drop a boulder, a clump of clay or
+# a heap of sand at the cursor, half the brush's size. The generated
+# cave gets a few lumps and heaps of its own (_scatter_chunks).
 # GECKO_DEMO=1 in the environment replaces the keyboard with a scripted
 # walk so movie-mode frames show the gecko moving without anyone at the keys.
 # GECKO_SCENE=name[:script] runs a test scene from tests/scenes.json the
@@ -25,14 +30,38 @@ const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
+const LAB_FLOOR := 800.0       # The tongue demos' flat room: its floor line
+const LAB_CEIL := 680.0        # and its ceiling, within the tongue's reach of the floor
 
-# Demo steps: seconds, input vector, jump on the first frame, chew held,
-# then optionally the left button held and the cursor offset from the
-# body. GECKO_DEMO=climb walks into the boulder and over it, tunnel chews
-# through it and walks the tunnel both ways, swim drops into the pool,
-# tongue grapples the ceiling and spits at the floor, dig chews after the
-# cursor with no key held: down-right, up-right, straight down, back left.
+# Demo steps: seconds, input vector, jump on the first frame, chew held
+# (the right button), then optionally the left button held and the
+# cursor offset from the body. GECKO_DEMO=climb walks into the boulder
+# and over it, tunnel chews through it and walks the tunnel both ways,
+# swim drops into the pool, tongue grapples the ceiling on a held left
+# button, then strikes the floor from it with taps, pull drags a stone
+# in with both buttons and swallows it, then
+# drags a boulder to the mouth and walks it along, strike dents the
+# floor and breaks the boulder, dig chews after the cursor with no key
+# held: down-right, up-right, straight down, back left.
 const DEMOS := {
+	"pull": [
+		[0.6, Vector2.ZERO, false, false],
+		[2.4, Vector2.ZERO, false, true, true, Vector2(90, 9)],
+		[0.6, Vector2.ZERO, false, false],
+		[4.0, Vector2.ZERO, false, true, true, Vector2(190, 1)],
+		[0.6, Vector2.ZERO, false, false],
+		[3.5, Vector2.RIGHT, false, false],
+		[2.0, Vector2.LEFT, false, false],
+	],
+	"strike": [
+		[0.6, Vector2.ZERO, false, false],
+		[0.05, Vector2.ZERO, false, false, true, Vector2(70, 30)],
+		[1.2, Vector2.ZERO, false, false, false, Vector2(70, 30)],
+		[0.05, Vector2.ZERO, false, false, true, Vector2(150, 1)],
+		[1.5, Vector2.ZERO, false, false, false, Vector2(150, 1)],
+		[0.05, Vector2.ZERO, false, false, true, Vector2(150, 1)],
+		[2.5, Vector2.ZERO, false, false, false, Vector2(150, 1)],
+	],
 	"dig": [
 		[0.5, Vector2.ZERO, false, false],
 		[2.5, Vector2.ZERO, false, true, false, Vector2(120, 120)],
@@ -73,14 +102,13 @@ const DEMOS := {
 		[1.5, Vector2(-1, -1), false, false],
 	],
 	"tongue": [
-		[1.5, Vector2.RIGHT, false, false, false, Vector2(160, -160)],
-		[0.3, Vector2.ZERO, false, false, false, Vector2(160, -160)],
-		[2.5, Vector2.ZERO, false, false, true, Vector2(160, -160)],
-		[1.0, Vector2.ZERO, false, false, false, Vector2(60, 200)],
-		[0.08, Vector2.ZERO, false, false, true, Vector2(60, 200)],
-		[1.5, Vector2.ZERO, false, false, false, Vector2(60, 200)],
-		[0.08, Vector2.ZERO, false, false, true, Vector2(-80, 200)],
-		[2.0, Vector2.ZERO, false, false, false, Vector2(-80, 200)],
+		[1.0, Vector2.ZERO, false, false, false, Vector2(60, -110)],
+		[2.5, Vector2.ZERO, false, false, true, Vector2(60, -110)],
+		[1.0, Vector2.ZERO, false, false, false, Vector2(40, 100)],
+		[0.08, Vector2.ZERO, false, false, true, Vector2(40, 100)],
+		[1.5, Vector2.ZERO, false, false, false, Vector2(40, 100)],
+		[0.08, Vector2.ZERO, false, false, true, Vector2(-60, 100)],
+		[1.5, Vector2.ZERO, false, false, false, Vector2(-60, 100)],
 	],
 	"climb": [
 		[1.3, Vector2.RIGHT, false, false],
@@ -236,6 +264,9 @@ func _reset() -> void:
 		_cam = gecko.pos
 		_camera.position = gecko.pos
 		return
+	if sim and _demo_name in ["pull", "strike", "tongue"]:
+		_lab()
+		return
 	map.generate(seed_value)
 	var spawn := _flat_spawn()
 	if _demo_name == "climb":
@@ -249,9 +280,71 @@ func _reset() -> void:
 		# A funnel in the floor, 44 px wide at the top narrowing to nothing
 		for i in range(9):
 			map.erase_circle(Vector2(spawn.x + 90.0, spawn.y + 6.0 + i * 8.0), 22.0 - i * 2.0)
+	if sim and _demo_name == "":
+		_scatter_chunks(spawn)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
 	_cam = gecko.pos
 	_camera.position = gecko.pos
+
+
+# A flat room for the tongue demos (particle world only): a stone small
+# enough to swallow and a boulder the tongue can drag but not swallow
+# for pull, a boulder for strike, the ceiling in reach for tongue.
+func _lab() -> void:
+	var gen := CaveMap.new()
+	gen.blank()
+	gen.erase_rect(Rect2(0.0, LAB_CEIL, 1920.0, LAB_FLOOR - LAB_CEIL))
+	map.build_cells(gen.solid)
+	gen.free()
+	var x := 900.0
+	if _demo_name == "pull":
+		_lump_on_floor(x + 90.0, 5.0, false, LAB_CEIL + 8.0)
+		_lump_on_floor(x + 190.0, 13.0, false, LAB_CEIL + 8.0)
+	elif _demo_name == "strike":
+		_lump_on_floor(x + 150.0, 12.0, false, LAB_CEIL + 8.0)
+	gecko.spawn(Vector2(x, LAB_FLOOR - Gecko.RIDE_H))
+	_cam = gecko.pos
+	_camera.position = gecko.pos
+
+
+# A lump resting on the first floor below (x, from_y): a boulder (or a
+# stone, when small) or a clump of clay. Returns its chunk id, 0 when
+# it did not fit.
+func _lump_on_floor(x: float, radius: float, clay: bool, from_y := 540.0) -> int:
+	var fl: Vector2 = map.floor_below(Vector2(x, from_y))
+	var p := Vector2(x, fl.y - radius - 2.0)
+	if map.solid_within(p, radius + 2.0):
+		return 0
+	return map.spawn_clay(p, radius) if clay else map.spawn_boulder(p, radius)
+
+
+# Loose lumps about the chamber's floor: a boulder too heavy for the
+# tongue, two it can drag, some stones and clumps of clay, and two heaps
+# of sand, clear of the spawn so the gecko starts on plain ground and
+# clear of the pool.
+func _scatter_chunks(spawn: Vector2) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value * 7 + 3
+	var lumps := [[18.0, false], [13.0, false], [10.0, false], [4.0, false], [5.0, false],
+		[3.5, false], [4.5, false], [11.0, true], [8.0, true]]
+	for lump in lumps:
+		for _try in 8:
+			var x := rng.randf_range(720.0, 1400.0)
+			if absf(x - spawn.x) < 140.0:
+				continue
+			if _lump_on_floor(x, lump[0], lump[1]) > 0:
+				break
+	for r in [26.0, 18.0]:
+		for _try in 8:
+			var x := rng.randf_range(720.0, 1400.0)
+			if absf(x - spawn.x) < 160.0:
+				continue
+			var fl: Vector2 = map.floor_below(Vector2(x, 540.0))
+			var p := Vector2(x, fl.y - r - 2.0)
+			if map.solid_within(p, r + 2.0):
+				continue
+			map.spawn_sand(p, r)
+			break
 
 
 # The floor point near the middle of the chamber with the least slope
@@ -297,7 +390,7 @@ func _physics_process(dt: float) -> void:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0:
-		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap spit, hold tongue   RMB chew at cursor   R new cave   Tab test scene   F1 debug"
+		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand   R new cave   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
 
@@ -388,6 +481,12 @@ func _process(_dt: float) -> void:
 		map.erase_circle(m, brush_r)
 	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 		map.fill_circle(m, brush_r)
+	if not over_panel and Input.is_action_just_pressed("drop_boulder"):
+		map.spawn_boulder(m, maxf(brush_r * 0.5, 4.0))
+	if not over_panel and Input.is_action_just_pressed("drop_clay"):
+		map.spawn_clay(m, maxf(brush_r * 0.5, 4.0))
+	if not over_panel and Input.is_action_just_pressed("drop_sand"):
+		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
 	if Input.is_action_just_pressed("regenerate"):
 		seed_value += 1
 		_scene = {}

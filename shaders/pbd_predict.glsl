@@ -11,6 +11,20 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN
 // Feedback block at the SSBO tail (see simulation.gd O_FB):
 // [0] player contact count, [1] creature kills, [2] impact count, [3..] impact entries
 const uint O_FB = 2059403u;
+// Bond records at the SSBO tail (see sim.gd O_BD): per particle [chunk
+// id, awake, bond count, pad, then NB pairs of (mate index, rest length)].
+// A chunk is a lump of loose material (a boulder, a stone, a clump of
+// clay) whose particles are bonded to their lattice neighbours; chunk id
+// 0 means none. Capsule slots (see pbd_delta) with a mode below -1.5
+// are chunk events this shader handles: -2 pull (unit dir, speed in the
+// radius field, chunk id in half_length), -3 eat (chunk id in
+// half_length, radius), -4 break (radius).
+const uint O_BD = 2203470u;
+const uint BD = 20u;
+const uint NB = 8u;
+const uint NONE = 0xFFFFFFFFu;
+const uint O_CAP = 2059339u;
+const uint N_CAP = 8u;
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }    // Read float from flat uint SSBO
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); } // Write float to flat uint SSBO
@@ -171,7 +185,74 @@ void main() {
     }
 
     bool is_ephemeral = (mat == 8u || mat == 9u);
-    bool awake = has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral;
+
+    // --- Chunks: a bonded particle wakes with its mates, so a lump
+    //     pushed at one end moves as a whole; and the chunk events in
+    //     the capsule slots: pull, eat, break ---
+    uint bd = O_BD + id * BD;
+    uint chunk = buf.d[bd];
+    bool bonded = chunk != 0u;
+    bool mates_moving = false;
+    bool pulled = false;
+    float pull_vx = 0.0, pull_vy = 0.0;
+    if (bonded) {
+        for (uint k = 0u; k < NB; k++) {
+            uint j = buf.d[bd + 4u + k * 2u];
+            if (j == NONE) continue;
+            uint bj = O_PT + j * 8u;
+            if (abs(rf(bj + 2u)) > 0.01 || abs(rf(bj + 3u)) > 0.01) {
+                mates_moving = true;
+                break;
+            }
+        }
+        for (uint c = 0u; c < N_CAP; c++) {
+            uint slot = O_CAP + c * 8u;
+            if (rf(slot + 6u) < 0.5) continue;
+            float mode = rf(slot + 7u);
+            if (mode > -1.5) continue;
+            vec2 cpos = vec2(rf(slot), rf(slot + 1u));
+            float cr = rf(slot + 4u);
+            float d = length(vec2(px, py) - cpos);
+            if (mode < -3.5) {
+                // A strike: every bond within reach breaks and the grains
+                // fly apart a little.
+                if (d < cr) {
+                    for (uint k = 0u; k < NB; k++) buf.d[bd + 4u + k * 2u] = NONE;
+                    buf.d[bd] = 0u;
+                    buf.d[bd + 2u] = 0u;
+                    chunk = 0u;
+                    uint hsh = id * 2654435761u;
+                    float a = float(hsh >> 16u) / 65535.0 * 6.2831853;
+                    float m = 30.0 + float((hsh * 747796405u) >> 20u) / 4095.0 * 50.0;
+                    vx += cos(a) * m;
+                    vy += sin(a) * m;
+                    mates_moving = true;
+                }
+            } else if (mode < -2.5) {
+                // Swallowed: the chunk's particles within reach vanish.
+                if (chunk == uint(rf(slot + 5u)) && d < cr) {
+                    wf(b, -1000.0); wf(b + 1u, -1000.0);
+                    wf(b + 2u, 0.0); wf(b + 3u, 0.0);
+                    wf(b + 4u, -1000.0); wf(b + 5u, -1000.0);
+                    wf(b + 7u, 0.0);
+                    for (uint k = 0u; k < NB; k++) buf.d[bd + 4u + k * 2u] = NONE;
+                    buf.d[bd] = 0u;
+                    buf.d[bd + 1u] = 0u;
+                    buf.d[bd + 2u] = 0u;
+                    return;
+                }
+            } else if (chunk == uint(rf(slot + 5u))) {
+                // Dragged by the tongue: the whole chunk moves toward the
+                // mouth at the pull speed, gravity or not.
+                pulled = true;
+                pull_vx = rf(slot + 2u) * cr;
+                pull_vy = rf(slot + 3u) * cr;
+            }
+        }
+    }
+
+    bool awake = has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral || mates_moving || pulled;
+    if (bonded) buf.d[bd + 1u] = awake ? 1u : 0u;
 
     // --- Explosion slot 1 ---
     // A negative encoded position marks an implosion. Decode with abs().
@@ -222,13 +303,20 @@ void main() {
         vy = clamp(vy, -110.0, 50.0);
     }
 
+    if (pulled) {
+        vx = pull_vx;
+        vy = pull_vy;
+    }
+
     float predx = awake ? (px + dt * vx) : px;
     float predy = awake ? (py + dt * vy) : py;
 
-    // --- Congestion damping ---
+    // --- Congestion damping (never for a chunk's particles: a lump is
+    //     dense by nature, and damping its inside but not its edge
+    //     would tear it apart as it moves) ---
     float cs = rf(O_P + 6u);
     uint congest_limit = (mat == 1u || mat == 10u || is_ephemeral) ? 12u : 6u;
-    if (has_velocity && (abs(vx) > 2.0 || abs(vy) > 2.0)) {
+    if (has_velocity && !bonded && (abs(vx) > 2.0 || abs(vy) > 2.0)) {
         int pcx = int(floor(predx / cs));
         int pcy = int(floor(predy / cs));
         if (pcx >= 0 && pcx < int(GW) && pcy >= 0 && pcy < int(GH)) {

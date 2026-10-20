@@ -15,10 +15,22 @@ and the particle world is built from its generator. `chain.gd`,
 
 Sim notes: every particle covers the full 1920x1080 (the shooter started
 at a ground line), so the shaders carry offsets different from the
-shooter's; `sim.gd` asserts the cell-class offset. Chewing and the brush
-are melt capsules (particles deleted on the GPU), spit is a sim
-explosion, a fill spawns particles. The local rendering device does not
-exist headless, so sim runs need the window (movie mode is fine).
+shooter's; `sim.gd` asserts the cell-class and bond offsets. Chewing
+and the brush are melt capsules (particles deleted on the GPU), a fill
+spawns particles. Loose lumps (boulders, stones, clumps of clay) are
+chunks: one particle per cell, each bonded to its eight lattice
+neighbours by a distance constraint (a bond record per particle at the
+buffer's tail, solved with the density constraints in `pbd_delta.glsl`,
+mates holding each other by their bonds alone and never drawn into
+what they touch). A lump sleeps until a mate moves, falls as one,
+comes apart where bonds are broken or stretched past their limit (clay
+sooner than stone), and its cells read back as 16 + the chunk id, so
+the CPU can tell a lump from the ground and trace the piece the tongue
+is stuck to. The tongue's drag and the walk's shove (a pull on a whole
+chunk), a swallow and a strike's break are capsule slots of their own.
+The local rendering
+device does not exist headless, so sim runs need the window (movie
+mode is fine, on a virtual display too).
 
 ## Rules the gecko follows
 
@@ -69,10 +81,40 @@ exist headless, so sim runs need the window (movie mode is fine).
   floor and ceiling, so a tunnel its own height does not wedge it. A
   body centre that ends up inside rock is pushed out before anything
   else is decided.
-- Tongue: held left button shoots it at the cursor, up to 320 px; on rock
-  it anchors and reels the body in, which clings where it arrives.
-  Release lets go. A tap instead spits a lobbed shot that blows a 20 px
-  crater where it lands.
+- Tongue: a press of the left button shoots it at the cursor, up to
+  160 px, as a tapering line with no tip, and where it lands it sticks
+  while the button is down. A tap (the button up before the tongue has
+  been held 0.12 s, landed or not) strikes: an 8 px dent in the ground,
+  or the bonds broken within 10 px of where it hits a lump, and it
+  comes straight back. Held longer alone it is the grapple: the gecko
+  lets go, is reeled in to the anchor, and clings where it arrives.
+  With the right button (or the chew key) held as well it drags: the
+  gecko braces on its planted feet, the snout drawn back, and a piece
+  of up to 80 cells is dragged in at 150 px/s, the tip riding its
+  cells; at the mouth it is swallowed if it is 16 cells or fewer (the
+  mouth opens as the yawn's does while it nears, the piece vanishes
+  into it, and a bulge runs down the body) or let go; the ground, or a bigger piece,
+  holds the tongue taut until a button is released. Airborne or
+  swimming there is nothing to brace on, so the tongue reels the gecko
+  in whichever buttons are down. Chewing waits while the tongue is
+  out. There is no spit.
+- Loose lumps (B and C drop a boulder or a clump of clay at the cursor,
+  N a heap of sand, which is plain loose sand and flows; the generated
+  cave has a few of each) are solid to stand on, stepped over when
+  they are pebbles (6 cells or fewer) and climbed when wedged; on the
+  ground the gecko's senses (the surface rays, the probe, the gap and
+  wall tests) do not read a lump as terrain, only its collision does,
+  so a lump ahead is a thing in the way, and standing on one it is
+  terrain again. Walking
+  into one shoves it: the whole lump is moved as one at 60 px/s the way
+  the walk points (a push on its near particles alone rolls it up over
+  the body, or flattens it), the walk keeps up behind it at 50 px/s,
+  and only after half a second against a lump that does not move does
+  it count as a wall. The wall
+  reach never grabs a lump. A lump rolls as it is dragged or shoved,
+  and its turned lattice is drawn without holes (each particle paints
+  every cell within a lattice half-diagonal), so its cells count a
+  little high when turned.
 - Water (a still pool in the bitmap until the sim's readback brings its
   own): the gecko drifts where the input points with no gravity, cannot
   rise through the surface, and leaves by pushing into rock and clinging,
@@ -141,9 +183,13 @@ exist headless, so sim runs need the window (movie mode is fine).
 
 ## Controls
 
-WASD or arrows move, Space jumps, E or Shift chews. Left mouse: tap to
-spit, hold for the tongue. Right mouse erases, middle fills, wheel sizes
-the brush. R makes a new chamber, 1 and 2 pick the gecko's pixel grid.
+WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots
+the tongue: a tap strikes, a hold grapples, and with the right button
+held as well it sticks and drags. Right mouse chews at the cursor. Ctrl+right erases, middle
+fills, wheel sizes the brush; B, C and N drop a boulder, a clump of
+clay or a heap of sand at the cursor, half the brush's size. R makes a
+new chamber, 1 and 2
+pick the gecko's pixel grid.
 Tab loads the next scene from the movement suite (built in whichever
 world is running, the keys driving the gecko) and Shift+Tab goes back
 to the generated cave. F1 is debug mode: the gecko's overlay (up
@@ -155,9 +201,13 @@ The world's mouse actions ignore the mouse while it is over the panel.
 
 ## Checking it without a hand on the keys
 
-`GECKO_DEMO=climb|tunnel|swim|tongue|notch|crevice|traverse|dig` replaces
-the keyboard and mouse with a scripted run (see `main.gd`; climb builds
-a test pillar, crevice a funnel, dig chews after a scripted cursor).
+`GECKO_DEMO=climb|tunnel|swim|tongue|pull|strike|notch|crevice|traverse|dig`
+replaces the keyboard and mouse with a scripted run (see `main.gd`;
+climb builds a test pillar, crevice a funnel, dig chews after a
+scripted cursor; tongue, pull and strike run in a flat room of their
+own in the particle world: a grapple to the ceiling on a held button,
+a stone dragged in and swallowed then a boulder dragged to the mouth
+and walked along, a strike on the floor and on a boulder).
 `GECKO_TRACE=1` prints the body state per physics tick (key=value: the
 body, the drawn body, the head, up, the feet, the decision flags) and
 the gecko's screen position and tick per frame; `tools/strip.sh` turns
