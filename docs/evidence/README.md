@@ -16,7 +16,18 @@ to it; nothing is hand-picked beyond the choice of which scenes to show.
 - `tests/flicker.md`: the frame flicker report over the 60 fps
   recordings of the same 95 runs, one frame per physics tick. It
   measures how much the drawn silhouette changes between consecutive
-  frames after alignment, and whether it breaks into fragments.
+  frames after alignment, and whether it breaks into fragments. Legs
+  stepping change about 11 percent of the silhouette a frame; the
+  report flags frames over 35 percent outside a turn, a jump or a
+  landing, and frames with 8 px or more of silhouette detached from the
+  rest. 83 of the 95 runs have no flagged frame at all. The other 12
+  have one to five flagged frames each, of two kinds: the whole body
+  reshaping in a frame at a corner it is rounding (the dead end of the
+  bent tunnel, the dig's pitch down a shaft, a ceiling corner, a
+  landing one frame past the grace), and the tail tip or a far foot
+  drawn detached for one or two frames while the body rears up a wall
+  or squeezes through a ragged tunnel. Both are listed under Events in
+  the report with their ticks.
 - `tests/baseline.json`: the first run of the suite, before any fix,
   which the reports diff against (31 of 95 passing then).
 
