@@ -297,9 +297,15 @@ run regresses.
 ## Building and publishing
 
 Code: https://github.com/gregkaczan/untitled-gecko. `./build.sh` exports
-Windows and Linux release builds into `build/` (export templates for
-Godot 4.6.1 must be installed under `~/.local/share/godot/export_templates/`)
-and, only with `ITCH_PUSH=1` and `butler` logged in, pushes them to
-itch.io as `kwakuuuu/gecko:windows` (and `:linux` when enabled). A web build would have to
-run the bitmap world: the particle sim needs compute shaders, which the
-web export does not have.
+Windows and macOS release builds into `build/` (Linux when enabled;
+export templates for Godot 4.6.1 must be installed under
+`~/.local/share/godot/export_templates/`) and, only with `ITCH_PUSH=1`
+and `butler` logged in, pushes them to itch.io as
+`kwakuuuu/gecko:windows` and `:osx` (and `:linux` when enabled). The
+macOS app is a universal binary, ad-hoc signed by Godot's own signer
+(no Apple identity, no notarization), so Gatekeeper calls it unverified
+on first launch: right-click, Open, or `xattr -dr com.apple.quarantine
+gecko.app` after unzipping. The sim's compute shaders run on Metal
+there; untested on a Mac so far. A web build would have to run the
+bitmap world: the particle sim needs compute shaders, which the web
+export does not have.

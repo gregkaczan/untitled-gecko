@@ -12,7 +12,7 @@ GODOT="${GODOT:-$HOME/.local/bin/godot}"
 # Toggle which platforms to build (edit these)
 BUILD_WIN=true
 BUILD_LINUX=false
-BUILD_MAC=false
+BUILD_MAC=true
 
 # itch.io: pushes only with ITCH_PUSH=1 (never by default), to ITCH_TARGET
 ITCH_TARGET="${ITCH_TARGET:-kwakuuuu/gecko}"
