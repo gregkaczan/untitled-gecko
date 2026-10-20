@@ -21,6 +21,7 @@ const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
 const NUDGE_MAX := 4.0         # Most the ride-height nudge moves the body in one tick (px): settling, never a hop
+const NUDGE_DEAD := 1.0        # Ride height this close to its target is left alone, so a whole-pixel reading cannot rock the body
 const BODY_R := 9.0            # Clearance the body centre always keeps from rock
 const LIFT := 2.5              # Px the body rises per tick to get over a low obstacle
 const LIFT_LOW := 12.0         # A blocking cell no higher than this over the floor under the body is low enough to step over
@@ -97,6 +98,7 @@ const THIN_DEAD := 0.5         # A point this close to the middle stays put (the
 const THIN_MARGIN := 2.0       # Px between a thinned point's drawn edge and the passage wall: a pixel of air, so the edge never sits on a pixel boundary and flickers
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
 const NORMAL_SMOOTH_FINE := 0.08  # The blend for small changes: rough walls and edges wobble the normal every tick
+const NORMAL_SMOOTH_WOBBLE := 0.04  # The blend once the raw normal has turned back and forth two ticks running: a stair-stepped wall
 const NORMAL_FINE_DOT := 0.9   # A change under ~25 degrees counts as small
 const AWAY_LOOK := 200.0       # How far along a steep surface the away rule looks for its inside corner
 const HEAD_RECOVER := 180.0    # Speed the snout comes forward again after a wall held it back (px/s)
@@ -169,6 +171,7 @@ var tongue_tip := Vector2.ZERO
 var tongue_dir := Vector2.ZERO
 var spits: Array = []          # [position, velocity] per spit in flight
 var debug := false             # F1: overlay with up vector, probe reach, feet and bite
+var mouse_blocked := false     # The mouse is over the debug panel: no tongue, spit or chew from it
 var _mouse_held := -1.0        # Seconds the left button has been held, -1 when it is up
 var _tongue_spent := false     # A tongue that missed or let go stays in until the button is released
 var _spit_cd := 0.0
@@ -202,6 +205,7 @@ var _bridge_miss := 0          # Ticks in a row the gap-ahead test has failed wh
 var _n_raw := Vector2.ZERO     # Last tick's raw surface normal
 var _n_streak := 0             # Ticks the raw normal has kept turning the same way
 var _n_sign := 0.0
+var _n_alt := 0                # Ticks the raw normal has alternated its turn direction
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
 var _squeeze := false          # In a passage narrower than the body: less clearance, slow, the body thinned
 var _sq_r := BODY_R            # The clearance while squeezing
@@ -331,6 +335,12 @@ func _physics_process(dt: float) -> void:
 	_debug_layer.queue_redraw()
 
 
+# The drawn body's base: what the camera follows, since the body centre
+# can shift a fraction of a pixel on jiggling ground while this stays.
+func draw_pos() -> Vector2:
+	return _pos_s if clinging else pos
+
+
 func _read_input() -> Vector2:
 	if input_override != null:
 		return input_override
@@ -370,7 +380,7 @@ func _read_jump() -> bool:
 func _read_chew() -> bool:
 	if input_override != null:
 		return chew_override
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not Input.is_key_pressed(KEY_CTRL):
+	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not Input.is_key_pressed(KEY_CTRL) and not mouse_blocked:
 		return true
 	return Input.is_action_pressed("chew")
 
@@ -650,6 +660,9 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		var turn := _n_raw.angle_to(n) if _n_raw != Vector2.ZERO else 0.0
 		var sgn := signf(turn) if absf(turn) > 0.01 else 0.0
 		_n_streak = _n_streak + 1 if (sgn != 0.0 and sgn == _n_sign) else 0
+		# Small alternating turns are a stair-stepped wall read by turns;
+		# big ones are two surfaces taking turns (a crevice), followed.
+		_n_alt = _n_alt + 1 if (sgn != 0.0 and _n_sign != 0.0 and sgn == -_n_sign and absf(turn) < 0.2) else 0
 		if sgn != 0.0:
 			_n_sign = sgn
 		_n_raw = n
@@ -659,7 +672,9 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 		# nearest, following each at once turns the body back and forth.
 		var big := n.dot(_n_target) < FLIP_DOT
 		_flip_ticks = _flip_ticks + 1 if (big and _hold_ticks == 0) else 0
-		if _grab_n != Vector2.ZERO or (big and _flip_ticks >= FLIP_CONFIRM):
+		if _grab_n != Vector2.ZERO or _squeeze or (big and _flip_ticks >= FLIP_CONFIRM):
+			# A grab, or a squeeze (the passage's frame, taken at once so
+			# a tilt from the lip's pull does not steer the walk into it).
 			_n_target = n
 			_flip_ticks = 0
 		elif big:
@@ -668,7 +683,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			# A steady turn (a corner) is followed fast; a wobble (rough
 			# ground, an edge) blends in slowly, so the body neither
 			# shivers on a ragged wall nor lags behind a corner.
-			var k := NORMAL_SMOOTH if (_n_streak >= 2 or n.dot(_n_target) < NORMAL_FINE_DOT) else NORMAL_SMOOTH_FINE
+			var k := NORMAL_SMOOTH if (_n_streak >= 2 or n.dot(_n_target) < NORMAL_FINE_DOT) else (NORMAL_SMOOTH_WOBBLE if _n_alt >= 2 else NORMAL_SMOOTH_FINE)
 			_n_target = _n_target.slerp(n, k).normalized()
 		up = _turn_toward(up, _n_target, SURF_TURN * dt)
 	_up_rate = absf(up_before.angle_to(up))
@@ -687,16 +702,20 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			_squeeze_nudge()
 		_update_squeeze()
 	elif not squeezed and not _bridging and not _lifting and _grab_n == Vector2.ZERO:
-		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
+		var floor_pt = _ray_fine(pos, -up, RAY_LEN)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
 			var want := RIDE_H - 1.5
 			# Under a low ceiling the body rides halfway between floor and
 			# ceiling, so a tunnel its own height does not wedge it.
-			var ceil_pt = map.ray_hit(pos, up, RAY_LEN)
+			var ceil_pt = _ray_fine(pos, up, RAY_LEN)
 			if ceil_pt != null:
 				want = minf(want, (d + (ceil_pt - pos).dot(up)) * 0.5)
-			_move(up * clampf((want - d) * minf(1.0, 20.0 * dt), -NUDGE_MAX, NUDGE_MAX))
+			# Within the dead band the body is left where it is: in the
+			# particle world the cells under it jiggle by a pixel, and
+			# chasing them would rock the body (and the camera) for ever.
+			if absf(want - d) > NUDGE_DEAD:
+				_move(up * clampf((want - d) * minf(1.0, 20.0 * dt), -NUDGE_MAX, NUDGE_MAX))
 		else:
 			# Over an edge: toward the nearest rock, which wraps the body
 			# round the corner, but never backward against the walk.
@@ -804,7 +823,7 @@ func _cursor() -> Vector2:
 # keeps it until release; a shorter press spits.
 func _update_mouse(dt: float) -> void:
 	_spit_cd = maxf(_spit_cd - dt, 0.0)
-	var held := lmb_override if input_override != null else Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var held := lmb_override if input_override != null else (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_blocked)
 	if held:
 		_mouse_held = 0.0 if _mouse_held < 0.0 else _mouse_held + dt
 		if not tongue_out and not _tongue_spent and _mouse_held >= HOLD_TIME:
@@ -1084,6 +1103,19 @@ func _clear_r() -> float:
 	return _sq_r
 
 
+# The map's ray, which samples every 2 px, refined to the pixel: the
+# ride height read from it must not jump 2 px as the body creeps a
+# fraction of one, or the nudge chasing it rocks the body for ever.
+func _ray_fine(p: Vector2, dir: Vector2, length: float):
+	var hit = map.ray_hit(p, dir, length)
+	if hit == null:
+		return null
+	var back: Vector2 = hit - dir
+	if (back - p).dot(dir) >= 0.0 and map.is_solid_world(back):
+		return back
+	return hit
+
+
 # Distance along dir from p to the first rock, in 1 px steps, or INF.
 func _free_span(p: Vector2, dir: Vector2, max_len: float) -> float:
 	var n := int(max_len)
@@ -1225,10 +1257,11 @@ func _try_slot_entry(tangent: Vector2) -> void:
 # In a squeeze the body keeps to the middle of the passage: the one it
 # is in, or at the mouth, the one ahead.
 func _squeeze_nudge() -> void:
-	# Not while up is still turning (a corner's pull being undone): the
-	# nudge is across the passage, and across a turning frame it reads
-	# as a step back along the walk.
-	if _up_rate > LIFT_TURN_MAX:
+	# Not while up is still turning, or still tilted from the passage's
+	# frame (a corner's pull being undone): the nudge is across the
+	# passage, and across a tilted frame it reads as a step back along
+	# the walk.
+	if _up_rate > LIFT_TURN_MAX or up.dot(_sq_up) < 0.98:
 		return
 	# The middle averaged over the columns here and a body length ahead
 	# (those that read as the passage), so a ragged wall does not bob

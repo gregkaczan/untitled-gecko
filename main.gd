@@ -1,8 +1,9 @@
 # Scene driver for the gecko movement spike: one chamber (the particle
 # sim, or the bitmap stand-in with GECKO_WORLD=bitmap), one gecko, a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
-# R for a fresh chamber, F1 for the debug overlay, 1 and 2 for the gecko's
-# pixel grid (4 px like the rock, or 2 px), Tab for the next test scene
+# R for a fresh chamber, F1 for debug mode (the gecko's overlay and a
+# panel down the right: scenes, seed, brush, clock, pixel grid), 1 and 2
+# for the gecko's pixel grid (4 px like the rock, or 2 px), Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the generated cave (the
 # keys drive the gecko in a scene loaded this way). The mouse buttons are
 # the gecko's: left tap spits, left hold is the tongue, right chews toward
@@ -15,12 +16,14 @@
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
+const CAMERA_EASE := 16.0      # How fast the camera closes on the gecko (per second): quick, the pixel snap does the rest
 const CaveMap = preload("res://cave_map.gd")
 const SimMap = preload("res://sim_map.gd")
 const Sim = preload("res://sim.gd")
 const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
+const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 
 # Demo steps: seconds, input vector, jump on the first frame, chew held,
@@ -109,6 +112,7 @@ var brush_r := 24.0
 var seed_value := 7
 var _label: Label
 var _camera: Camera2D
+var _cam := Vector2.ZERO       # The camera's eased position before pixel snapping
 var _demo: Array = []
 var _hint_t := 0.0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
@@ -121,6 +125,9 @@ var _scene_done := -1.0        # Seconds since the scene script ended, -1 while 
 var _scene_all: Dictionary = {}  # tests/scenes.json, loaded on the first Tab
 var _scene_i := -1             # Index of the scene Tab loaded, -1 in the generated cave
 var _hint := ""                # Label text while the hint timer runs; empty for the controls hint
+var _panel: DebugPanel
+var _debug := false            # F1: the panel and the gecko's overlay
+var _step_ticks := 0           # Physics ticks left to run before pausing again (the panel's step)
 
 
 func _ready() -> void:
@@ -160,8 +167,7 @@ func _ready() -> void:
 	_camera.limit_top = 0
 	_camera.limit_right = int(CaveMap.W * CaveMap.CELL)
 	_camera.limit_bottom = int(CaveMap.H * CaveMap.CELL)
-	_camera.position_smoothing_enabled = true
-	_camera.position_smoothing_speed = 6.0
+	_camera.position_smoothing_enabled = false
 	add_child(_camera)
 	var hud := CanvasLayer.new()
 	add_child(hud)
@@ -169,6 +175,38 @@ func _ready() -> void:
 	_label.position = Vector2(12, 8)
 	_label.add_theme_font_size_override("font_size", 20)
 	hud.add_child(_label)
+	# The panel keeps working while the world is paused: this node runs
+	# always and guards its own ticks, the world's nodes pause.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	map.process_mode = Node.PROCESS_MODE_PAUSABLE
+	gecko.process_mode = Node.PROCESS_MODE_PAUSABLE
+	if sim:
+		sim.process_mode = Node.PROCESS_MODE_PAUSABLE
+	_panel = DebugPanel.new()
+	_panel.visible = false
+	hud.add_child(_panel)
+	_ensure_scenes()
+	_panel.set_scenes(_scene_all.get("scenes", {}).keys())
+	_panel.set_seed(seed_value)
+	_panel.set_brush(brush_r)
+	_panel.set_pixel_size(blobs.pixel_sz)
+	_panel.scene_picked.connect(_load_scene)
+	_panel.main_cave.connect(_main_cave)
+	_panel.reload.connect(_reset)
+	_panel.regenerate.connect(func(sv: int) -> void:
+		seed_value = sv
+		_scene = {}
+		_scene_i = -1
+		_panel.select_scene(-1)
+		_reset())
+	_panel.brush_changed.connect(func(v: float) -> void: brush_r = v)
+	_panel.time_scale_changed.connect(func(v: float) -> void: Engine.time_scale = v)
+	_panel.paused.connect(func(on: bool) -> void: get_tree().paused = on)
+	_panel.step.connect(func() -> void:
+		_step_ticks = 1
+		get_tree().paused = false)
+	_panel.pixel_size_changed.connect(func(v: float) -> void: blobs.set_pixel_size(v))
+	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
 	_reset()
 	if not picked.is_empty():
 		_demo = picked.steps
@@ -195,8 +233,8 @@ func _reset() -> void:
 			SceneBuilder.build(map, _scene, _scene_bases)
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
+		_cam = gecko.pos
 		_camera.position = gecko.pos
-		_camera.reset_smoothing()
 		return
 	map.generate(seed_value)
 	var spawn := _flat_spawn()
@@ -212,8 +250,8 @@ func _reset() -> void:
 		for i in range(9):
 			map.erase_circle(Vector2(spawn.x + 90.0, spawn.y + 6.0 + i * 8.0), 22.0 - i * 2.0)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
+	_cam = gecko.pos
 	_camera.position = gecko.pos
-	_camera.reset_smoothing()
 
 
 # The floor point near the middle of the chamber with the least slope
@@ -232,32 +270,59 @@ func _flat_spawn() -> Vector2:
 
 
 func _physics_process(dt: float) -> void:
+	if get_tree().paused and _step_ticks == 0:
+		return
+	if _step_ticks > 0:
+		# One tick for the panel's step button, then paused again after
+		# the frame, so the world's nodes get their tick too.
+		_step_ticks -= 1
+		if _step_ticks == 0:
+			get_tree().set_deferred("paused", true)
+			_panel.set_paused(true)
 	if sim:
 		sim.tick()
-	_camera.position = gecko.pos
+	# The camera eases after the drawn body and sits on whole pixels of
+	# the 2 px grid: a camera at a fraction of a pixel shifts every edge
+	# on the screen as it moves, which reads as flicker when the gecko
+	# is still, and the body centre itself rocks half a pixel on
+	# jiggling particle ground while the drawn body does not.
+	_cam = _cam.lerp(gecko.draw_pos(), 1.0 - exp(-CAMERA_EASE * dt))
+	_camera.position = (_cam * 0.5).round() * 2.0
 	if _demo_step >= 0:
 		_run_demo(dt)
 	# The state readout only with the debug overlay; the controls hint for
 	# the first seconds of a run.
 	_hint_t += dt
-	if gecko.debug:
-		_label.text = gecko.debug_text() + "   brush %.0f   [LMB tap spit, hold tongue, RMB chew, Space jump, Ctrl+RMB erase, MMB fill, wheel size, R new cave, F1 debug, 1/2 gecko px]" % brush_r
+	if _debug:
+		_label.text = gecko.debug_text()
+		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0:
 		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap spit, hold tongue   RMB chew at cursor   R new cave   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
 
 
+func _ensure_scenes() -> void:
+	if _scene_all.is_empty():
+		_scene_all = SceneBuilder.load_all()
+
+
 # Tab: the next test scene from tests/scenes.json, built in this world,
 # with the keys driving the gecko instead of the scene's script.
 func _next_scene() -> void:
-	if _scene_all.is_empty():
-		_scene_all = SceneBuilder.load_all()
-	var names: Array = _scene_all.scenes.keys()
-	if names.is_empty():
+	_ensure_scenes()
+	var n: int = _scene_all.get("scenes", {}).size()
+	if n > 0:
+		_load_scene((_scene_i + 1) % n)
+
+
+func _load_scene(i: int) -> void:
+	_ensure_scenes()
+	var names: Array = _scene_all.get("scenes", {}).keys()
+	if names.is_empty() or i < 0 or i >= names.size():
 		return
-	_scene_i = (_scene_i + 1) % names.size()
-	var name: String = names[_scene_i]
+	_scene_i = i
+	var name: String = names[i]
 	_scene = _scene_all.scenes[name]
 	_scene_bases = _scene_all.bases
 	_demo_step = -1
@@ -265,7 +330,8 @@ func _next_scene() -> void:
 	gecko.chew_override = false
 	gecko.lmb_override = false
 	_reset()
-	_hint = "scene %d/%d  %s   (Tab next, Shift+Tab main cave)" % [_scene_i + 1, names.size(), name]
+	_panel.select_scene(i)
+	_hint = "scene %d/%d  %s   (Tab next, Shift+Tab main cave)" % [i + 1, names.size(), name]
 	_hint_t = 5.0
 
 
@@ -273,6 +339,7 @@ func _next_scene() -> void:
 func _main_cave() -> void:
 	_scene = {}
 	_scene_i = -1
+	_panel.select_scene(-1)
 	_reset()
 	_hint = "main cave"
 	_hint_t = 7.0
@@ -310,10 +377,14 @@ func _process(_dt: float) -> void:
 		# (project.godot), so the frame is the window's size, one pixel
 		# per pixel, whatever size the compositor gave it.
 		var half := get_viewport().get_visible_rect().size * 0.5
-		var screen := (gecko.pos - _camera.get_screen_center_position()) * CAMERA_ZOOM + half
+		var screen := (gecko.pos - _camera.position) * CAMERA_ZOOM + half
 		print("F%d %d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick])
 	var m := get_global_mouse_position()
-	if Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and Input.is_key_pressed(KEY_CTRL):
+	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position())
+	gecko.mouse_blocked = over_panel
+	if over_panel or get_tree().paused:
+		pass
+	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and Input.is_key_pressed(KEY_CTRL):
 		map.erase_circle(m, brush_r)
 	elif Input.is_mouse_button_pressed(MOUSE_BUTTON_MIDDLE):
 		map.fill_circle(m, brush_r)
@@ -321,6 +392,8 @@ func _process(_dt: float) -> void:
 		seed_value += 1
 		_scene = {}
 		_scene_i = -1
+		_panel.select_scene(-1)
+		_panel.set_seed(seed_value)
 		_reset()
 	# Exact matches, so Tab with Shift held is only the one action.
 	if Input.is_action_just_pressed("scene_next", true):
@@ -328,11 +401,16 @@ func _process(_dt: float) -> void:
 	if Input.is_action_just_pressed("scene_main", true):
 		_main_cave()
 	if Input.is_action_just_pressed("debug_toggle"):
-		gecko.debug = not gecko.debug
+		_debug = not _debug
+		_panel.visible = _debug
+		gecko.debug = _debug
+		_panel.set_overlay(_debug)
 	if Input.is_action_just_pressed("render_coarse"):
 		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
+		_panel.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
 	if Input.is_action_just_pressed("render_fine"):
 		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_FINE)
+		_panel.set_pixel_size(BlobLayer.PIXEL_SZ_FINE)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -341,3 +419,4 @@ func _unhandled_input(event: InputEvent) -> void:
 			brush_r = minf(brush_r + 4.0, 80.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			brush_r = maxf(brush_r - 4.0, 8.0)
+		_panel.set_brush(brush_r)

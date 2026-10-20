@@ -174,12 +174,16 @@ The movement suite is the regression gate for any movement change:
   outcome. `BASELINE=tests/baseline.json` marks regressions against the
   committed baseline. A run passes with no events at all.
 - `FRAMES=1 tools/suite.sh [filter]` records 60 fps frames (one per
-  tick, needs a display) under `frames/`. The project window is
-  1920x1000 with no canvas stretch, so it fits a 1080 px screen's work
-  area and both the screen and the recorded frames are one pixel per
-  pixel: a 1080 px window gets shortened by the compositor, and the
-  movie frame then holds the content at a half-pixel offset, which
-  blends every edge and reads as flicker; `tools/flicker.py frames/`
+  tick) under `frames/`, on a virtual display (`xvfb-run`) with
+  software Vulkan, the game's own renderer, so no window opens;
+  `ONSCREEN=1` records on the real display and GPU instead (the frames
+  then differ by a colour step on some rock pixels, nothing more).
+  The project window is 1920x1000 with no canvas stretch, so it fits a
+  1080 px screen's work area and both the screen and the recorded
+  frames are one pixel per pixel: a 1080 px window gets shortened by
+  the compositor, and the movie frame then holds the content at a
+  half-pixel offset, which blends every edge and reads as flicker;
+  `tools/flicker.py frames/`
   measures the drawn silhouette's change between frames and any
   fragments it breaks into; `tools/sheet.sh scene:script tick` makes a
   contact sheet round a tick, and `tools/ticks.py` dumps a tick range of
