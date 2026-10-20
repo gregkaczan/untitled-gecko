@@ -12,6 +12,15 @@
 #                                     as the game, pixel for pixel) so
 #                                     no window opens; ONSCREEN=1 uses
 #                                     the real display and GPU instead
+#   SIM=1 tools/suite.sh              runs the particle world instead of
+#                                     the bitmap, on a virtual display with
+#                                     the GPU's Vulkan driver (SIM_ICD=path
+#                                     picks another, lvp_icd.json for
+#                                     software Vulkan at a fifth of the
+#                                     speed), traces under runs-sim/;
+#                                     GECKO_SENSE and GECKO_CRUMB pass
+#                                     through, so GECKO_SENSE=4 SIM=1
+#                                     runs the coarse senses
 #   JOBS=n OUT=dir BASELINE=file.json
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -20,9 +29,14 @@ filter="${1:-.}"
 export FRAMES="${FRAMES:-0}"
 # Recordings live apart from the headless traces, so a later headless
 # run never overwrites the trace that maps a recording's frames to ticks.
+export SIM="${SIM:-0}"
+export SIM_ICD="${SIM_ICD:-/usr/share/vulkan/icd.d/nvidia_icd.json}"
 if [[ "$FRAMES" == 1 ]]; then
   export OUT="${OUT:-frames}"
   jobs="${JOBS:-1}"
+elif [[ "$SIM" == 1 ]]; then
+  export OUT="${OUT:-runs-sim}"
+  jobs="${JOBS:-3}"
 else
   export OUT="${OUT:-runs}"
   jobs="${JOBS:-6}"
@@ -45,6 +59,10 @@ run_one() {
     rm -f "$dir"/f*.png
     GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
       timeout 600 "$GODOT" --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
+  elif [[ "$SIM" == 1 ]]; then
+    VK_ICD_FILENAMES="$SIM_ICD" GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
+      timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan \
+      --path . --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
   else
     GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
       timeout 300 "$GODOT" --headless --path . --fixed-fps 60 > "$dir/trace.log" 2>&1 || true
@@ -53,7 +71,7 @@ run_one() {
 }
 export -f run_one
 
-python3 -I tools/analyze.py --list | grep -E "$filter" | xargs -P "$jobs" -I{} bash -c 'run_one "$@"' _ {}
+python3 -I tools/analyze.py $([[ "$SIM" == 1 ]] && echo --list-sim || echo --list) | grep -E "$filter" | xargs -P "$jobs" -I{} bash -c 'run_one "$@"' _ {}
 
 if [[ -n "${BASELINE:-}" ]]; then
   python3 -I tools/analyze.py "$OUT" --baseline "$BASELINE"

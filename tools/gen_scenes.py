@@ -28,6 +28,7 @@ def step(secs, inp, jump=False, chew=False, lmb=False, aim=None):
 
 SCRIPTS = {
     "walk_right": [step(5.0, R)],
+    "walk_long": [step(10.0, R)],      # A squeeze walks at 52 px/s: 10 s covers 500 px of it
     "walk_left": [step(5.0, L)],
     "traverse": [step(4.5, R), step(4.5, L)],
     "traverse_left": [step(4.5, L), step(4.5, R)],
@@ -159,9 +160,9 @@ add("specks_floor", [["specks", 3, 600, 1400, F - 2, 14]], ["floor", 500, 700], 
 # senses pass through and the body loosens (sim.gd's crumb threshold; in
 # the bitmap world they are specks like any other).
 add("crumbs_air", [["cell", x, F - 10 - (8 if (x // 40) % 2 else 0), 1] for x in range(700, 1320, 40)],
-    ["floor", 500, 700], ["traverse"], state="cling", reach=[1000, 0, 1920, 1080])
+    ["floor", 500, 700], ["traverse"], state="cling", reach=[1000, 0, 1920, 1080], sim_only=True)
 add("crumbs_tunnel", [["tunnel", 500, 600, 1500, 600, 11]] + [["cell", x, 600 + dy, 1] for x in range(700, 1320, 36) for dy in ((-6,), (0,), (6,))[(x // 36) % 3]],
-    ["floor", 560, 600], ["traverse"], base="solid", state="cling", reach=[1100, 0, 1920, 1080])
+    ["floor", 560, 600], ["traverse"], base="solid", state="cling", reach=[1100, 0, 1920, 1080], sim_only=True)
 add("notch_1", [["erase", 1000, F, 4, 4]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)
 add("notch_2", [["erase", 1000, F, 8, 4]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)
 add("notch_deep", [["erase", 1000, F, 4, 12]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)
@@ -229,6 +230,24 @@ add("tunnel_level", [["tunnel", 500, 600, 1500, 600, 11]], ["floor", 560, 600], 
 add("tunnel_ragged", [["ragged", 500, 600, 1500, 600, 11, 7]], ["floor", 560, 600], ["traverse"], base="solid", state="cling", reach=[1100, 0, 1920, 1080])
 add("tunnel_45", [["tunnel", 500, 400, 1000, 900, 11]], ["floor", 520, 420], ["traverse"], base="solid", state="cling", reach=[0, 800, 1920, 1080])
 add("tunnel_45_ragged", [["ragged", 500, 400, 1000, 900, 11, 11]], ["floor", 520, 420], ["traverse"], base="solid", state="cling", reach=[0, 800, 1920, 1080])
+
+
+def ragged_run(y, x0, radii, seg, seed):
+    """A chewed tunnel along y from x0 in segments of seg px, each ragged at its own radius."""
+    return [["ragged", x0 + i * seg, y, x0 + (i + 1) * seg, y, r, seed + i] for i, r in enumerate(radii)]
+
+
+# Jagged tunnels: throats the body must squeeze through opening into
+# wider pockets and closing again, so the squeeze has to let go and take
+# hold by turns (a straight ragged tunnel never asks that of it). A
+# squeeze walks at 52 px/s, so the walk is long and the mark 360 px in:
+# past two throats and two pockets.
+add("tunnel_jagged", ragged_run(600, 500, [8, 14, 8, 14, 8, 14, 8, 8], 100, 21), ["floor", 540, 600], ["walk_long"], base="solid", state="cling", reach=[900, 0, 1920, 1080],
+    note="throats 11 to 17 px tall and pockets 23 to 29 px, 100 px each, chewed")
+add("tunnel_jagged_wide", ragged_run(600, 500, [8, 20, 8, 20, 8, 20, 8, 8], 100, 31), ["floor", 540, 600], ["walk_long"], base="solid", state="cling", reach=[900, 0, 1920, 1080],
+    note="throats 11 to 17 px tall opening into chambers about 40 px tall, 100 px each, chewed")
+add("tunnel_jagged_fine", ragged_run(600, 500, [8, 12] * 10, 40, 41), ["floor", 540, 600], ["walk_long"], base="solid", state="cling", reach=[900, 0, 1920, 1080],
+    note="the radius alternating every 40 px between 8 and 12: walls of bumps the body rubs along")
 add("tunnel_shaft", [["tunnel", 1000, 300, 1000, 900, 11], ["tunnel", 1000, 900, 1300, 900, 11]],
     ["at", 1000, 330, 1, 0], ["shaft"], base="solid", state="cling", note="a 22 px shaft, spawned on its left wall", reach=[0, 650, 1920, 1080])
 add("tunnel_bend", [["tunnel", 500, 600, 900, 600, 11], ["tunnel", 900, 600, 1200, 900, 11], ["tunnel", 1200, 900, 1600, 900, 11]],

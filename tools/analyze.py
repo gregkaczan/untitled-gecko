@@ -4,6 +4,7 @@
     tools/analyze.py runs/                 report.md and report.json in runs/
     tools/analyze.py runs/ --baseline b.json   also marks regressions
     tools/analyze.py --list                the scene:script specs to run
+    tools/analyze.py --list-sim            the same with the sim_only scenes
 
 A run is one scene and one script. Its trace has one `t<n>` line per
 physics tick (see gecko.gd _print_trace) and one `F<frame> x y tick cx
@@ -499,10 +500,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("runs", nargs="?", default="runs")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--list-sim", action="store_true", help="the specs with the sim_only scenes too (SIM=1 tools/suite.sh)")
     ap.add_argument("--baseline")
     args = ap.parse_args()
-    if args.list:
-        for s in specs(load_scenes(), headless=True):
+    if args.list or args.list_sim:
+        for s in specs(load_scenes(), headless=not args.list_sim):
             print(s)
         return
     analyze(args.runs, args.baseline)
