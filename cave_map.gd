@@ -8,9 +8,9 @@
 # chunk edits (push, pull, eat, break, spawn) do nothing.
 extends Node2D
 
-const W := 480
-const H := 270
-const CELL := 4.0
+const W := 960
+const H := 540
+const CELL := 2.0
 
 const ROCK := Color(0.17, 0.14, 0.12)
 const ROCK_VAR := Color(0.05, 0.04, 0.03)
@@ -30,7 +30,7 @@ const LAVA_TOP := Color(0.98, 0.62, 0.20)
 const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
 const BEDROCK := Color(0.10, 0.09, 0.13)  # Rock no bite opens
 const HARD_GIVE := 0.4         # Chance a bite takes a cell of hard rock (the sim's material table says the same)
-const WATER_Y := 222           # Cells: empty cells below this row inside the basin are water
+const WATER_Y := 444           # Cells: empty cells below this row inside the basin are water
 
 # Cell values
 const CELL_AIR := 0
@@ -89,28 +89,28 @@ func generate(seed_value: int) -> void:
 		solid.resize(W * H)
 	solid.fill(1)
 	var c := Vector2(W * 0.5, H * 0.5)
-	var rx := 150.0
-	var ry := 95.0
+	var rx := 300.0
+	var ry := 190.0
 	for y in H:
 		for x in W:
 			var d := Vector2((x + 0.5 - c.x) / rx, (y + 0.5 - c.y) / ry)
 			var a := d.angle()
 			var wobble := _noise.get_noise_2d(cos(a) * 3.0, sin(a) * 3.0) * 0.18
-			var grain := _noise.get_noise_2d(x * 0.2, y * 0.2) * 0.02
+			var grain := _noise.get_noise_2d(x * 0.1, y * 0.1) * 0.02
 			if d.length() < 1.0 + wobble + grain:
 				solid[y * W + x] = 0
 	# Pockets bitten out of the rim
 	for i in 4:
 		var a := i * TAU / 4.0 + 0.6 + _noise.get_noise_1d(i * 7.0) * 0.5
 		var centre := c + Vector2(cos(a) * rx * 0.98, sin(a) * ry * 0.98)
-		_carve_blob(centre, 26.0 + i * 4.0, 0)
+		_carve_blob(centre, 52.0 + i * 8.0, 0)
 	# Rock growing back into the room: shelves, a stalactite, and a dome on
 	# the floor (its centre at floor level, so it has no undercut)
-	_carve_blob(c + Vector2(-rx * 0.62, ry * 0.55), 22.0, 1)
-	_carve_blob(c + Vector2(rx * 0.55, ry * 0.98), 26.0, 1)
-	_carve_blob(c + Vector2(rx * 0.25, -ry * 0.9), 15.0, 1)
-	_carve_blob(c + Vector2(-rx * 0.9, -ry * 0.1), 20.0, 1)
-	_carve_blob(c + Vector2(-rx * 0.75, ry * 0.95), 30.0, 0)
+	_carve_blob(c + Vector2(-rx * 0.62, ry * 0.55), 44.0, 1)
+	_carve_blob(c + Vector2(rx * 0.55, ry * 0.98), 52.0, 1)
+	_carve_blob(c + Vector2(rx * 0.25, -ry * 0.9), 30.0, 1)
+	_carve_blob(c + Vector2(-rx * 0.9, -ry * 0.1), 40.0, 1)
+	_carve_blob(c + Vector2(-rx * 0.75, ry * 0.95), 60.0, 0)
 	_smooth_rim()
 	_smooth_rim()
 	for y in range(WATER_Y, H):

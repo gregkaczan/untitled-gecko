@@ -100,8 +100,8 @@ func _ready() -> void:
 	col.add_child(px_row)
 	px_row.add_child(_label("Pixel grid"))
 	_pixel = OptionButton.new()
+	_pixel.add_item("1 px", 1)
 	_pixel.add_item("2 px", 2)
-	_pixel.add_item("4 px", 4)
 	_pixel.focus_mode = Control.FOCUS_NONE
 	_pixel.item_selected.connect(func(i: int) -> void: pixel_size_changed.emit(float(_pixel.get_item_id(i))))
 	px_row.add_child(_pixel)

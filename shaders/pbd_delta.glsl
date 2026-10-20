@@ -4,23 +4,23 @@
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer Data { uint d[]; } buf;
 
-const uint GW = 160u, GH = 90u, MPC = 32u, PC = 129600u;
-const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN = 1512136u;
-const uint O_NP = 2059336u; // NPC tunable params: [0]=separation [1]=cohesion [2]=flow_speed
+const uint GW = 320u, GH = 180u, MPC = 32u, PC = 518400u;
+const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_RN = 6048136u;
+const uint O_NP = 8236936u; // NPC tunable params: [0]=separation [1]=cohesion [2]=flow_speed
 // Capsule erosion slots for drone drills. Only this shader reads them.
 // Slot layout: [pos.x, pos.y, dir.x, dir.y, radius, half_length, active, melt]
 // melt > 0 turns the slot into a melter: each tick every ground particle
 // inside vanishes with that probability, and nothing inside is pushed.
-const uint O_CAP = 2059339u;
+const uint O_CAP = 8236939u;
 const uint N_CAP = 8u;
 // Feedback block (see simulation.gd O_FB):
 // [0] player contact count, [1] creature kills, [2] impact count,
 // [3 + i*2] impact packed position (y << 12 | x), [4 + i*2] impact kind
-const uint O_FB = 2059403u;
+const uint O_FB = 8237003u;
 const uint MAX_IMPACTS = 32u;
 // Bond records (see pbd_predict and sim.gd O_BD): per particle [chunk
 // id, awake, bond count, pad, NB pairs of (mate index, rest length)].
-const uint O_BD = 2203470u;
+const uint O_BD = 8813070u;
 const uint BD = 20u;
 const uint NB = 8u;
 const uint NONE = 0xFFFFFFFFu;
@@ -362,7 +362,7 @@ void main() {
 
                     bool both_water = (mat_i == 1u && mat_j == 1u);
                     bool both_lava = (mat_i == 10u && mat_j == 10u);
-                    float sep_dist = (both_water || both_lava) ? 1.5 : 2.0;
+                    float sep_dist = (both_water || both_lava) ? 0.75 : 1.0;
                     float sep_str  = both_water ? 0.15 : (both_lava ? 0.10 : 0.3);
                     if (r < sep_dist && r > 0.001) {
                         delta_p += (diff / r) * (sep_dist - r) * sep_str;

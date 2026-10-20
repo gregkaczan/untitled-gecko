@@ -5,12 +5,12 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer Data { uint d[]; } buf;
 
 // Spatial grid: GW×GH cells, up to MPC particles per cell, PC total particles
-const uint GW = 160u, GH = 90u, MPC = 32u, PC = 129600u;
+const uint GW = 320u, GH = 180u, MPC = 32u, PC = 518400u;
 // SSBO section offsets: Params, Materials, GridCounts, GridParticles, ParticleData, RenderOutput
-const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN = 1512136u;
+const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_RN = 6048136u;
 // Feedback block at the SSBO tail (see simulation.gd O_FB):
 // [0] player contact count, [1] creature kills, [2] impact count, [3..] impact entries
-const uint O_FB = 2059403u;
+const uint O_FB = 8237003u;
 // Bond records at the SSBO tail (see sim.gd O_BD): per particle [chunk
 // id, awake, bond count, pad, then NB pairs of (mate index, rest length)].
 // A chunk is a lump of loose material (a boulder, a stone, a clump of
@@ -19,16 +19,16 @@ const uint O_FB = 2059403u;
 // are chunk events this shader handles: -2 pull (unit dir, speed in the
 // radius field, chunk id in half_length), -3 eat (chunk id in
 // half_length, radius), -4 break (radius).
-const uint O_BD = 2203470u;
+const uint O_BD = 8813070u;
 const uint BD = 20u;
 const uint NB = 8u;
 const uint NONE = 0xFFFFFFFFu;
-const uint O_CAP = 2059339u;
+const uint O_CAP = 8236939u;
 const uint N_CAP = 8u;
 // Cell classes per render pixel, last tick's (render_write.glsl): 0 air,
 // 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell.
-const uint O_CT = 2073870u;
-const uint O_LP = 5573070u;   // light and flow parameters (sim.gd): from [96] two currents, 8 floats each: x0 y0 x1 y1 dx dy speed on
+const uint O_CT = 8294670u;
+const uint O_LP = 22291470u;   // light and flow parameters (sim.gd): from [96] two currents, 8 floats each: x0 y0 x1 y1 dx dy speed on
 
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }    // Read float from flat uint SSBO

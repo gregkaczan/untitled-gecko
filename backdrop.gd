@@ -7,7 +7,7 @@
 # camera's grid every tick so they never shimmer (main.gd _follow).
 extends Node2D
 
-const CELL := 4.0
+const CELL := 2.0
 const FAR := 0.15              # The far wall's share of the camera's motion
 const NEAR := 1.25             # The near layer's: past 1, it moves faster than the world
 const FAR_MARGIN := Vector2i(60, 36)   # Cells of far wall beyond the world's edge each way, for its drift
@@ -15,7 +15,7 @@ const FAR_BASE := Color(0.075, 0.072, 0.095)
 const NEAR_COLOR := Color(0.02, 0.02, 0.03, 0.78)
 const NEAR_CHANCE_CEIL := 0.14 # Per scanned column with a ceiling
 const NEAR_CHANCE_FLOOR := 0.08
-const NEAR_STEP := 7           # Columns scanned, in cells
+const NEAR_STEP := 14          # Columns scanned, in cells
 
 var _far: Sprite2D
 var _near: Sprite2D

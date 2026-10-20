@@ -7,12 +7,12 @@ layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer Data { uint d[]; } buf;
 
 const uint O_P = 0u;
-const uint O_CT = 2073870u;   // cell class per pixel: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
-const uint O_LA = 4795470u;   // light, two uints per cell (RG and B as 16-bit): the result of the last tick's spread, and of this one
-const uint O_LB = 5054670u;   // light, the spread's other half
-const uint O_EM = 5313870u;   // emission per cell, packed RGB8, written by the particles (render_write.glsl)
-const uint O_LO = 5443470u;   // the light as RGB8 per cell, for the overlay texture (light_out.glsl, read back by sim.gd)
-const uint O_LP = 5573070u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 8 floats each: x y r g b radius
+const uint O_CT = 8294670u;   // cell class per pixel: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
+const uint O_LA = 19181070u;   // light, two uints per cell (RG and B as 16-bit): the result of the last tick's spread, and of this one
+const uint O_LB = 20217870u;   // light, the spread's other half
+const uint O_EM = 21254670u;   // emission per cell, packed RGB8, written by the particles (render_write.glsl)
+const uint O_LO = 21773070u;   // the light as RGB8 per cell, for the overlay texture (light_out.glsl, read back by sim.gd)
+const uint O_LP = 22291470u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 8 floats each: x y r g b radius
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 

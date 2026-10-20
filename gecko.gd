@@ -30,7 +30,7 @@ signal blasted                 # A gas burst threw the gecko
 
 const Chain = preload("res://chain.gd")
 
-const CELL := 4.0              # The map's cell size (CaveMap.CELL)
+const CELL := 2.0              # The map's cell size (CaveMap.CELL)
 const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
@@ -151,15 +151,15 @@ const PULL_SPEED := 360.0      # The body reeled in on the tongue (the grapple)
 const PULL_ACCEL := 2400.0
 const STRIKE_R := 4.0          # Dent a tongue strike leaves in the ground: a cell or so (was 8: it ate the ground)
 const STRIKE_BREAK_R := 10.0   # Round the tip of a strike on a lump, its bonds break
-const PULL_MAX_CELLS := 80     # Biggest piece the tongue drags in (cells of 4 px, a turned lump fills more); a bigger one holds it
-const EAT_MAX_CELLS := 16      # Biggest piece swallowed when it reaches the mouth
+const PULL_MAX_CELLS := 320    # Biggest piece the tongue drags in (cells of 4 px, a turned lump fills more); a bigger one holds it
+const EAT_MAX_CELLS := 64      # Biggest piece swallowed when it reaches the mouth
 const EAT_REACH := 16.0        # A dragged piece this close to the mouth is swallowed, or let go
 const EAT_R := 28.0            # How far round the mouth the swallow reaches
 const CHUNK_PULL_SPEED := 150.0
 const PUSH_LUMP_SPEED := 60.0  # Speed a shoved lump is moved at, as one, ahead of the walk
 const PUSH_SPEED := 50.0       # Walking speed kept up behind a lump being shoved
 const PUSH_TRIES := 30         # Ticks of shoving a lump that does not move before it counts as a wall
-const PEBBLE_CELLS := 6        # A lump of this many cells or fewer is stepped over, not shoved
+const PEBBLE_CELLS := 24       # A lump of this many cells or fewer is stepped over, not shoved
 const BRACE_BACK := 5.0        # Snout drawn back while the gecko strains on its tongue
 const GULP_TIME := 0.5         # Seconds a swallowed piece takes to travel down the body
 const EAT_OPEN := 0.09         # Seconds the mouth takes to open for a piece coming in

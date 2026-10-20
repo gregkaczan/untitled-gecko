@@ -29,14 +29,14 @@ const CaveMap = preload("res://cave_map.gd")
 
 const WORLD_W := 1920.0
 const WORLD_H := 1080.0
-const PIXEL_SZ := 4.0
-const CELL_SZ := 12.0
-const SUPPORT_R := 12.0
-const GW := 160
-const GH := 90
+const PIXEL_SZ := 2.0
+const CELL_SZ := 6.0
+const SUPPORT_R := 6.0
+const GW := 320
+const GH := 180
 const MPC := 32
-const RENDER_W := 480
-const RENDER_H := 270
+const RENDER_W := 960
+const RENDER_H := 540
 const SIM_DT := 1.0 / 60.0
 const GRAVITY := 900.0
 const WORKGROUP := 256
@@ -45,8 +45,8 @@ const SOLVER_ITERS := 6
 const O_P := 0
 const O_M := 40
 const O_GC := 136
-const O_GP := 14536
-const O_PT := 475336
+const O_GP := 57736
+const O_PT := 1900936
 const PARTICLE_COUNT := RENDER_W * RENDER_H     # 129600
 const O_RN := O_PT + PARTICLE_COUNT * 8          # 1512136
 const O_WD := O_RN + RENDER_W * RENDER_H
@@ -75,17 +75,17 @@ const O_LO := O_EM + RENDER_W * RENDER_H         # 5443470, RGB8 per cell, the o
 const O_LP := O_LO + RENDER_W * RENDER_H         # 5573070
 const LP_SIZE := 128
 const TOTAL_UINTS := O_LP + LP_SIZE
-const LIGHT_PASSES := 9                          # Cells the light travels per tick; odd, see above
+const LIGHT_PASSES := 19                         # Cells the light travels per tick; odd, see above
 const MAX_GLOWS := 8                             # Glow sources (the gecko, slugs) the seed takes
 const LIGHT_DECAY := 0.8                         # Of last tick's light kept before this tick's spread: a moved glow leaves a short trail
 # Passage per cell. Beyond one tick's passes the light is carried on
 # from the decayed field, so the fall-off there is the passage times
 # the decay's ninth root (0.976): air comes to 0.961 a cell, half-light
 # about 17 cells (70 px) past the bright plateau round a source.
-const LIGHT_AIR := 0.985
-const LIGHT_WATER := 0.93
-const LIGHT_LOOSE := 0.6
-const LIGHT_SOLID := 0.45                        # A rock face lights a cell or two deep
+const LIGHT_AIR := 0.9925
+const LIGHT_WATER := 0.9644
+const LIGHT_LOOSE := 0.7746
+const LIGHT_SOLID := 0.6708                        # A rock face lights a cell or two deep
 const CT_CHUNK := 16                             # Cell class 16 + id: a cell of chunk id
 
 const MAT_SAND := 0
@@ -159,9 +159,9 @@ var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
-	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
-	assert(O_BD == 2203470, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
-	assert(O_LA == 4795470 and O_EM == 5313870 and O_LO == 5443470 and O_LP == 5573070, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
+	assert(O_CT == 8294670, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
+	assert(O_BD == 8813070, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
+	assert(O_LA == 19181070 and O_EM == 21254670 and O_LO == 21773070 and O_LP == 22291470, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
 	_light.resize(LP_SIZE * 4)

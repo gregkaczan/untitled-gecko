@@ -117,7 +117,7 @@ func chunk_at_world(p: Vector2) -> int:
 # The connected piece of chunk id round p: the centres (world px) of the
 # cells of that id reachable from the one nearest p, eight-connected, up
 # to limit of them. Empty when none of its cells is within two of p.
-func chunk_piece(id: int, p: Vector2, limit := 400) -> PackedVector2Array:
+func chunk_piece(id: int, p: Vector2, limit := 1600) -> PackedVector2Array:
 	var out := PackedVector2Array()
 	var cx := int(floor(p.x / CELL))
 	var cy := int(floor(p.y / CELL))

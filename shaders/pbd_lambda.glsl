@@ -4,8 +4,8 @@
 layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 layout(set = 0, binding = 0, std430) buffer Data { uint d[]; } buf;
 
-const uint GW = 160u, GH = 90u, MPC = 32u, PC = 129600u;
-const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN = 1512136u;
+const uint GW = 320u, GH = 180u, MPC = 32u, PC = 518400u;
+const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_RN = 6048136u;
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); }

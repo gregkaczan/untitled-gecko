@@ -24,8 +24,8 @@ extends Node2D
 
 const WORLD_W := 1920
 const WORLD_H := 1080
-const PIXEL_SZ_FINE := 2.0      # The gecko reads at 2 px pixels over 4 px rock
-const PIXEL_SZ_COARSE := 4.0    # The old look: the gecko shares the rock's grid
+const PIXEL_SZ_FINE := 1.0      # The gecko reads at 2 px pixels over 4 px rock
+const PIXEL_SZ_COARSE := 2.0    # The old look: the gecko shares the rock's grid
 const SPLAT_SCALE := 1.6     # Splat draw radius over the body radius
 const SPLAT_TEX_SIZE := 64
 
