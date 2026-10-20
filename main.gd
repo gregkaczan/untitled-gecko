@@ -28,10 +28,20 @@
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
-const CAMERA_EASE := 16.0      # How fast the camera closes on the gecko (per second): quick, the pixel snap does the rest
+const CAMERA_EASE := 16.0      # How fast the camera closes on the gecko (per second), once it has fallen behind
+const CAM_LOCK_SPEED := 220.0  # Up to this speed (px/s) the camera scrolls exactly with the drawn body, so an ordinary walk or climb keeps the body on the same screen pixels
+const CAM_GRID := 1.0 / CAMERA_ZOOM  # The camera sits on whole screen pixels: half a world pixel at this zoom
+const GLOW_COLOR := Color(1.0, 0.82, 0.58)   # The gecko's own light, warm and small (the sim's light pass)
+const GLOW_R := 14.0                         # Px round the head seeded at full glow; the spread carries it on
+const DAYLIGHT := Color(0.85, 0.92, 1.0)     # The light at the exit's crack
+const VINE_HOLD := 1.2                       # Seconds the gecko may hang on a vine before its anchor gives
 const CaveMap = preload("res://cave_map.gd")
 const SimMap = preload("res://sim_map.gd")
 const Sim = preload("res://sim.gd")
+const SoundBank = preload("res://sound.gd")
+const Ambience = preload("res://ambience.gd")
+const Backdrop = preload("res://backdrop.gd")
+const Slug = preload("res://slug.gd")
 const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
@@ -152,6 +162,9 @@ var seed_value := 7
 var _label: Label
 var _camera: Camera2D
 var _cam := Vector2.ZERO       # The camera's eased position before pixel snapping
+var _cam_target := Vector2.ZERO  # The drawn body's base the camera last followed, for its move this tick
+var _cam_seat := Vector2.ZERO  # The base's place on the screen's pixels: where the blob layer's grid is anchored
+var _seat_off := Vector2.ZERO  # That place as an offset from the camera, kept until the lag has left it by a screen pixel
 var _demo: Array = []
 var _hint_t := 0.0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
@@ -168,6 +181,11 @@ var _panel: DebugPanel
 var _debug := false            # F1: the panel and the gecko's overlay
 var _step_ticks := 0           # Physics ticks left to run before pausing again (the panel's step)
 var _exit := Rect2()           # The level's exit, empty in a scene without one
+var _sound: Node2D              # sound.gd: the one-shots on the gecko's events, the drone and the hum
+var _ambience: Node2D           # ambience.gd: drips, bite dust, bubbles
+var _vines := {}                # Chunk id -> {top, load}: the vines hanging in the level and how long the gecko has hung on each
+var _backdrop: Node2D           # backdrop.gd: the far wall and the near dripstone, particle world only
+var _slugs: Array = []          # slug.gd: the glow slugs in the level
 var _won := false              # The gecko reached the exit: the camera pulls back
 
 
@@ -200,6 +218,21 @@ func _ready() -> void:
 	add_child(blobs)
 	gecko = Gecko.new()
 	gecko.map = map
+	# The camera follows after the gecko's tick, so the pixel grid it
+	# anchors is the one the body is drawn on this tick (main ticks
+	# before its children).
+	gecko.ticked.connect(_follow)
+	_sound = SoundBank.new()
+	add_child(_sound)
+	_sound.listen(gecko)
+	_ambience = Ambience.new()
+	add_child(_ambience)
+	_ambience.setup(map, gecko, _sound)
+	if sim:
+		_backdrop = Backdrop.new()
+		_backdrop.set_grid(CAM_GRID)
+		add_child(_backdrop)
+		_backdrop.attach_far(sim)
 	gecko.blobs = blobs
 	add_child(gecko)
 	_camera = Camera2D.new()
@@ -277,23 +310,45 @@ func _reset() -> void:
 			var gen := CaveMap.new()
 			SceneBuilder.build(gen, _scene, _scene_bases)
 			map.build_cells(gen.solid)
+			_backdrop.build(gen.solid, CaveMap.W, CaveMap.H, seed_value)
 			gen.free()
 		else:
 			SceneBuilder.build(map, _scene, _scene_bases)
-		SceneBuilder.spawn_lumps(map, _scene)
+		_vines.clear()
+		for v in SceneBuilder.spawn_lumps(map, _scene):
+			_vines[v[0]] = {"top": v[1], "load": 0.0}
+		_clear_slugs()
+		var k := 0
+		for at in SceneBuilder.slug_points(_scene):
+			var s := Slug.new()
+			s.setup(map, at, 31 + k)
+			add_child(s)
+			_slugs.append(s)
+			k += 1
 		_exit = SceneBuilder.exit_rect(_scene)
+		if sim:
+			sim.set_daylight(_exit, DAYLIGHT)
+		_sound.set_exit(_exit)
+		_ambience.reset()
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
-		_cam = gecko.pos
-		_camera.position = gecko.pos
 		_camera_home()
+		_cam_reset()
 		return
 	_exit = Rect2()
+	_clear_slugs()
+	if sim:
+		sim.set_daylight(_exit, DAYLIGHT)
+	_sound.set_exit(_exit)
+	_ambience.reset()
 	_camera_home()
 	if sim and _demo_name in ["pull", "strike", "tongue"]:
 		_lab()
 		return
 	map.generate(seed_value)
+	if _backdrop:
+		# The generated cave: the far wall only (its cells are the sim's).
+		_backdrop.build(PackedByteArray(), CaveMap.W, CaveMap.H, seed_value)
 	var spawn := _flat_spawn()
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
@@ -309,8 +364,7 @@ func _reset() -> void:
 	if sim and _demo_name == "":
 		_scatter_chunks(spawn)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
-	_cam = gecko.pos
-	_camera.position = gecko.pos
+	_cam_reset()
 
 
 # A flat room for the tongue demos (particle world only): a stone small
@@ -329,8 +383,7 @@ func _lab() -> void:
 	elif _demo_name == "strike":
 		_lump_on_floor(x + 150.0, 12.0, false, LAB_CEIL + 8.0)
 	gecko.spawn(Vector2(x, LAB_FLOOR - Gecko.RIDE_H))
-	_cam = gecko.pos
-	_camera.position = gecko.pos
+	_cam_reset()
 
 
 # A lump resting on the first floor below (x, from_y): a boulder (or a
@@ -398,25 +451,17 @@ func _physics_process(dt: float) -> void:
 		if _step_ticks == 0:
 			get_tree().set_deferred("paused", true)
 			_panel.set_paused(true)
+	_update_slugs(dt)
 	if sim:
+		var glows: Array = [[gecko.chain.head(), GLOW_COLOR.lerp(Color(0.8, 1.0, 0.6), 0.5 if gecko.glow_boost > 0.0 else 0.0),
+				GLOW_R * (1.8 if gecko.glow_boost > 0.0 else 1.0)]]
+		for s in _slugs:
+			glows.append(s.glow())
+		sim.set_glows(glows)
 		sim.tick()
+		_update_vines(dt)
 	if not _won and _exit.has_area() and _exit.has_point(gecko.pos):
 		_win()
-	if _won:
-		# Out: the camera lets go of the gecko and pulls back over the
-		# whole cave, the rock round it in view.
-		var k := 1.0 - exp(-WIN_PULL * dt)
-		_cam = _cam.lerp(Vector2(CaveMap.W * CaveMap.CELL, CaveMap.H * CaveMap.CELL) * 0.5, k)
-		_camera.position = _cam
-		_camera.zoom = _camera.zoom.lerp(Vector2(WIN_ZOOM, WIN_ZOOM), k)
-	else:
-		# The camera eases after the drawn body and sits on whole pixels of
-		# the 2 px grid: a camera at a fraction of a pixel shifts every edge
-		# on the screen as it moves, which reads as flicker when the gecko
-		# is still, and the body centre itself rocks half a pixel on
-		# jiggling particle ground while the drawn body does not.
-		_cam = _cam.lerp(gecko.draw_pos(), 1.0 - exp(-CAMERA_EASE * dt))
-		_camera.position = (_cam * 0.5).round() * 2.0
 	if _demo_step >= 0:
 		_run_demo(dt)
 	# The state readout only with the debug overlay; the controls hint for
@@ -429,6 +474,118 @@ func _physics_process(dt: float) -> void:
 		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
+
+
+# The slugs creep (slug.gd), one swallowed at the mouth is gone and the
+# gecko's glow brightens, and their blobs go to the gecko's drawing.
+func _update_slugs(dt: float) -> void:
+	var blobs_out: Array = []
+	for i in range(_slugs.size() - 1, -1, -1):
+		var s: Node2D = _slugs[i]
+		s.tick(dt, gecko)
+		if s.eaten:
+			gecko.gulp_slug()
+			_slugs.remove_at(i)
+			s.queue_free()
+			continue
+		for b in s.blobs():
+			blobs_out.append(b)
+	gecko.extra_blobs = blobs_out
+
+
+func _clear_slugs() -> void:
+	for s in _slugs:
+		s.queue_free()
+	_slugs.clear()
+	gecko.extra_blobs = []
+
+
+# A vine the gecko hangs on (a planted foot on its cells) takes the
+# load for VINE_HOLD, then its anchor's bonds are broken and it comes
+# down, gecko and all; the load eases off a vine let go of.
+func _update_vines(dt: float) -> void:
+	if _vines.is_empty():
+		return
+	var held := -1
+	if gecko.clinging:
+		for f in gecko.feet:
+			if f.planted:
+				var id: int = map.chunk_at_world(f.pos)
+				if _vines.has(id):
+					held = id
+					break
+	for id in _vines.keys():
+		var v: Dictionary = _vines[id]
+		v.load = v.load + dt if id == held else maxf(v.load - dt * 2.0, 0.0)
+		if v.load >= VINE_HOLD:
+			map.break_circle(v.top, 7.0)
+			_vines.erase(id)
+
+
+# The camera, after the gecko's tick (its ticked signal). Out of the
+# cave it lets go of the gecko and pulls back over the whole cave, the
+# rock round it in view. Otherwise it follows the drawn body's base:
+# it scrolls exactly with the base's own move up to CAM_LOCK_SPEED, so
+# an ordinary walk keeps the body on the same screen pixels and the
+# small unevenness of its speed goes into the scroll, where the eye
+# does not see it, rather than into the body's place on the screen;
+# whatever lag is left (a fall, a landing's jolt, a long move in one
+# tick) eases out at CAMERA_EASE. It sits on whole screen pixels
+# (CAM_GRID), held inside the world's edges, so the world scrolls a
+# screen pixel at a time and every edge stays crisp. The body's own
+# pixel grid is anchored on the base's place on the screen's pixels
+# (the blob layer's origin), so the body is drawn with the same pixels
+# tick after tick and moves on the screen only as the camera's lag
+# changes, a screen pixel at a time. Before, the camera was rounded to
+# the body's 2 px grid and the body to the world's: the two crossed
+# pixel boundaries at different moments and the body shook a pixel
+# back and forth as it walked, while the world scrolled in 2 px steps.
+func _follow() -> void:
+	var dt := get_physics_process_delta_time()
+	if _won:
+		var k := 1.0 - exp(-WIN_PULL * dt)
+		_cam = _cam.lerp(Vector2(CaveMap.W * CaveMap.CELL, CaveMap.H * CaveMap.CELL) * 0.5, k)
+		_camera.position = _cam
+		_camera.zoom = _camera.zoom.lerp(Vector2(WIN_ZOOM, WIN_ZOOM), k)
+		return
+	var target := gecko.draw_pos()
+	_cam += (target - _cam_target).limit_length(CAM_LOCK_SPEED * dt)
+	_cam_target = target
+	_cam = _cam.lerp(target, 1.0 - exp(-CAMERA_EASE * dt))
+	_camera.position = _cam_clamped((_cam / CAM_GRID).round() * CAM_GRID)
+	# The seat moves to the lag's nearest screen pixel only once the lag
+	# has left the seat by a whole one: the camera's own rounding to the
+	# grid puts a quarter pixel of noise on the lag, which would rock a
+	# seat at a boundary between two pixels.
+	var lag := target - _camera.position
+	for k in 2:
+		if absf(lag[k] - _seat_off[k]) >= CAM_GRID:
+			_seat_off[k] = roundf(lag[k] / CAM_GRID) * CAM_GRID
+	_cam_seat = _camera.position + _seat_off
+	blobs.set_origin(_cam_seat.posmodv(Vector2(blobs.pixel_sz, blobs.pixel_sz)))
+	if _backdrop:
+		_backdrop.follow(_camera.position)
+
+
+# The camera straight onto the gecko, as at a spawn.
+func _cam_reset() -> void:
+	_cam = gecko.draw_pos()
+	_cam_target = _cam
+	_camera.position = _cam_clamped((_cam / CAM_GRID).round() * CAM_GRID)
+	_seat_off = Vector2.ZERO
+	_cam_seat = _camera.position
+	blobs.set_origin(_cam_seat.posmodv(Vector2(blobs.pixel_sz, blobs.pixel_sz)))
+
+
+# The camera centre held inside its limits, as Camera2D itself would
+# hold it, so the position set is the position shown and the blob grid
+# can be anchored to it; on the camera's grid, so the view at an edge
+# stays on whole screen pixels.
+func _cam_clamped(p: Vector2) -> Vector2:
+	var half := get_viewport().get_visible_rect().size * 0.5 / _camera.zoom
+	half = (half / CAM_GRID).ceil() * CAM_GRID
+	return Vector2(clampf(p.x, _camera.limit_left + half.x, _camera.limit_right - half.x),
+			clampf(p.y, _camera.limit_top + half.y, _camera.limit_bottom - half.y))
 
 
 # The gecko is out of the cave. Input stays with the player; the camera
@@ -546,12 +703,22 @@ func _process(_dt: float) -> void:
 	if sim:
 		sim.read_render()
 	if _trace:
-		# Screen position in the movie frame. The window is unstretched
-		# (project.godot), so the frame is the window's size, one pixel
-		# per pixel, whatever size the compositor gave it.
+		# One line per drawn frame, for tools/analyze.py's camera metrics
+		# and the sheet tools: the body centre's screen position in the
+		# movie frame (the window is unstretched, project.godot, so the
+		# frame is the window's size, one pixel per pixel, whatever size
+		# the compositor gave it), the tick, the camera's centre in the
+		# world (as shown: held to the world's edges), the drawn body's
+		# base on the screen where the blob layer's grid seats it, that
+		# base in the world, and 1 once the gecko is out and the camera
+		# has let go of it.
 		var half := get_viewport().get_visible_rect().size * 0.5
-		var screen := (gecko.pos - _camera.position) * CAMERA_ZOOM + half
-		print("F%d %d %d %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick])
+		var cam := _camera.get_screen_center_position()
+		var screen := (gecko.pos - cam) * CAMERA_ZOOM + half
+		var base := gecko.draw_pos()
+		var body := (_cam_seat - cam) * CAMERA_ZOOM + half
+		print("F%d %d %d %d %.2f %.2f %.1f %.1f %.2f %.2f %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick,
+			cam.x, cam.y, body.x, body.y, base.x, base.y, 1 if _won else 0])
 	var m := get_global_mouse_position()
 	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position())
 	gecko.mouse_blocked = over_panel

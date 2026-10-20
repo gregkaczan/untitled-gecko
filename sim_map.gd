@@ -144,9 +144,24 @@ func spawn_clay(p: Vector2, radius: float) -> int:
 	return sim.spawn_chunk_disc(p, radius, sim.MAT_CLAY)
 
 
+# A vine hanging from top, length px (sim.gd). The chunk id, 0 for none.
+func spawn_vine(top: Vector2, length: float) -> int:
+	return sim.spawn_vine(top, length)
+
+
 # Loose sand on the air within radius of p.
 func spawn_sand(p: Vector2, radius: float) -> void:
 	sim.spawn_sand_disc(p, radius)
+
+
+# Ambience (ambience.gd): a drop of water falling from p, and a puff of
+# n wisps at p drifting with vel.
+func spawn_drop(p: Vector2) -> void:
+	sim.spawn_drop(p)
+
+
+func spawn_puff(p: Vector2, n: int, vel: Vector2, spread: float, life: float) -> void:
+	sim.spawn_puff(p, n, vel, spread, life)
 
 
 func fill_circle(p: Vector2, radius: float) -> void:

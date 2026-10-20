@@ -14,6 +14,17 @@
 # appendages of one slug-like body.
 extends Node2D
 
+signal ticked                  # The end of a physics tick: body, chain and blobs are this tick's (the camera follows on it)
+# Events for the sounds and the ambience (sound.gd, ambience.gd).
+signal stepped(at: Vector2)    # A foot planted at the end of a step
+signal bit(at: Vector2)        # A bite landed there
+signal swallowed               # A piece went down
+signal tongue_shot             # The tongue left the mouth
+signal tongue_hit(at: Vector2) # The tip met something solid (stuck or struck)
+signal splashed(at: Vector2)   # Into the water
+signal landed(speed: float)    # Onto a surface from the air or the water, at that speed
+signal jumped
+
 const Chain = preload("res://chain.gd")
 
 const CELL := 4.0              # The map's cell size (CaveMap.CELL)
@@ -34,6 +45,7 @@ const CHEW_R := 11.0           # Mean radius of one bite; each bite varies aroun
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const CHEW_PERIOD := 0.4       # Seconds per bite: the jaw opens through the cycle and the bite lands as it shuts
 const CHEW_SNAP := 0.25        # The last part of the cycle, over which the jaw shuts
+const CHEW_MOUTH := 3.0        # Px the mouth mark opens per bite: the lips part, the head keeps its shape
 const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
 const BURROW_SLOW := 0.3       # Walking speed through loose grains (a bed of sand), as a fraction of the walk
 const PUSH_R_FRONT := 8.0      # Radius of the body's push on loose grains, head to mid-body (sim_map.gd)
@@ -210,6 +222,9 @@ var _press_t := 0.0            # Seconds the left button has been held since the
 var _gulp := 0.0               # Seconds left of a swallow travelling down the body
 var _gape := 0.0               # Px the mouth is open
 var _gape_want := false        # This tick a piece is coming in: the mouth opens
+var _gape_chew := false        # The gape is a bite's: drawn as parted lips, not the yawn's dropped jaw
+var extra_blobs: Array = []    # Blobs drawn with the body's by the blob layer: the slugs (main.gd sets it before the tick)
+var glow_boost := 0.0          # Seconds left of the brighter glow a swallowed slug gives (main.gd reads it)
 var _agape := 0.0              # Seconds left of holding the mouth open after a swallow
 var _block_cell = null         # The cell that stopped this tick's walk, null when none
 var _push_ticks := 0           # Ticks in a row the walk has been shoving the same lump
@@ -322,6 +337,7 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	straining = false
 	_gulp = 0.0
 	_gape = 0.0
+	_gape_chew = false
 	_agape = 0.0
 	_chew_t = 0.0
 	_digging = false
@@ -357,6 +373,7 @@ func _physics_process(dt: float) -> void:
 	_block_cell = null
 	no_cling = maxf(no_cling - dt, 0.0)
 	_gulp = maxf(_gulp - dt, 0.0)
+	glow_boost = maxf(glow_boost - dt, 0.0)
 	_dig_aim = Vector2.ZERO
 	if not _squeeze:
 		_sq_r = move_toward(_sq_r, BODY_R, SQUEEZE_RECOVER)
@@ -394,6 +411,7 @@ func _physics_process(dt: float) -> void:
 	var in_water: bool = map.water_near(pos, 1)
 	if in_water and not clinging and not swimming and not tongue_anchored:
 		swimming = true
+		splashed.emit(pos)
 		vel *= 0.4
 	elif swimming and not in_water:
 		swimming = false
@@ -424,6 +442,7 @@ func _physics_process(dt: float) -> void:
 	queue_redraw()
 	_under.queue_redraw()
 	_debug_layer.queue_redraw()
+	ticked.emit()
 
 
 # The body's push on loose grains: two capsules along the drawn chain,
@@ -516,6 +535,7 @@ func _chew(dir: Vector2) -> void:
 	# tunnel comes out ragged like something chewed, not drilled.
 	var jitter := Vector2(randf_range(-3.0, 3.0), randf_range(-3.0, 3.0))
 	map.erase_circle(_bite + jitter, randf_range(CHEW_R - 2.5, CHEW_R + 0.5))
+	bit.emit(_bite)
 	# Wedged against its own tunnel's wall, where the bite ahead cannot
 	# reach back to a ragged bit at the shoulder: a bite round the body
 	# itself frees it.
@@ -1024,6 +1044,7 @@ func _update_mouse(dt: float) -> void:
 
 
 func _shoot_tongue() -> void:
+	tongue_shot.emit()
 	tongue_out = true
 	tongue_anchored = false
 	tongue_retracting = false
@@ -1033,6 +1054,20 @@ func _shoot_tongue() -> void:
 	tongue_dir = (_cursor() - tongue_tip).normalized()
 	if tongue_dir == Vector2.ZERO:
 		tongue_dir = look
+
+
+# For a slug caught on the tip (slug.gd): the tongue comes back.
+func release_tongue() -> void:
+	_release_tongue()
+
+
+# A slug at the mouth: swallowed, the bulge runs down, and the glow
+# brightens for a while.
+func gulp_slug() -> void:
+	_gulp = GULP_TIME
+	_agape = EAT_AGAPE
+	glow_boost = 20.0
+	swallowed.emit()
 
 
 # Letting go: the tip flies back to the mouth before the tongue is gone.
@@ -1066,6 +1101,7 @@ func _update_tongue(dt: float) -> void:
 		var next := tongue_tip + tongue_dir * inc
 		if map.is_solid_world(next):
 			tongue_tip = next
+			tongue_hit.emit(next)
 			if _lmb:
 				tongue_anchored = true
 				tongue_chunk = map.chunk_at_world(next)
@@ -1129,6 +1165,7 @@ func _hold_tongue() -> void:
 			if near_mouth <= EAT_REACH and _gape >= YAWN_GAPE - 0.01:
 				map.eat_chunk(tongue_chunk, mouth, EAT_R)
 				_gulp = GULP_TIME
+				swallowed.emit()
 				_agape = EAT_AGAPE
 				_release_tongue()
 				return
@@ -1152,8 +1189,13 @@ func _update_gape(dt: float) -> void:
 		var u := _chew_t / CHEW_PERIOD
 		var open := u / (1.0 - CHEW_SNAP) if u < 1.0 - CHEW_SNAP else (1.0 - u) / CHEW_SNAP
 		_gape = YAWN_GAPE * clampf(open, 0.0, 1.0)
+		_gape_chew = true
 	else:
 		_gape = move_toward(_gape, YAWN_GAPE if want else 0.0, YAWN_GAPE / (EAT_OPEN if want else EAT_CLOSE) * dt)
+		# A bite's gape closing after the chew key is let go keeps its
+		# look until shut; a swallow's is the yawn's from the start.
+		if want or _gape <= 0.0:
+			_gape_chew = false
 	_gape_want = false
 
 
@@ -1183,6 +1225,7 @@ func _update_pull(dt: float) -> void:
 
 
 func _land(n: Vector2) -> void:
+	landed.emit(vel.length())
 	clinging = true
 	up = n
 	_n_target = n
@@ -1213,6 +1256,7 @@ func _drop() -> void:
 
 
 func _jump() -> void:
+	jumped.emit()
 	clinging = false
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
@@ -1949,6 +1993,7 @@ func _update_feet(dt: float) -> void:
 				f.planted = true
 				f.anchor = f.step_to
 				f.pos = f.anchor
+				stepped.emit(f.pos)
 			else:
 				# The step's arc, no higher than the leg's drop: flat in a passage.
 				var drop := (hip - f.step_to).dot(up) - FOOT_LIFT
@@ -2045,6 +2090,8 @@ func _foot_draw(f: Foot) -> Vector2:
 # they show past the body, and near legs are the body's own colour.
 func _push_blobs() -> void:
 	var list: Array = []
+	for b in extra_blobs:
+		list.append(b)
 	_leg_blobs(list, -1.0, FAR_LEG_COLOR)
 	# A swallowed piece travels down the body as a bulge.
 	var gulp_at := -1.0
@@ -2131,14 +2178,22 @@ func _face(list: Array) -> Array:
 		"yawn":
 			gape = YAWN_GAPE * swell
 			shut = ph == 1
-	# A swallow opens the mouth as the yawn does (_update_gape).
+	# A swallow opens the mouth as the yawn does (_update_gape). A bite
+	# only parts the lips: the snout stays put and no jaw blob drops,
+	# so the head keeps its shape through the chew (the yawn's lifted
+	# snout and dropped jaw swelled it with every bite, which read as a
+	# swallow's bulge); the bite shows as the mouth mark opening and
+	# shutting, to CHEW_MOUTH at the widest.
+	var chew := _gape_chew and _gape >= gape
 	gape = maxf(gape, _gape)
-	list.append([chain.head() + look * SNOUT + up * gape * 0.5, 5.0, BODY_COLOR])
+	list.append([chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, BODY_COLOR])
 	if gape > 0.0:
 		# The mouth goes under the eye: at its widest its top row can
 		# share the eye's row on the pixel grid.
-		list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
-		var size := along * 6.0 + across * (gape + 1.0)
+		if not chew:
+			list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
+		var h := minf(gape, CHEW_MOUTH) if chew else gape
+		var size := along * 6.0 + across * (h + 1.0)
 		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
 	if shut:
 		marks.append([eye - ax - along * 2.0 - across, along * 4.0 + across * 2.0, EYE_COLOR])

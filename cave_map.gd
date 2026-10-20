@@ -22,6 +22,7 @@ const COPPER := Color(0.85, 0.47, 0.14)   # A vein's cells, drawn bright so they
 const SAND := Color(0.42, 0.36, 0.23)     # A bed or heap of sand: ground here, loose grains that flow in the sim
 const CLAY := Color(0.33, 0.22, 0.14)
 const LAVA := Color(0.80, 0.28, 0.05)     # A pool: neither solid nor water here, a glowing liquid in the sim
+const SHROOM := Color(0.42, 0.82, 0.46)  # Glowshroom flesh
 const LAVA_TOP := Color(0.98, 0.62, 0.20)
 const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
 const BEDROCK := Color(0.10, 0.09, 0.13)  # Rock no bite opens
@@ -38,6 +39,7 @@ const CELL_CLAY := 5           # Loose clay: the same, sticky and slow in the si
 const CELL_LAVA := 6           # Lava: a drawn pool here (neither solid nor water), a liquid that glows in the sim
 const CELL_HARD := 7           # Hard rock: a bite takes HARD_GIVE of its cells
 const CELL_BEDROCK := 8        # Bedrock: no bite opens it
+const CELL_SHROOM := 9         # Glowshroom: decor that is ground to the gecko and a green light in the sim; a bite takes it
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
@@ -144,7 +146,7 @@ func is_solid(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return true
 	var v := solid[y * W + x]
-	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK
+	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK or v == CELL_SHROOM
 
 
 # Loose grains live in the particle world only (sim_map.gd): here a bed
@@ -219,6 +221,20 @@ func body_capsules(_a0: Vector2, _a1: Vector2, _ra: float, _b0: Vector2, _b1: Ve
 
 
 func spawn_sand(_p: Vector2, _radius: float) -> void:
+	pass
+
+
+# The bitmap has no vines (scene_builder.gd spawn_lumps).
+func spawn_vine(_top: Vector2, _length: float) -> int:
+	return 0
+
+
+# The bitmap has no drops or wisps (ambience.gd).
+func spawn_drop(_p: Vector2) -> void:
+	pass
+
+
+func spawn_puff(_p: Vector2, _n: int, _vel: Vector2, _spread: float, _life: float) -> void:
 	pass
 
 
@@ -511,6 +527,8 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 						col = HARD.lightened(0.12) if rim else HARD + ROCK_VAR * grain * 0.5
 					CELL_BEDROCK:
 						col = BEDROCK.lightened(0.12) if rim else BEDROCK
+					CELL_SHROOM:
+						col = SHROOM.lightened(0.15) if rim else SHROOM
 					_:
 						col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)

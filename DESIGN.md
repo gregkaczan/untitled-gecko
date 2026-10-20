@@ -96,9 +96,15 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   surface is right under it, in which case the feet step again. An
   unplanted foot closes on its rest spot at a set speed, never in one
   snap, and a stretched leg keeps enough blobs along it to stay one limb.
-- Chewing is eating: a bite every 0.4 s, the jaw opening through the
+- Chewing is eating: a bite every 0.4 s, the mouth opening through the
   cycle and the bite (a circle of about 11 px, a little off and a
   little different each time) landing as it shuts, toward the cursor.
+  A bite only parts the lips (the mouth mark opens to 3 px): the snout
+  stays put and no jaw drops, so the head keeps its shape through the
+  chew. The yawn's lifted snout and dropped jaw, used for the bite at
+  first, swelled the head every 0.4 s, which read as a swallow's
+  bulge; the gecko chews rock, it does not swallow it, and the bulge
+  down the body is the tongue's swallow alone.
   With rock in reach of the bites the walk slows to 45 px/s, so a
   tunnel is eaten through at about a third of walking speed, slower
   through hard rock (each bite takes two fifths of it) and not at all
@@ -156,12 +162,44 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   own): the gecko drifts where the input points with no gravity, cannot
   rise through the surface, and leaves by pushing into rock and clinging,
   or on the tongue. Walking in from the floor keeps it clinging, so it
-  walks along the bottom; jump to swim.
+  walks along the bottom; jump to swim. Swimming is sensed from the
+  water cells within one of the body centre, so the body's pusher
+  capsules in the particle world leave water (and lava) alone: when
+  they shoved the water out of the body, the centre read air, the swim
+  dropped to the air state and back every other tick, and the gecko
+  sank to the bottom. The `pool_drop` scene (a jump into deep water,
+  then no input) guards it: the gecko floats in the top half, state
+  swim, headless on the bitmap and recorded on the sim's water.
 - The head looks at the cursor, within about 100 degrees of the body line.
 - The drawn body rides on a base that follows the body centre exactly
   along the surface and only slowly across it, so bumps do not bob the
   head. The snout stops at rock instead of being shoved aside, and
   comes forward again at a set speed.
+- The camera follows that base, after the gecko's tick. Up to 220 px/s
+  it scrolls exactly with the base's move, so an ordinary walk or climb
+  keeps the body on the same screen pixels and the small unevenness of
+  its speed goes into the scroll, where the eye does not see it; what
+  lag is left (a fall, a landing's jolt, a long move in one tick) eases
+  out at 16 per second. It sits on whole screen pixels (half a world
+  pixel at the 2x zoom), held inside the world's edges, so the world
+  scrolls a screen pixel at a time and every edge stays crisp. The
+  body's own 2 px pixel grid is anchored on the base's seat, the base
+  rounded to the screen's pixels relative to the camera and kept until
+  the lag has left it by a whole screen pixel, so the body is drawn
+  with the same pixels tick after tick and moves on the screen only as
+  the lag changes, a screen pixel at a time. Before, the camera was
+  rounded to the body's 2 px grid and the body to the world's: the two
+  crossed pixel boundaries at different moments and the body shook a
+  pixel back and forth as it walked (6821 shake events over the suite,
+  24054 camera jerks), while the world scrolled in 2 px steps. This is
+  the framing-transposer idea from Cinemachine (a target followed in
+  screen space with per-axis damping, a dead zone where it may move
+  without moving the camera, and the target's clock respected) cut to
+  what matters here, with the pixel seat in place of Unity's pixel
+  perfect camera's sprite snapping. The camera still moves once per
+  physics tick; a display not at 60 Hz shows that as a beat, which an
+  interpolated follow per drawn frame would remove (the blob layer
+  would have to be shifted by the same interpolation).
 - A walking move blocked by rock low over the floor (a loose pixel, a
   ledge up to 12 px) lifts the body 2.5 px a tick and tries again, so
   it climbs over in a few ticks instead of stopping or hopping; never
@@ -330,6 +368,78 @@ trace under `frames/` as the suite's `FRAMES=1` does.
 `GECKO_DUMP_MAP=file.png` writes the bitmap world's cells as a PNG and
 quits, for a look at the layout.
 
+## The cave's dress
+
+What the first slice adds on top of the movement, each a first version
+(2026-10-21), all in the particle world unless said otherwise.
+
+- Light: the sim has a light pass (`light_seed.glsl`, `light_spread.glsl`,
+  `light_out.glsl`), three regions at the tail of its buffer. Each
+  tick the seed takes last tick's light decayed by 0.8, the emission
+  the particles wrote (copper a little, lava a lot, glowshrooms green
+  with a slow breath, `render_write.glsl`), daylight on the open cells
+  of the exit's rect, and the glows (the gecko's head, warm and small;
+  each slug's); nine spread passes carry it a cell at a time, the
+  brightest neighbour times what the cell lets through (air 0.985,
+  water 0.93, loose grains 0.6, solid 0.45, so a rock face lights a
+  cell or two deep), at 16 bits a channel so it fades out instead of
+  sticking. The result is read back as a 480x270 texture and
+  multiplied over the particles and the backdrop with an ambient floor
+  (`light_overlay.gdshader`), under the gecko, whose whole body is
+  drawn the same brightness (a shaded gecko read as a different
+  creature). `GECKO_LIGHT=0` turns it off. Godot's compute barrier
+  re-applies the last push constant to whatever it re-binds, so no
+  barrier follows the output pass.
+- Sound, kept light (`sound.gd`): one-shots on the gecko's signals
+  (a foot planting at the end of a step, a bite, a swallow, the tongue
+  leaving and landing, the splash into water, a landing above 120
+  px/s), a cave drone, and a daylight hum placed at the exit so it
+  grows as the gecko climbs. The sounds are synthesised by
+  `tools/gen_sounds.py` into `sounds/*.wav` (no numpy, no licences):
+  placeholders with a lo-fi character, regenerated by a parameter
+  tweak; each play gets a little pitch variety from the bank's own
+  random generator (the gecko's bites draw on the global one, which
+  the suite seeds). `GECKO_SOUND=0` silences it.
+- Ambience (`ambience.gd`): drops of water fall from the ceiling over
+  the pools (the sim's own water, a drip sound when they land), a bite
+  throws up a puff of dust, a swimming gecko blows bubbles (both the
+  shooter's smoke particles, short-lived).
+- Decor as stamps: `["decor", name, x, y, "floor" | "ceiling"]` in a
+  scene's terrain sets a pattern of cells on the first floor below the
+  point or hanging from the first ceiling above it, from a table of
+  cell patterns (`tests/scene_builder.gd` DECOR). The glowshrooms are
+  the first: material 12 in the sim (the shooter's purple ore slot made
+  static, pale green and a light), cell kind 9 in the bitmap, ground
+  to the gecko, gone with a bite. The intent is that drawn parts (small
+  images with a palette that maps colours to cell kinds) replace the
+  tables, placed by hand in the level's list now and by a map editor
+  later, and destructible for free because they become cells.
+- Dripstone, procedural from a seed: `["stalactites" | "stalagmites",
+  x0, x1, y, n, seed, hmin, hmax]` grows n cones of rock off a ceiling
+  or floor line, `["column", x, y0, y1, w, seed]` a stalagnate with a
+  waist. In the clutch: off the hall's and the gulf's ceilings, small
+  on the hall's floor, a column in the dead end.
+- Vines: `["vine", x, y, length]` in a scene's lumps hangs a chain of
+  clay cells from the first ceiling above (x, y), its top cell rock so
+  it holds, bonded like a lump, drawn green-brown. It swings, is shoved
+  aside by a walk, parts where bitten or stretched past clay's limit,
+  and can be clung to; a hang of more than 1.2 s on one (a planted
+  foot on its cells) breaks its anchor and it comes down, gecko and all
+  (`main.gd` VINE_HOLD). Particle world only.
+- Backdrop (`backdrop.gd`): a far wall of darker rock noise, larger
+  than the world, moving at 0.15 of the camera, under the particles;
+  and a near layer of dark dripstone silhouettes hung from the cell
+  map's ceilings and raised from its floors, in front of everything at
+  1.25 of the camera, both on the camera's pixel grid every tick.
+- Glow slugs (`slug.gd`): `["slugs"]` points in the level. A slug
+  creeps along the nearest surface at 12 px/s, turns back where it is
+  blocked and now and then on its own, falls when it loses the surface,
+  glows green (a light source), and is drawn as three blobs by the
+  gecko's blob layer. The tongue's tip touching one catches it: it
+  rides the tip to the mouth, is swallowed (the bulge runs down), and
+  the gecko's glow is brighter and greener for twenty seconds. Hunting
+  and lighting the way are the same act.
+
 ## Controls
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots
@@ -363,16 +473,19 @@ and walked along, a strike on the floor and on a boulder).
 `GECKO_TRACE=1` prints the body state per physics tick (key=value: the
 body, the drawn body, the head, up, the feet, the decision flags, the
 idle animation, and `cp`, the chain head first as offset along the
-tangent, offset along up, drawn radius and thinned) and
-the gecko's screen position and tick per frame; `tools/strip.sh` turns
+tangent, offset along up, drawn radius and thinned) and, per frame,
+the gecko's screen position, the tick, the camera's centre as shown,
+the drawn body's seat on the screen and in the world, and whether the
+camera has let go of the gecko at the exit; `tools/strip.sh` turns
 movie-mode frames into a contact sheet cropped around the gecko.
 
 The movement suite is the regression gate for any movement change:
 
-- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 105 scenes
+- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 106 scenes
   built from terrain primitives on the bitmap map, each with a spawn and
   scripted input: flat floor, slopes, steps, bumps, corners, overhangs,
-  gaps, crevices, ceilings, tunnels, landings, water, generated caves,
+  gaps, crevices, ceilings, tunnels, landings, water (a pool swum
+  across, a deep pool jumped into and floated in), generated caves,
   cursor digs, squeezes (low passages, slots, a chewed passage, holes
   at the floor through walls 12 and 24 px thick, a hole 40 px up a wall
   entered from the climb), an idle stand on the flat for the idle
@@ -390,9 +503,17 @@ The movement suite is the regression gate for any movement change:
   (about twelve seconds for the lot, `JOBS` in parallel) into `runs/`
   and scores them with `tools/analyze.py`: drawn body and head jumps,
   back-and-forth under a held input, up flips and oscillation, state
-  flicker, stalls, foot flicker and sinking, plus each scene's expected
-  outcome. `BASELINE=tests/baseline.json` marks regressions against the
-  committed baseline. A run passes with no events at all.
+  flicker, stalls, foot flicker and sinking, and from the per-frame
+  lines the camera: a camera step that changes by 4 screen px or more
+  while the body's own step is steady (`cam_jerk`: a camera on a
+  coarse grid, or on another clock than the body), the drawn body's
+  seat reversing on the screen while its world motion does not
+  (`shake`: body and camera rounded to pixels independently), and a
+  camera still moving long after the body has stopped (`cam_creep`,
+  informational), plus each scene's expected outcome.
+  `BASELINE=tests/baseline.json` marks regressions against the
+  committed baseline (a metric the baseline predates is not compared).
+  A run passes with no events at all.
 - `FRAMES=1 tools/suite.sh [filter]` records 60 fps frames (one per
   tick) under `frames/`, on a virtual display (`xvfb-run`) with
   software Vulkan, the game's own renderer, so no window opens;

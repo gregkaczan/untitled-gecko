@@ -56,6 +56,9 @@ SCRIPTS = {
     # Nothing at all: the idle animations play.
     "idle": [step(13.0, Z)],
     "swim_across": [step(6.0, R), step(2.5, U), step(1.5, R)],
+    # Off the bank with a jump into deep water, then nothing: the gecko
+    # must float where it is, not sink to the bottom.
+    "float": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(6.0, Z)],
     # Digging is a bite every 0.4 s and a creep of 45 px/s behind it,
     # so a 100 px dig takes a few seconds.
     "dig_45": [step(0.4, Z), step(6.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
@@ -229,6 +232,14 @@ add("pool", [["erase", 1000, F, 400, 100], ["water", 1000, F, 400, 100]], ["floo
     note="walk in, swim across, climb out on the far wall", reach=[1420, 0, 1920, 1080])
 add("pool_bank_slope", [["erase", 1000, F, 400, 100], ["below", 1300, F + 100, 1400, F], ["water", 1000, F, 400, 100]],
     ["floor", 800, 700], ["swim_across"], state="cling", reach=[1420, 0, 1920, 1080])
+# Deep water: a jump off the bank lands the gecko in it and it floats
+# there, state swim, in the top half of a 160 px pool, instead of
+# sinking to the bottom and clinging (the particle world's body pusher
+# once shoved the water out of the body, so the swim read air and
+# dropped the gecko tick by tick). Headless on the bitmap's still pool;
+# tools/record.sh pool_drop:float runs it on the sim's water.
+add("pool_drop", [["erase", 1000, F, 400, 160], ["water", 1000, F, 400, 160]], ["floor", 800, 700], ["float"], state="swim",
+    end=[1000, F - 20, 1400, F + 80], note="a jump into deep water, then no input: floats in the top half of the pool, never the bottom")
 
 # 14. Generated caves
 for sd in (1, 2, 3, 4, 5, 6):

@@ -6,11 +6,15 @@
     tools/analyze.py --list                the scene:script specs to run
 
 A run is one scene and one script. Its trace has one `t<n>` line per
-physics tick (see gecko.gd _print_trace) and one `F<frame> x y tick`
-line per drawn frame. Each metric below turns the ticks into events
-(tick, value); a run passes when every scored metric has no events and
-the scene's expected outcome holds. Thresholds are at the top; they are
-calibrated so the flat floor produces nothing.
+physics tick (see gecko.gd _print_trace) and one `F<frame> x y tick cx
+cy bx by wx wy won` line per drawn frame (main.gd _process: the body
+centre on the screen, the tick, the camera's centre in the world, the
+drawn body's base on the screen where the pixel grid seats it, that
+base in the world, and whether the gecko is out and the camera has let
+go of it). Each metric below turns the ticks, or the frames, into
+events (tick, value); a run passes when every scored metric has no
+events and the scene's expected outcome holds. Thresholds are at the
+top; they are calibrated so the flat floor produces nothing.
 """
 import argparse
 import glob
@@ -48,10 +52,16 @@ SINK_TICKS = 10
 TURN_GRACE = 20            # ticks after a facing flip: the head swings round by design
 LAND_GRACE = 12            # ticks after landing: feet re-seat, the chain catches up at its set speed
 SPAWN_GRACE = 12           # first ticks: the gecko settles onto its spawn
+# Camera (from the F lines, screen px; the window shows the world at ZOOM)
+ZOOM = 2.0
+CAM_JERK = 4.0             # change of the camera's per-frame step while the body's own step is steady: a camera on a coarse grid steps 0, 4, 8; its rounding to the screen pixel alone can change a step by 2
+CAM_STEADY = 0.6           # world px: the body's step may change this much and still count as steady
+SHAKE_MIN = 1.0            # screen px: a reversal of the drawn body's screen motion smaller than this is nothing
+CREEP_WIN = 12             # frames the body has been still before a moving camera counts as creeping
 
 SCORED = ["draw_jump", "head_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
-          "foot_toggle", "foot_slide", "foot_jump", "sink", "float"]
-INFO = ["body_jump", "stuck"]
+          "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake"]
+INFO = ["body_jump", "stuck", "cam_creep"]
 
 
 def vec(s):
@@ -60,13 +70,26 @@ def vec(s):
 
 
 def parse(path):
-    """The trace's ticks. A tick number that does not follow the last one
-    means two processes wrote the file (or a line was cut): the run is
-    marked corrupt rather than scored."""
+    """The trace's ticks, and its frames in parse.frames (empty for a
+    trace from before the camera fields). A tick number that does not
+    follow the last one means two processes wrote the file (or a line
+    was cut): the run is marked corrupt rather than scored."""
     ticks = []
+    frames = []
     parse.corrupt = 0
+    parse.frames = frames
     with open(path) as f:
         for line in f:
+            if line.startswith("F") and line[1:2].isdigit():
+                parts = line.split()
+                if len(parts) >= 10:
+                    try:
+                        frames.append({"tick": int(parts[3]), "cam": (float(parts[4]), float(parts[5])),
+                                       "body": (float(parts[6]), float(parts[7])), "world": (float(parts[8]), float(parts[9])),
+                                       "won": len(parts) > 10 and parts[10] == "1"})
+                    except ValueError:
+                        parse.corrupt += 1
+                continue
             if not line.startswith("t"):
                 continue
             parts = line.split()
@@ -137,10 +160,60 @@ def grace_sets(ticks):
     return turn, land, jumped, spawn
 
 
-def metrics(ticks):
+def camera_metrics(ev, ticks, frames):
+    """From the frames: the camera's step changing while the body's own
+    step is steady (cam_jerk: a camera rounded to a coarse grid, or one
+    that moves on another clock than the body), the drawn body's screen
+    motion reversing while its world motion does not (shake: the body
+    and the camera rounded to pixels independently), and the camera
+    still moving long after the body has stopped (cam_creep). Frames
+    whose ticks are not consecutive (two frames of one tick, a frame
+    skipped) are not compared, nor the grace ticks after a change of
+    state (a landing, the water, the tongue: each jolts the body's
+    motion by design), a turn or a jump, nor the spawn, nor the
+    camera's pull-back once the gecko is out. A camera that stops dead,
+    or starts, while the body goes on moving is one held at the world's
+    edge, not a jerk."""
+    if len(frames) < 3 or not ticks:
+        return
+    turn, land, jumped, spawn = grace_sets(ticks)
+    index = {tk["tick"]: i for i, tk in enumerate(ticks)}
+    skip = turn | land | jumped | spawn
+    for i in range(1, len(ticks)):
+        if ticks[i]["state"] != ticks[i - 1]["state"]:
+            skip.update(range(i, min(len(ticks), i + LAND_GRACE)))
+
+    def steps(k, i):
+        a, b = frames[i - 1], frames[i]
+        return ((b["cam"][k] - a["cam"][k]) * ZOOM, b["body"][k] - a["body"][k], b["world"][k] - a["world"][k])
+
+    still = 0
+    for i in range(2, len(frames)):
+        f0, f1, f2 = frames[i - 2], frames[i - 1], frames[i]
+        t = f2["tick"]
+        if f1["tick"] != f0["tick"] + 1 or t != f1["tick"] + 1 or f2["won"]:
+            continue
+        if any(index.get(x, -1) in skip or x not in index for x in (f0["tick"], f1["tick"], t)):
+            continue
+        moved = dist(f2["world"], f1["world"]) > 0.05
+        still = 0 if moved else still + 1
+        for k, axis in ((0, "x"), (1, "y")):
+            c1, b1, w1 = steps(k, i - 1)
+            c2, b2, w2 = steps(k, i)
+            pinned = (c2 == 0.0 and abs(w2) > 0.5) or (c1 == 0.0 and abs(w1) > 0.5)
+            if abs(c2 - c1) >= CAM_JERK and abs(w2 - w1) < CAM_STEADY and not pinned:
+                ev["cam_jerk"].append((t, round(abs(c2 - c1), 1), axis))
+            if b1 * b2 < 0 and min(abs(b1), abs(b2)) >= SHAKE_MIN and w1 * w2 >= 0:
+                ev["shake"].append((t, round(abs(b2 - b1), 1), axis))
+            if still > CREEP_WIN and abs(c2) >= 1.0:
+                ev["cam_creep"].append((t, round(abs(c2), 1), axis))
+
+
+def metrics(ticks, frames=()):
     ev = {k: [] for k in SCORED + INFO}
     if len(ticks) < 2:
         return ev
+    camera_metrics(ev, ticks, frames)
     turn, land, jumped, spawn = grace_sets(ticks)
     for i in range(1, len(ticks)):
         a, b = ticks[i - 1], ticks[i]
@@ -336,8 +409,9 @@ def analyze(runs_dir, baseline_path=None):
         if not os.path.exists(path):
             continue
         ticks = parse(path)
+        frames = parse.frames
         scene = data["scenes"][scene_name]
-        ev = metrics(ticks)
+        ev = metrics(ticks, frames)
         allow = set(scene.get("allow", []))
         oc = outcome(ticks, scene)
         if parse.corrupt:
@@ -360,7 +434,8 @@ def analyze(runs_dir, baseline_path=None):
     cols = SCORED + INFO
     short = {"draw_jump": "draw", "head_jump": "head", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
-             "foot_jump": "fjump", "sink": "sink", "float": "float", "body_jump": "body*", "stuck": "stuck*"}
+             "foot_jump": "fjump", "sink": "sink", "float": "float", "cam_jerk": "cjerk", "shake": "shake",
+             "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*"}
     lines = ["# Movement suite report", "",
              "Runs: %d, passing: %d, failing: %d. Columns are event counts; * marks informational metrics; "
              "travel is the body's path length in px, a check that the scene was exercised." % (total, passing, total - passing), ""]
@@ -375,8 +450,9 @@ def analyze(runs_dir, baseline_path=None):
         for c in cols:
             cnt = r["metrics"][c]["count"]
             cell = str(cnt) if cnt else ""
-            if base is not None and spec in base:
-                b = base[spec]["metrics"].get(c, {}).get("count", 0)
+            # A metric the baseline predates (the camera's) is not compared.
+            if base is not None and spec in base and c in base[spec]["metrics"]:
+                b = base[spec]["metrics"][c].get("count", 0)
                 if cnt > b:
                     cell += " (+%d)" % (cnt - b)
                     if c in SCORED and c not in r["allow"]:

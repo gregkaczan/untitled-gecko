@@ -13,6 +13,7 @@ const uint O_WD = 1641736u;
 const uint O_LD = 1771336u;
 const uint O_CD = 1900936u;
 const uint O_CT = 2073870u;   // cell class per pixel: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
+const uint O_EM = 5313870u;   // emission per cell (light_seed.glsl), written by render_write.glsl
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -25,4 +26,5 @@ void main() {
     buf.d[O_LD + id] = 0u;
     buf.d[O_CD + id] = 0u;
     buf.d[O_CT + id] = 0u;
+    buf.d[O_EM + id] = 0u;
 }

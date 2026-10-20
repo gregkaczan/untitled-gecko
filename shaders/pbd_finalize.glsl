@@ -58,7 +58,7 @@ void main() {
     } else if (mat == 10u) {
         visc = 0.35; fric = 0.15; yield_s = 0.0;
     } else if (mat == 12u) {
-        visc = 0.0; fric = 0.4; yield_s = 2.0;
+        visc = 0.0; fric = 0.6; yield_s = 8.0;   // glowshroom: static
     } else if (mat == 13u) {
         visc = 0.02; fric = 0.05; yield_s = 0.0;
     } else {

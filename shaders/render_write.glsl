@@ -16,6 +16,7 @@ const uint O_LD = 1771336u;
 const uint O_CD = 1900936u;
 const uint O_CT = 2073870u;   // cell class per pixel, read back by the gecko: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
 const uint O_BD = 2203470u;   // bond records: [chunk id, ...] per particle (see sim.gd)
+const uint O_EM = 5313870u;   // emission per cell for the light pass (light_seed.glsl): copper and lava glow
 const uint BD = 20u;
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
@@ -79,6 +80,19 @@ void main() {
     int ry = int(floor(py / psz));
     if (rx < 0 || rx >= int(rw) || ry < 0 || ry >= int(rh)) return;
 
+    // Light sources among the particles: a copper vein glows a little,
+    // lava a lot, a glowshroom (12) green with a slow breath, each
+    // mushroom (a 16 px patch) in its own phase. The light pass
+    // spreads it from here.
+    if (mat == 6u || mat == 10u || mat == 12u) {
+        vec3 em = (mat == 6u) ? vec3(0.55, 0.28, 0.08) : ((mat == 10u) ? vec3(1.0, 0.45, 0.10) : vec3(0.25, 0.85, 0.35));
+        if (mat == 12u) {
+            float phase = hash11(floor(px / 16.0) * 7.1 + floor(py / 16.0) * 13.3) * 6.2832;
+            em *= 0.72 + 0.28 * sin(rf(O_P + 36u) * 0.045 + phase);
+        }
+        atomicMax(buf.d[O_EM + uint(ry) * rw + uint(rx)], packUnorm4x8(vec4(em, 1.0)));
+    }
+
     // Cell class for the CPU world queries. Solid beats water beats air;
     // fire, smoke, bullets and mites leave no class. Static solid (rock,
     // hard rock, bedrock, copper: anything a yield of 5 or more holds in
@@ -96,7 +110,7 @@ void main() {
         if (mat == 1u) cls = 1u;
         else if (mat == 10u) cls = 3u;
         else if (mat < 8u || mat == 12u) {
-            float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 2.0;
+            float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 8.0;   // 12, the glowshroom, is static
             cls = (chunk != 0u) ? 16u + chunk : ((yield_s >= 5.0) ? 2u : 4u);
         }
         if (chunk != 0u) {
@@ -172,53 +186,6 @@ void main() {
         return;
     }
 
-    // --- Purple ore (mat 12): self-illuminating purple crystal ---
-    if (mat == 12u) {
-        float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
-        float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
-        float h2 = hash11(variation * 419.2 + float(id) * 0.0047);
-        cr = 0.65 + (h0 - 0.5) * 0.18;
-        cg = 0.18 + (h1 - 0.5) * 0.12;
-        cb = 0.85 + (h2 - 0.5) * 0.14;
-        float sparkle = hash11(px * 0.21 + py * 0.27 + variation);
-        float bright = step(0.60, sparkle) * 0.30;
-        cr += bright * 0.8;
-        cg += bright * 0.3;
-        cb += bright;
-        float glint = step(0.82, hash11(variation * 59.3 + float(id) * 0.005)) * 0.35;
-        cr += glint * 0.6; cg += glint * 0.3; cb += glint;
-        float depth = 1.0 - (py / rf(O_P + 3u)) * 0.2;
-        cr *= depth; cg *= depth; cb *= depth;
-        float ore_glow = 0.15;
-        float final_light = min(light + ore_glow, 1.0);
-        cr *= final_light; cg *= final_light; cb *= final_light;
-
-        // Sonar also reveals purple ore
-        float sonar_on = rf(O_P + 30u);
-        float sonar_r = rf(O_P + 31u);
-        if (sonar_on > 0.5 && sonar_r > 1.0) {
-            float sonar_cx = rf(O_P + 32u), sonar_cy = rf(O_P + 33u);
-            float sdist = length(vec2(px - sonar_cx, py - sonar_cy));
-            if (sdist < sonar_r) {
-                float behind = (sonar_r - sdist) / 300.0;
-                float reveal = clamp(1.0 - behind * 2.5, 0.0, 1.0);
-                reveal *= reveal;
-                float pulse = 0.8 + 0.2 * sin(sdist * 0.15 + sonar_r * 0.1);
-                float glow = reveal * 0.85 * pulse;
-                cr = mix(cr, 0.8, glow);
-                cg = mix(cg, 0.2, glow);
-                cb = mix(cb, 1.0, glow);
-            }
-        }
-
-        cr = clamp(cr, 0.0, 1.0);
-        cg = clamp(cg, 0.0, 1.0);
-        cb = clamp(cb, 0.0, 1.0);
-        uint pixel = uint(ry) * rw + uint(rx);
-        atomicMax(buf.d[O_RN + pixel], packUnorm4x8(vec4(cr, cg, cb, 1.0)));
-        return;
-    }
-
     // --- Fire (mat 8): emissive, color ramps from dark ember to bright yellow with life ---
     if (mat == 8u) {
         // life_frac: 1.0=just spawned, 0.0=about to die (frac encodes remaining life, max ~0.099)
@@ -261,6 +228,16 @@ void main() {
         cr += wisp;
         cg += wisp * 0.7; // wisps are warm-tinted (less green than red)
 
+    // --- Glowshroom (mat 12): pale green flesh, a lighter cap edge by the hash ---
+    } else if (mat == 12u) {
+        float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
+        float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
+        cr = 0.42 + (h0 - 0.5) * 0.12;
+        cg = 0.82 + (h1 - 0.5) * 0.12;
+        cb = 0.46 + (h0 - 0.5) * 0.10;
+        float speck = step(0.85, hash11(variation * 53.3 + float(id) * 0.009)) * 0.15;
+        cr += speck; cg += speck; cb += speck;
+
     // --- Standard materials (sand, clay, rock, stone, hard rock, copper, bedrock) ---
     // (lava mat 10 redirected to density buffer above, composited by render_water)
     } else {
@@ -268,6 +245,9 @@ void main() {
         cr = rf(O_M + mat * 12u + 6u);
         cg = rf(O_M + mat * 12u + 7u);
         cb = rf(O_M + mat * 12u + 8u);
+        // A vine: clay spawned with its fraction in the top band
+        // (sim.gd spawn_vine), green-brown instead of clay.
+        if (mat == 2u && fract(mat_f) >= 0.0945) { cr = 0.30; cg = 0.52; cb = 0.22; }
 
         // Per-particle color variation: 3 independent hashes give RGB jitter.
         // Uses variation (from fractional material) + particle ID for stable uniqueness.
@@ -326,7 +306,7 @@ void main() {
     float ore_glow = 0.0;
     if (mat == 6u) ore_glow = 0.10;  // copper: faint glow
     // mat 10 (lava) redirected to density buffer above; rendered by render_water
-    if (mat == 12u) ore_glow = 0.15; // purple ore: moderate glow
+    if (mat == 12u) ore_glow = 0.3;  // glowshroom: it is a lamp
 
     float final_light = min(light + ore_glow, 1.0);
 

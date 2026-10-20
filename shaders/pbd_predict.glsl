@@ -158,7 +158,7 @@ void main() {
     if (mat < 8u) {
         yield_s = rf(O_M + mat * 12u + 5u);
     } else if (mat == 12u) {
-        yield_s = 2.0;
+        yield_s = 8.0;   // glowshroom: held in place like rock
     } else {
         yield_s = 0.0;
     }

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dm3vwsgqbdg21"
+path="res://.godot/imported/light_spread.glsl-f20f301296a7da5bc470343f01e99ebf.res"
+
+[deps]
+
+source_file="res://shaders/light_spread.glsl"
+dest_files=["res://.godot/imported/light_spread.glsl-f20f301296a7da5bc470343f01e99ebf.res"]
+
+[params]
+

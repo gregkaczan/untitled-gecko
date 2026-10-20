@@ -48,6 +48,12 @@ def water(x0, y0, x1, y1):
     return ["water", x0, y0, x1 - x0, y1 - y0]
 
 
+def decor(name, x, y, where="floor"):
+    """A stamp (tests/scene_builder.gd DECOR) on the first floor below
+    (x, y), or hanging from the first ceiling above it."""
+    return ["decor", name, x, y, where]
+
+
 # The route, an S: the bottom band runs right, the middle band left,
 # the top band right. World px, every edge on the 4 px grid.
 #
@@ -120,6 +126,35 @@ TERRAIN = [
     room(*GULF),
     room(*CRACK),
     room(*LIGHT),
+    # Dripstone, procedural from a seed (tests/scene_builder.gd): short
+    # stalactites off the hall's and the gulf's ceilings, small
+    # stalagmites on the hall's floor (stepped over), a column in the
+    # dead end. None on the lines the stations run.
+    ["stalactites", 300, 1000, 804, 5, 3, 16, 44],
+    ["stalagmites", 560, 740, 984, 3, 4, 4, 8],
+    ["stalactites", 1020, 1480, 284, 4, 5, 12, 32],
+    ["column", 876, 184, 264, 20, 6],
+    # Glowshrooms: lamps along the route (the sim's light pass), decor
+    # that is ground to the gecko and goes with a bite. Off the lines
+    # the stations walk at speed, or small where on them.
+    decor("shroom_cluster", 330, 940),          # the hall, by the first holes
+    decor("shroom_s", 890, 940),                # on the shelf
+    decor("shroom_s", 800, 820, "ceiling"),     # hanging from the hall's ceiling
+    decor("shroom_m", 570, 740),                # the pit's bottom
+    decor("shroom_cluster", 100, 690),          # the turning chamber's floor
+    decor("shroom_m", 300, 400),                # the top corridor
+    decor("shroom_s", 560, 360, "ceiling"),     # hanging over the trough, lighting the water
+    decor("shroom_cluster", 1320, 400),         # the gulf's floor
+    decor("shroom_cluster", 770, 240),          # the dead end: a lamp that leads nowhere (clear of the neck below 800-840)
+]
+
+# Glow slugs (slug.gd): start points, each put on the nearest surface.
+# Off the lines the tongue stations shoot along.
+SLUGS = [
+    [650, 810],                                           # the hall's ceiling
+    [1000, 970],                                          # the hall's floor, by the far dome
+    [70, 560],                                            # the turning chamber's left wall
+    [1040, 290],                                          # the gulf's ceiling, left of the grapple's line
 ]
 
 # ["boulder" | "clay" | "sand", x, y, r]: a lump of radius r resting on
@@ -132,6 +167,15 @@ LUMPS = [
     ["boulder", 950, 690, 18],                            # the roll: shoved into the pit
     ["boulder", 500, 690, 13],                            # the cork, in the passage across the pit
     ["sand", 420, 632, 24],                               # the pocket over the dip
+    # Vines: hanging from the first ceiling above (x, y), length px;
+    # climbable, shoved aside by a walk, and a hang of more than a
+    # second or so snaps the anchor (main.gd). The gulf's reach down
+    # toward the floor: another way up toward the crack.
+    ["vine", 480, 830, 56],                               # the hall's ceiling
+    ["vine", 920, 830, 40],
+    ["vine", 1180, 300, 104],                             # the gulf, down to 388 (the floor is 424)
+    ["vine", 1060, 300, 60],
+    ["vine", 600, 360, 48],                               # over the trough
 ]
 
 SPAWN = ["floor", 172, 940]
@@ -184,7 +228,7 @@ scenes = {}
 
 
 def add(name, spawn, scripts, reach=None, note=None, sim_only=False):
-    sc = {"base": "clutch", "spawn": spawn, "scripts": scripts, "lumps": LUMPS, "exit": EXIT}
+    sc = {"base": "clutch", "spawn": spawn, "scripts": scripts, "lumps": LUMPS, "exit": EXIT, "slugs": SLUGS}
     if reach:
         sc["reach"] = reach
     if note:

@@ -30,7 +30,12 @@ rm -rf "$BUILD_DIR"
 
 mkdir -p "$BUILD_DIR/linux" "$BUILD_DIR/win" "$BUILD_DIR/mac"
 
-MODE="${1:-debug}"
+# Release when pushing to itch.io unless a mode is given; debug otherwise.
+if [[ "${ITCH_PUSH:-0}" == "1" ]]; then
+    MODE="${1:-release}"
+else
+    MODE="${1:-debug}"
+fi
 
 build_preset() {
     local preset="$1" binary="$2" flag="$3"

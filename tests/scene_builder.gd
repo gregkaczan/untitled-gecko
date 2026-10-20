@@ -164,6 +164,23 @@ static func _apply(map: Node2D, op: Array) -> void:
 			map.copper_rect(_rect(op, 1))
 		"sand", "clay", "lava", "hard", "bedrock":
 			map.material_rect(_rect(op, 1), _kind(map, String(op[0])))
+		"decor":
+			# ["decor", name, x, y, "floor" | "ceiling"]: a stamp from DECOR
+			# set cell by cell on the first floor below (x, y), or hanging
+			# from the first ceiling above, only where there is air.
+			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor")
+		"stalactites", "stalagmites":
+			# [op, x0, x1, y, n, seed, hmin, hmax]: n cones of rock between
+			# x0 and x1 hanging from the ceiling line y (stalactites) or
+			# standing on the floor line y (stalagmites), hmin to hmax px
+			# tall, about half as wide at the base as tall, seeded.
+			_cones(map, float(op[1]), float(op[2]), float(op[3]), int(op[4]), int(op[5]), float(op[6]), float(op[7]),
+					1.0 if String(op[0]) == "stalactites" else -1.0)
+		"column":
+			# ["column", x, y0, y1, w, seed]: a stalagnate from the ceiling
+			# line y0 to the floor line y1, w px at its ends, a waist of a
+			# cell or two in the middle, seeded for its wobble.
+			_column(map, float(op[1]), float(op[2]), float(op[3]), float(op[4]), int(op[5]))
 		"sand_disc", "clay_disc":
 			map.material_circle(Vector2(op[1], op[2]), float(op[3]), _kind(map, String(op[0]).trim_suffix("_disc")))
 		"tunnel":
@@ -196,6 +213,74 @@ static func _apply(map: Node2D, op: Array) -> void:
 			push_error("unknown terrain op " + String(op[0]))
 
 
+# Decor stamps: cells relative to the base cell (the one on the surface
+# under the stamp's middle), x right, y up the stamp (toward the air),
+# each a cell kind. The glowshrooms are the first; parts drawn as small
+# images with a palette of kinds can replace these tables.
+const DECOR := {
+	"shroom_s": [[0, 1, 9], [-1, 2, 9], [0, 2, 9], [1, 2, 9]],
+	"shroom_m": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9]],
+	"shroom_cluster": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9],
+			[4, 1, 9], [3, 2, 9], [4, 2, 9], [5, 2, 9], [-4, 1, 9], [-5, 2, 9], [-4, 2, 9], [-3, 2, 9]],
+}
+
+
+# Cones: dir 1 grows down from a ceiling line, -1 up from a floor line.
+# Each is rows of rock narrowing from its base by a power curve, so it
+# comes out pointed, a cell at the tip, on the 4 px grid.
+static func _cones(map: Node2D, x0: float, x1: float, y: float, n: int, seed_v: int, hmin: float, hmax: float, dir: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var cell: float = map.CELL
+	for i in n:
+		var x := snappedf(lerpf(x0, x1, (i + rng.randf_range(0.2, 0.8)) / n), cell)
+		var h := snappedf(rng.randf_range(hmin, hmax), cell)
+		var w := snappedf(h * rng.randf_range(0.4, 0.6), cell)
+		var rows := int(h / cell)
+		for r in rows:
+			var t := float(r) / maxf(rows - 1, 1)
+			var rw := maxf(snappedf(w * pow(1.0 - t, 0.75), cell), cell)
+			var ry := y + dir * r * cell if dir > 0.0 else y - (r + 1) * cell
+			map.fill_rect(Rect2(x - rw * 0.5, ry, rw, cell))
+
+
+static func _column(map: Node2D, x: float, y0: float, y1: float, w: float, seed_v: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var cell: float = map.CELL
+	var rows := int((y1 - y0) / cell)
+	var lean := rng.randf_range(-0.15, 0.15)
+	for r in rows:
+		var t := float(r) / maxf(rows - 1, 1)
+		# Wide at both ends, a waist in the middle: the two cones met.
+		var k := absf(t - 0.5) * 2.0
+		var rw := maxf(snappedf(lerpf(cell * 1.5, w, pow(k, 1.6)), cell), cell)
+		var cx := snappedf(x + lean * (t - 0.5) * (y1 - y0), cell)
+		map.fill_rect(Rect2(cx - rw * 0.5, y0 + r * cell, rw, cell))
+
+
+static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> void:
+	if not DECOR.has(name):
+		push_error("unknown decor " + name)
+		return
+	var cell: float = map.CELL
+	var cx := int(floor(at.x / cell))
+	var cy: int
+	var dir := -1
+	if where == "ceiling":
+		var c: Vector2 = map.ceiling_above(at)
+		cy = int(floor(c.y / cell)) - 1   # The last solid row of the ceiling
+		dir = 1
+	else:
+		var f: Vector2 = map.floor_below(at)
+		cy = int(floor(f.y / cell))       # The first solid row of the floor
+	for c in DECOR[name]:
+		var x: int = cx + c[0]
+		var y: int = cy + dir * c[1]
+		if not map.is_solid(x, y) and not map.is_water(x, y):
+			map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
+
+
 static func _kind(map: Node2D, name: String) -> int:
 	match name:
 		"sand":
@@ -215,13 +300,32 @@ static func _kind(map: Node2D, name: String) -> int:
 # The scene's loose lumps, on the world as built (the bitmap world's
 # spawns do nothing). A lump rests on the first floor below its point,
 # clipped to the air there, so one bigger than its passage fills it.
-static func spawn_lumps(map: Node2D, scene: Dictionary) -> void:
+# The slugs' start points: ["slugs"] entries [x, y] put on the nearest
+# surface by slug.gd itself.
+static func slug_points(scene: Dictionary) -> Array:
+	var out: Array = []
+	for s in scene.get("slugs", []):
+		out.append(Vector2(s[0], s[1]))
+	return out
+
+
+# Returns the vines spawned, [chunk id, anchor] each, for main.gd's
+# snap rule; a vine is ["vine", x, y, length]: hanging from the first
+# ceiling above (x, y), length px.
+static func spawn_lumps(map: Node2D, scene: Dictionary) -> Array:
+	var vines: Array = []
 	for lump in scene.get("lumps", []):
 		var p := Vector2(lump[1], lump[2])
 		var r := float(lump[3])
 		match String(lump[0]):
 			"sand":
 				map.spawn_sand(p, r)
+			"vine":
+				var c: Vector2 = map.ceiling_above(p)
+				var top := Vector2(p.x, c.y + 2.0)
+				var id: int = map.spawn_vine(top, r)
+				if id > 0:
+					vines.append([id, top])
 			"clay", "boulder":
 				var fl: Vector2 = map.floor_below(p)
 				var at := Vector2(p.x, fl.y - r - 2.0)
@@ -231,6 +335,7 @@ static func spawn_lumps(map: Node2D, scene: Dictionary) -> void:
 					map.spawn_boulder(at, r)
 			_:
 				push_error("unknown lump " + String(lump[0]))
+	return vines
 
 
 # The rect the body centre enters to finish, empty for a scene without one.

@@ -64,7 +64,28 @@ const O_BD := O_CT + RENDER_W * RENDER_H         # 2203470, see pbd_predict.glsl
 const BD_STRIDE := 20                            # Per particle: chunk id, awake, bond count, pad, 8 x (mate, rest)
 const MAX_BONDS := 8
 const BOND_NONE := 0xFFFFFFFF
-const TOTAL_UINTS := O_BD + PARTICLE_COUNT * BD_STRIDE
+# The light pass (light_seed.glsl, light_spread.glsl): two halves of
+# packed RGB8 light per cell (the spread ping-pongs between them, an odd
+# number of passes so the result lands in A), the emission the
+# particles write (copper, lava), and its parameters.
+const O_LA := O_BD + PARTICLE_COUNT * BD_STRIDE  # 4795470, two uints per cell (16 bits a channel)
+const O_LB := O_LA + RENDER_W * RENDER_H * 2     # 5054670
+const O_EM := O_LB + RENDER_W * RENDER_H * 2     # 5313870, RGB8 per cell
+const O_LO := O_EM + RENDER_W * RENDER_H         # 5443470, RGB8 per cell, the overlay's texture
+const O_LP := O_LO + RENDER_W * RENDER_H         # 5573070
+const LP_SIZE := 128
+const TOTAL_UINTS := O_LP + LP_SIZE
+const LIGHT_PASSES := 9                          # Cells the light travels per tick; odd, see above
+const MAX_GLOWS := 8                             # Glow sources (the gecko, slugs) the seed takes
+const LIGHT_DECAY := 0.8                         # Of last tick's light kept before this tick's spread: a moved glow leaves a short trail
+# Passage per cell. Beyond one tick's passes the light is carried on
+# from the decayed field, so the fall-off there is the passage times
+# the decay's ninth root (0.976): air comes to 0.961 a cell, half-light
+# about 17 cells (70 px) past the bright plateau round a source.
+const LIGHT_AIR := 0.985
+const LIGHT_WATER := 0.93
+const LIGHT_LOOSE := 0.6
+const LIGHT_SOLID := 0.45                        # A rock face lights a cell or two deep
 const CT_CHUNK := 16                             # Cell class 16 + id: a cell of chunk id
 
 const MAT_SAND := 0
@@ -76,6 +97,8 @@ const MAT_HARD := 5                              # The shooter's iron slot: hard
 const MAT_COPPER := 6                            # A vein: rock that glows, from the map's copper cells
 const MAT_BEDROCK := 7                           # The shooter's gold slot: rock no bite opens
 const MAT_LAVA := 10                             # Hard coded in the shaders, as in the shooter
+const MAT_SMOKE := 9                             # Ephemeral: rises and fades (the shooter's smoke); dust and bubbles here
+const MAT_SHROOM := 12                           # Glowshroom: the shooter's purple ore slot, made static, green and a light (hard coded in the shaders)
 const CT_SOLID := 2                              # Cell class of static solid (rock, hard rock, bedrock, copper)
 const CT_LOOSE := 4                              # Cell class of a loose grain (sand, clay, stone off a lump)
 
@@ -92,13 +115,15 @@ const SHADER_FILES := [
 	"pbd_predict", "grid_clear", "grid_insert",
 	"pbd_lambda", "pbd_delta", "pbd_finalize",
 	"render_clear", "render_write", "render_water",
+	"light_seed", "light_spread", "light_out",
 ]
-enum S { PREDICT, GRID_CLEAR, GRID_INSERT, LAMBDA, DELTA, FINALIZE, RENDER_CLEAR, RENDER_WRITE, RENDER_WATER }
+enum S { PREDICT, GRID_CLEAR, GRID_INSERT, LAMBDA, DELTA, FINALIZE, RENDER_CLEAR, RENDER_WRITE, RENDER_WATER, LIGHT_SEED, LIGHT_SPREAD, LIGHT_OUT }
 
 const BACKDROP := Color(0.045, 0.04, 0.06)
 
 var cells := PackedByteArray()      # O_CT readback: one uint per render pixel
 var ready_to_run := false
+var light_on := OS.get_environment("GECKO_LIGHT") != "0"  # The light pass and its overlay; GECKO_LIGHT=0 for the flat look
 var chunks := {}                    # Chunk id -> {mat, count} as spawned (the GPU owns what is left of each)
 
 var _rd: RenderingDevice
@@ -109,6 +134,11 @@ var _pipelines: Array[RID] = []
 var _display_img: Image
 var _display_tex: ImageTexture
 var _sprite: Sprite2D
+var _light_img: Image
+var _light_tex: ImageTexture
+var _light_sprite: Sprite2D
+var _light := PackedByteArray()      # O_LP: the light pass's parameters, uploaded every tick
+var _push := PackedByteArray()       # The spread's push constant: the pass index
 var _params := PackedByteArray()
 var _capsules := PackedByteArray()
 var _capsule_once: Array[bool] = []  # Slots to switch off after the next dispatch
@@ -125,8 +155,16 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
 	assert(O_BD == 2203470, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
+	assert(O_LA == 4795470 and O_EM == 5313870 and O_LO == 5443470 and O_LP == 5573070, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
+	_light.resize(LP_SIZE * 4)
+	_light.encode_float(0, LIGHT_DECAY)
+	_light.encode_float(11 * 4, LIGHT_AIR)
+	_light.encode_float(12 * 4, LIGHT_WATER)
+	_light.encode_float(13 * 4, LIGHT_LOOSE)
+	_light.encode_float(14 * 4, LIGHT_SOLID)
+	_push.resize(16)
 	_capsules.resize(MAX_CAPSULES * 8 * 4)
 	_capsule_once.resize(MAX_CAPSULES)
 	_capsule_once.fill(false)
@@ -151,6 +189,53 @@ func _ready() -> void:
 	_sprite.scale = Vector2(PIXEL_SZ, PIXEL_SZ)
 	_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_sprite)
+	# The light over the world: the light map multiplied over the
+	# particles and the backdrop (shaders/light_overlay.gdshader), as
+	# blocky as the rock. It sits under the gecko (z 4 to 6), which is
+	# drawn unlit, its whole body the same brightness, by the user's
+	# choice: a shaded gecko read as a different creature.
+	_light_img = Image.create(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8)
+	_light_tex = ImageTexture.create_from_image(_light_img)
+	_light_sprite = Sprite2D.new()
+	_light_sprite.texture = _light_tex
+	_light_sprite.centered = false
+	_light_sprite.scale = Vector2(PIXEL_SZ, PIXEL_SZ)
+	_light_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_light_sprite.z_as_relative = false
+	_light_sprite.z_index = 2
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/light_overlay.gdshader")
+	_light_sprite.material = mat
+	_light_sprite.visible = light_on
+	add_child(_light_sprite)
+
+
+# Daylight: the open cells of rect (world px) are lit with colour every
+# tick, and the light spreads from there. An empty rect is no daylight.
+func set_daylight(rect: Rect2, color: Color) -> void:
+	_light.encode_float(4 * 4, rect.position.x)
+	_light.encode_float(5 * 4, rect.position.y)
+	_light.encode_float(6 * 4, rect.end.x)
+	_light.encode_float(7 * 4, rect.end.y)
+	_light.encode_float(8 * 4, color.r)
+	_light.encode_float(9 * 4, color.g)
+	_light.encode_float(10 * 4, color.b)
+
+
+# The glows this tick: up to MAX_GLOWS of [position, colour, radius],
+# the gecko's head and the slugs. Set before tick().
+func set_glows(glows: Array) -> void:
+	var n := mini(glows.size(), MAX_GLOWS)
+	_light.encode_float(1 * 4, float(n))
+	for i in n:
+		var g: Array = glows[i]
+		var b := (16 + i * 8) * 4
+		_light.encode_float(b, g[0].x)
+		_light.encode_float(b + 4, g[0].y)
+		_light.encode_float(b + 8, g[1].r)
+		_light.encode_float(b + 12, g[1].g)
+		_light.encode_float(b + 16, g[1].b)
+		_light.encode_float(b + 20, g[2])
 
 
 func _draw() -> void:
@@ -202,6 +287,10 @@ func read_render() -> void:
 	var bytes := _rd.buffer_get_data(_buf, O_RN * 4, RENDER_W * RENDER_H * 4)
 	_display_img.set_data(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8, bytes)
 	_display_tex.update(_display_img)
+	if light_on:
+		var lb := _rd.buffer_get_data(_buf, O_LO * 4, RENDER_W * RENDER_H * 4)
+		_light_img.set_data(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8, lb)
+		_light_tex.update(_light_img)
 
 
 # Queue a blast; the GPU takes two per tick from the queue.
@@ -283,11 +372,14 @@ func break_circle(pos: Vector2, radius: float) -> void:
 
 # A particle at rest sleeps until something moves it; loose material
 # that should settle (a heap of sand) is spawned with a little velocity.
-func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO) -> void:
+func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO, life := -1.0) -> void:
 	if _dead.is_empty() or not ready_to_run:
 		return
 	var idx: int = _dead.pop_back()
-	var encoded := float(mat) + _rng.randf_range(0.0, 0.99) * 0.1
+	# The fraction is the material's variation, or for fire and smoke
+	# the life left (pbd_finalize.glsl: smoke loses about 0.00008 a
+	# tick, fire 0.00055), random unless given.
+	var encoded := float(mat) + (life if life >= 0.0 else _rng.randf_range(0.0, 0.99) * 0.1)
 	var p := PackedFloat32Array([pos.x, pos.y, vel.x, vel.y, pos.x, pos.y, 0.0, encoded])
 	_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, p.to_byte_array())
 	# A slot that once held a chunk's particle keeps its bonds: cleared.
@@ -299,7 +391,7 @@ func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO) -> void:
 # their rest distance. The lump holds its shape, falls, can be pushed or
 # dragged as one, and comes apart where its bonds are broken. Returns
 # the chunk id, or 0 when there are no cells or not enough free slots.
-func spawn_chunk(list: Array, mat: int) -> int:
+func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0) -> int:
 	if not ready_to_run or list.is_empty() or _dead.size() < list.size():
 		return 0
 	var id := _next_chunk
@@ -313,7 +405,12 @@ func spawn_chunk(list: Array, mat: int) -> int:
 	for c in list:
 		var idx: int = index[c]
 		var p: Vector2 = at[idx]
-		var encoded := float(mat) + _rng.randf_range(0.0, 0.99) * 0.1
+		# mats overrides the material per cell (a vine's rock anchor);
+		# frac, if given, is the fraction for the rest (a look: a vine's
+		# clay sits in the top band, render_write.glsl).
+		var cm: int = mats.get(c, mat)
+		var f: float = _rng.randf_range(0.0, 0.99) * 0.1 if (frac < 0.0 or mats.has(c)) else frac
+		var encoded := float(cm) + f
 		var rec := PackedFloat32Array([p.x, p.y, 0.0, 0.0, p.x, p.y, 0.0, encoded])
 		_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, rec.to_byte_array())
 		var bd := PackedByteArray()
@@ -337,6 +434,43 @@ func spawn_chunk(list: Array, mat: int) -> int:
 		_rd.buffer_update(_buf, (O_BD + idx * BD_STRIDE) * 4, bd.size(), bd)
 	chunks[id] = {"mat": mat, "count": list.size()}
 	return id
+
+
+# A vine: a column of clay cells hanging from top (the first air cell
+# under a ceiling), length px long or until it meets something, its top
+# cell rock (static) so it hangs, the rest bonded in a chain that
+# swings, parts where a bite takes it or a bond is stretched past its
+# limit (clay's 1.35), and reads back as a chunk, so the gecko can
+# cling to it, shove it aside or drag it. Drawn green-brown by the
+# fraction (render_write.glsl). Returns the chunk id, 0 for none.
+func spawn_vine(top: Vector2, length: float) -> int:
+	var cx := int(floor(top.x / PIXEL_SZ))
+	var cy := int(floor(top.y / PIXEL_SZ))
+	var n := maxi(int(length / PIXEL_SZ), 2)
+	var list: Array = []
+	for k in n:
+		var y := cy + k
+		if y >= RENDER_H or (cells.size() >= RENDER_W * RENDER_H * 4 and cells.decode_u32((y * RENDER_W + cx) * 4) != 0):
+			break
+		list.append(Vector2i(cx, y))
+	if list.size() < 2:
+		return 0
+	return spawn_chunk(list, MAT_CLAY, {list[0]: MAT_ROCK}, 0.097)
+
+
+# A puff: n wisps of smoke (material 9, rising, fading) about pos, each
+# with a little of the velocity given plus a spread, living life
+# (about 0.00008 a tick: 0.003 is some 40 ticks). Bite dust, bubbles.
+func spawn_puff(pos: Vector2, n: int, vel: Vector2, spread: float, life: float) -> void:
+	for i in n:
+		var p := pos + Vector2(_rng.randf_range(-3.0, 3.0), _rng.randf_range(-3.0, 3.0))
+		var v := vel + Vector2(_rng.randf_range(-spread, spread), _rng.randf_range(-spread, spread))
+		spawn_particle(p, MAT_SMOKE, v, life * _rng.randf_range(0.7, 1.3))
+
+
+# One drop of water at pos, falling.
+func spawn_drop(pos: Vector2) -> void:
+	spawn_particle(pos, MAT_WATER, Vector2(0.0, 30.0))
 
 
 # Loose sand on the air cells within radius of centre: a heap that
@@ -449,6 +583,7 @@ func _update_params() -> void:
 	p.encode_float(156, 0.0)      # [39] active particle counter
 	_rd.buffer_update(_buf, 0, 160, p)
 	_rd.buffer_update(_buf, O_CAP * 4, _capsules.size(), _capsules)
+	_rd.buffer_update(_buf, O_LP * 4, _light.size(), _light)
 	_rd.buffer_update(_buf, (O_P + 34) * 4, 4, _zero4)
 	_rd.buffer_update(_buf, O_FB * 4, 12, _zero12)
 
@@ -483,15 +618,29 @@ func _dispatch() -> void:
 	_rd.compute_list_add_barrier(cl)
 	_bind(cl, S.RENDER_WRITE, pg)
 	_rd.compute_list_add_barrier(cl)
+	if light_on:
+		_bind(cl, S.LIGHT_SEED, rg)
+		_rd.compute_list_add_barrier(cl)
+		for i in LIGHT_PASSES:
+			_push.encode_u32(0, i)
+			_bind(cl, S.LIGHT_SPREAD, rg, _push)
+			_rd.compute_list_add_barrier(cl)
+		# No barrier after this one: a barrier re-applies the last push
+		# constant to the pipeline it re-binds, and this pass has none
+		# (a validation error a tick); the water pass does not read the
+		# light, and the readback waits for the sync.
+		_bind(cl, S.LIGHT_OUT, rg)
 	_bind(cl, S.RENDER_WATER, rg)
 	_rd.compute_list_end()
 	_rd.submit()
 	_rd.sync()
 
 
-func _bind(cl: int, idx: int, groups: int) -> void:
+func _bind(cl: int, idx: int, groups: int, push := PackedByteArray()) -> void:
 	_rd.compute_list_bind_compute_pipeline(cl, _pipelines[idx])
 	_rd.compute_list_bind_uniform_set(cl, _uniform_set, 0)
+	if not push.is_empty():
+		_rd.compute_list_set_push_constant(cl, push, push.size())
 	_rd.compute_list_dispatch(cl, groups, 1, 1)
 
 
@@ -601,6 +750,8 @@ static func material_of(kind: int) -> int:
 			return MAT_HARD
 		CaveMap.CELL_BEDROCK:
 			return MAT_BEDROCK
+		CaveMap.CELL_SHROOM:
+			return MAT_SHROOM
 		_:
 			return MAT_ROCK
 

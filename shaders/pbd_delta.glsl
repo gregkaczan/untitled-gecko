@@ -175,7 +175,8 @@ void main() {
     } else if (mat_i == 9u) {
         rho0 = 1.8; cohesion = 0.0; yield_s = 0.0; fric_val = 0.0;
     } else if (mat_i == 12u) {
-        rho0 = 3.5; cohesion = 0.5; yield_s = 2.0; fric_val = 0.4;
+        // Glowshroom (the shooter's purple ore slot): held in place like rock, a bite takes it.
+        rho0 = 3.5; cohesion = 0.9; yield_s = 8.0; fric_val = 0.6;
     } else if (mat_i == 10u) {
         rho0 = 2.5; cohesion = 0.15; yield_s = 0.0; fric_val = 0.0;
     } else if (mat_i == 13u) {
@@ -525,7 +526,6 @@ void main() {
                     hsh = hsh * 747796405u + 2891336453u;
                     float rnd = float(hsh >> 16u) / 65535.0;
                     if (rnd < rate) {
-                        if (mat_i == 12u) push_impact(px, py, KIND_PURPLE);
                         kill_particle(b);
                         buf.d[bd] = 0u;
                         atomicAdd(buf.d[O_P + 22u], 1u); // melted this tick (CPU stat)
@@ -536,8 +536,11 @@ void main() {
             } else {
                 // A pusher (the gecko's body, mode -1) shoves loose grains
                 // out of its way and nothing else: the ground it stands on
-                // stays, and a lump is moved as one by the pull slot.
-                if (melt < -0.5 && (yield_s >= 5.0 || bonded)) continue;
+                // stays, a lump is moved as one by the pull slot, and
+                // water and lava are left alone (a body that shoved the
+                // water out of itself read air at its centre and fell
+                // out of its swim every other tick).
+                if (melt < -0.5 && (yield_s >= 5.0 || bonded || mat_i == 1u || mat_i >= 8u)) continue;
                 if (mat_i == 12u) {
                     // Purple ore detonates when carved.
                     push_impact(px, py, KIND_PURPLE);
