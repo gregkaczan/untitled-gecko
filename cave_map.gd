@@ -1,5 +1,5 @@
 # Cave map: a CPU bitmap of solid cells standing in for the GPU particle
-# world during the gecko spike. One cell is a 4x4 px block on screen, the
+# world during the gecko spike. One cell is a 2x2 px block on screen, the
 # same grid the particle sim renders at, so swapping in the live readback
 # later changes only how `solid` gets filled. Queries: probe() finds the
 # nearest solid and the surface normal around a point, solid_near() checks
@@ -8,9 +8,12 @@
 # chunk edits (push, pull, eat, break, spawn) do nothing.
 extends Node2D
 
-const W := 960
-const H := 540
-const CELL := 2.0
+const W_FULL := 960            # The cell grid: the sim's render grid, 2 px cells
+const H_FULL := 540
+const CELL_FULL := 2.0
+var W := W_FULL                # This map's grid; the particle world's senses can fold it to 4 px (sim_map.gd)
+var H := H_FULL
+var CELL := CELL_FULL
 
 const ROCK := Color(0.17, 0.14, 0.12)
 const ROCK_VAR := Color(0.05, 0.04, 0.03)

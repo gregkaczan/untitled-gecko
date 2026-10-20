@@ -1,10 +1,14 @@
 # Particle world: the GPU PBD simulation from untitled-idle-shooter, cut
-# down to what the gecko needs. Every particle is a 4 px block; one SSBO
+# down to what the gecko needs. Every particle is a 2 px block; one SSBO
 # holds parameters, the material table, the spatial hash, the particles,
 # the render buffers, and at its tail a cell-class buffer (air, water,
 # static solid, lava, loose grain per render pixel) that render_write.glsl
 # fills and the CPU reads back every tick. That readback is the gecko's
-# whole world: the same 480x270 grid the bitmap stand-in used.
+# whole world: the same grid the bitmap stand-in uses. It is read from
+# a marked copy (cell_post.glsl): a crumb, a bit of matter of at most
+# crumb_cells cells, carries CT_CRUMB so the senses pass through it and
+# the body loosens it; and a 2x2 fold of it (cell_fold.glsl) is read
+# back as well while the senses run on the 4 px grid.
 #
 # Materials, from the shooter's table: sand (loose, flows), water, clay
 # (loose, sticky), rock (static), stone (the loose stuff of lumps), hard
@@ -74,7 +78,10 @@ const O_EM := O_LB + RENDER_W * RENDER_H * 2     # 5313870, RGB8 per cell
 const O_LO := O_EM + RENDER_W * RENDER_H         # 5443470, RGB8 per cell, the overlay's texture
 const O_LP := O_LO + RENDER_W * RENDER_H         # 5573070
 const LP_SIZE := 128
-const TOTAL_UINTS := O_LP + LP_SIZE
+const O_LN := O_LP + LP_SIZE                     # 22291598, the cell classes with crumbs marked (cell_post.glsl): the senses' readback
+const O_C4 := O_LN + RENDER_W * RENDER_H         # 22809998, the same folded 2x2 to the 4 px grid (cell_fold.glsl)
+const TOTAL_UINTS := O_C4 + (RENDER_W / 2) * (RENDER_H / 2)
+const CT_CRUMB := 256                            # Added to a crumb's class in the O_LN copy: a speck the senses read as air and the body loosens
 const LIGHT_PASSES := 19                         # Cells the light travels per tick; odd, see above
 const MAX_GLOWS := 8                             # Glow sources (the gecko, slugs) the seed takes
 const LIGHT_DECAY := 0.8                         # Of last tick's light kept before this tick's spread: a moved glow leaves a short trail
@@ -122,12 +129,16 @@ const SHADER_FILES := [
 	"pbd_lambda", "pbd_delta", "pbd_finalize",
 	"render_clear", "render_write", "render_water",
 	"light_seed", "light_spread", "light_out",
+	"cell_post", "cell_fold",
 ]
-enum S { PREDICT, GRID_CLEAR, GRID_INSERT, LAMBDA, DELTA, FINALIZE, RENDER_CLEAR, RENDER_WRITE, RENDER_WATER, LIGHT_SEED, LIGHT_SPREAD, LIGHT_OUT }
+enum S { PREDICT, GRID_CLEAR, GRID_INSERT, LAMBDA, DELTA, FINALIZE, RENDER_CLEAR, RENDER_WRITE, RENDER_WATER, LIGHT_SEED, LIGHT_SPREAD, LIGHT_OUT, CELL_POST, CELL_FOLD }
 
 const BACKDROP := Color(0.045, 0.04, 0.06)
 
-var cells := PackedByteArray()      # O_CT readback: one uint per render pixel
+var cells := PackedByteArray()      # O_LN readback: one uint per render pixel, the class with CT_CRUMB added on a crumb
+var cells4 := PackedByteArray()     # O_C4 readback while fold_on: the classes folded to the 4 px grid, crumbs as air
+var fold_on := false                # Read the folded grid back each tick (the coarse senses, sim_map.gd)
+var crumb_cells := 4                # A bit of matter of at most this many cells (of its 5x5) is a crumb: air to the senses, loosened at the body's touch; 0 for none
 var ready_to_run := false
 var light_on := OS.get_environment("GECKO_LIGHT") != "0"  # The light pass and its overlay; GECKO_LIGHT=0 for the flat look
 var chunks := {}                    # Chunk id -> {mat, count} as spawned (the GPU owns what is left of each)
@@ -161,6 +172,7 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	assert(O_CT == 8294670, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
 	assert(O_BD == 8813070, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
+	assert(O_LN == 22291598 and O_C4 == 22809998, "the crumb offsets must match the literals in cell_post.glsl, cell_fold.glsl and pbd_predict.glsl")
 	assert(O_LA == 19181070 and O_EM == 21254670 and O_LO == 21773070 and O_LP == 22291470, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
@@ -285,11 +297,21 @@ func tick() -> void:
 		return
 	_update_params()
 	_dispatch()
-	cells = _rd.buffer_get_data(_buf, O_CT * 4, RENDER_W * RENDER_H * 4)
+	cells = _rd.buffer_get_data(_buf, O_LN * 4, RENDER_W * RENDER_H * 4)
+	if fold_on:
+		read_fold()
 	for i in MAX_CAPSULES:
 		if _capsule_once[i]:
 			_capsule_once[i] = false
 			set_capsule(i, Vector2.ZERO, Vector2.DOWN, 1.0, 1.0, false)
+
+
+# The folded grid (cell_fold.glsl) for the coarse senses: each tick
+# while fold_on, and once when the senses switch to it.
+func read_fold() -> void:
+	if not ready_to_run:
+		return
+	cells4 = _rd.buffer_get_data(_buf, O_C4 * 4, (RENDER_W / 2) * (RENDER_H / 2) * 4)
 
 
 # Once per frame: the rendered pixels into the display texture.
@@ -570,7 +592,9 @@ func _update_params() -> void:
 	p.encode_float(80, 0.0)       # [20] ram flag
 	_tick += 1
 	p.encode_float(84, float(_tick % 65536))  # [21] tick, GPU randomness
-	for i in range(22, 27):
+	p.encode_float(88, 0.0)       # [22] melted this tick (a GPU counter)
+	p.encode_float(92, float(crumb_cells))  # [23] the crumb threshold (cell_post.glsl, pbd_predict.glsl)
+	for i in range(24, 27):
 		p.encode_float(i * 4, 0.0)
 	p.encode_float(108, 0.0)      # [27] lighting off: flat material colours
 	var exp1_r := 0.0
@@ -629,6 +653,10 @@ func _dispatch() -> void:
 	_bind(cl, S.RENDER_CLEAR, rg)
 	_rd.compute_list_add_barrier(cl)
 	_bind(cl, S.RENDER_WRITE, pg)
+	_rd.compute_list_add_barrier(cl)
+	_bind(cl, S.CELL_POST, rg)
+	_rd.compute_list_add_barrier(cl)
+	_bind(cl, S.CELL_FOLD, ceili(float((RENDER_W / 2) * (RENDER_H / 2)) / WORKGROUP))
 	_rd.compute_list_add_barrier(cl)
 	if light_on:
 		_bind(cl, S.LIGHT_SEED, rg)
@@ -690,7 +718,7 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 	var water :=   [1.8, 1.2, 0.008, 0.0, 0.0, 0.0, 0.15, 0.40, 0.85, 1.0, 0.0, 0.0]
 	var clay :=    [3.5, 0.8, 0.15,  0.4, 0.4, 0.2, 0.55, 0.38, 0.25, 1.0, 0.0, 0.0]
 	var rock :=    [4.0, 2.0, 0.00,  0.9, 0.8, 8.0, 0.34, 0.29, 0.25, 1.0, 0.0, 0.0]
-	# Stone: the 4 px lattice's own density, no yield (its bonds hold
+	# Stone: the lattice's own density, no yield (its bonds hold
 	# the shape), some friction so a lump stops rolling; pale, so a lump
 	# stands out from the ground it lies on.
 	var stone :=   [3.0, 1.2, 0.02,  0.0, 0.5, 0.0, 0.60, 0.58, 0.54, 1.0, 0.0, 0.0]

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://byihnf61514jc"
+path="res://.godot/imported/cell_fold.glsl-88abfc5624e2838d6e0b2d828f22736a.res"
+
+[deps]
+
+source_file="res://shaders/cell_fold.glsl"
+dest_files=["res://.godot/imported/cell_fold.glsl-88abfc5624e2838d6e0b2d828f22736a.res"]
+
+[params]
+

@@ -2,7 +2,7 @@
 # readable place instead of project.godot. Rain World layout: WASD, the
 # arrows or the left stick move, Space or the south face button jumps,
 # E, Shift or the west face button chews. 1 and 2 pick the gecko's pixel
-# grid: 4 px like the rock, or the default 2 px. Tab loads the next test
+# grid: 2 px like the rock, or the default 1 px. Tab loads the next test
 # scene from tests/scenes.json, Shift+Tab goes back to the generated cave.
 # B, C and N drop a boulder, a clump of clay or a heap of sand at the
 # cursor. The mouse is

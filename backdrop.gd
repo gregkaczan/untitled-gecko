@@ -3,7 +3,7 @@
 # of the camera's speed, and a near layer in front of everything, a few
 # dark dripstone silhouettes hung from the ceilings and raised from the
 # floors of the cell map, moving a little faster than the world. Both
-# at the rock's 4 px cells, nearest filtered, and snapped to the
+# at the rock's 2 px cells, nearest filtered, and snapped to the
 # camera's grid every tick so they never shimmer (main.gd _follow).
 extends Node2D
 

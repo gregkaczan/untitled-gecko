@@ -7,7 +7,7 @@
 # R to start the cave again (a fresh chamber when in a generated one),
 # F1 for debug mode (the gecko's overlay and a
 # panel down the right: scenes, seed, brush, clock, pixel grid), 1 and 2
-# for the gecko's pixel grid (4 px like the rock, or 2 px), Tab for the next test scene
+# for the gecko's pixel grid (2 px like the rock, or 1 px), Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the first cave (the
 # keys drive the gecko in a scene loaded this way); the panel's New cave
 # builds a generated chamber from its seed. GECKO_DUMP_MAP=file.png
@@ -24,7 +24,9 @@
 # walk so movie-mode frames show the gecko moving without anyone at the keys.
 # GECKO_SCENE=name[:script] runs a test scene from tests/scenes.json the
 # same way and quits when the script ends; GECKO_SEED fixes the random
-# bites and steps so a run repeats exactly.
+# bites and steps so a run repeats exactly. GECKO_SENSE=4 puts the
+# gecko's senses on the 4 px fold and GECKO_CRUMB=n sets the crumb
+# threshold, both the debug panel's.
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
@@ -258,8 +260,8 @@ func _ready() -> void:
 	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	_camera.limit_left = 0
 	_camera.limit_top = 0
-	_camera.limit_right = int(CaveMap.W * CaveMap.CELL)
-	_camera.limit_bottom = int(CaveMap.H * CaveMap.CELL)
+	_camera.limit_right = int(CaveMap.W_FULL * CaveMap.CELL_FULL)
+	_camera.limit_bottom = int(CaveMap.H_FULL * CaveMap.CELL_FULL)
 	_camera.position_smoothing_enabled = false
 	add_child(_camera)
 	var hud := CanvasLayer.new()
@@ -283,6 +285,12 @@ func _ready() -> void:
 	_panel.set_seed(seed_value)
 	_panel.set_brush(brush_r)
 	_panel.set_pixel_size(blobs.pixel_sz)
+	if sim and OS.get_environment("GECKO_SENSE") == "4":
+		map.call("set_sense", 4.0)
+	if sim and OS.get_environment("GECKO_CRUMB") != "":
+		sim.crumb_cells = int(OS.get_environment("GECKO_CRUMB"))
+	_panel.set_sense(map.CELL)
+	_panel.set_crumb(sim.crumb_cells if sim else 0)
 	_panel.scene_picked.connect(_load_scene)
 	_panel.main_cave.connect(_main_cave)
 	_panel.reload.connect(_reset)
@@ -299,6 +307,12 @@ func _ready() -> void:
 		_step_ticks = 1
 		get_tree().paused = false)
 	_panel.pixel_size_changed.connect(func(v: float) -> void: blobs.set_pixel_size(v))
+	_panel.sense_changed.connect(func(v: float) -> void:
+		if map.has_method("set_sense"):
+			map.call("set_sense", v))
+	_panel.crumb_changed.connect(func(n: int) -> void:
+		if sim:
+			sim.crumb_cells = n)
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
 	_panel.light_changed.connect(func(on: bool) -> void:
 		if sim:
@@ -336,7 +350,7 @@ func _reset() -> void:
 			var gen := CaveMap.new()
 			SceneBuilder.build(gen, _scene, _scene_bases)
 			map.build_cells(gen.solid)
-			_backdrop.build(gen.solid, CaveMap.W, CaveMap.H, seed_value)
+			_backdrop.build(gen.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
 			# Kept as the authoring map for the editor (what Save writes).
 			if _author and _author != map:
 				_author.free()
@@ -387,7 +401,7 @@ func _reset() -> void:
 	map.generate(seed_value)
 	if _backdrop:
 		# The generated cave: the far wall only (its cells are the sim's).
-		_backdrop.build(PackedByteArray(), CaveMap.W, CaveMap.H, seed_value)
+		_backdrop.build(PackedByteArray(), CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
 	var spawn := _flat_spawn()
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
@@ -620,7 +634,7 @@ func _stamp_live(name: String, p: Vector2, where: String) -> void:
 	var before := _author.solid.duplicate()
 	# The authoring map already has the stamp: find its cells by the
 	# difference and fill those in the sim.
-	var cell := CaveMap.CELL
+	var cell := CaveMap.CELL_FULL
 	for i in before.size():
 		pass
 	var tmp := CaveMap.new()
@@ -629,8 +643,8 @@ func _stamp_live(name: String, p: Vector2, where: String) -> void:
 	SceneBuilder.stamp(tmp, name, p, where)
 	for i in tmp.solid.size():
 		if tmp.solid[i] != before[i]:
-			var x := i % CaveMap.W
-			var y := i / CaveMap.W
+			var x := i % CaveMap.W_FULL
+			var y := i / CaveMap.W_FULL
 			_fills.append([Vector2((x + 0.5) * cell, (y + 0.5) * cell), 2.0, tmp.solid[i]])
 	tmp.free()
 
@@ -727,8 +741,8 @@ func blank_level() -> String:
 func _gas_from_cells() -> void:
 	if _author == null:
 		return
-	var W: int = CaveMap.W
-	var H: int = CaveMap.H
+	var W: int = CaveMap.W_FULL
+	var H: int = CaveMap.H_FULL
 	var seen := {}
 	for i in _author.solid.size():
 		if _author.solid[i] != CaveMap.CELL_GAS or seen.has(i):
@@ -751,7 +765,7 @@ func _gas_from_cells() -> void:
 				if d >= 0 and d < W * H and not seen.has(d) and _author.solid[d] == CaveMap.CELL_GAS:
 					seen[d] = true
 					queue.append(d)
-		var r := Rect2(x0 * CaveMap.CELL, y0 * CaveMap.CELL, (x1 - x0 + 1) * CaveMap.CELL, (y1 - y0 + 1) * CaveMap.CELL)
+		var r := Rect2(x0 * CaveMap.CELL_FULL, y0 * CaveMap.CELL_FULL, (x1 - x0 + 1) * CaveMap.CELL_FULL, (y1 - y0 + 1) * CaveMap.CELL_FULL)
 		var known := false
 		for g in _gas:
 			if g.intersects(r):
@@ -861,7 +875,7 @@ func _follow() -> void:
 	var dt := get_physics_process_delta_time()
 	if _won:
 		var k := 1.0 - exp(-WIN_PULL * dt)
-		_cam = _cam.lerp(Vector2(CaveMap.W * CaveMap.CELL, CaveMap.H * CaveMap.CELL) * 0.5, k)
+		_cam = _cam.lerp(Vector2(CaveMap.W_FULL * CaveMap.CELL_FULL, CaveMap.H_FULL * CaveMap.CELL_FULL) * 0.5, k)
 		_camera.position = _cam
 		_camera.zoom = _camera.zoom.lerp(Vector2(WIN_ZOOM, WIN_ZOOM), k)
 		return
@@ -923,8 +937,8 @@ func _camera_home() -> void:
 	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
 	_camera.limit_left = 0
 	_camera.limit_top = 0
-	_camera.limit_right = int(CaveMap.W * CaveMap.CELL)
-	_camera.limit_bottom = int(CaveMap.H * CaveMap.CELL)
+	_camera.limit_right = int(CaveMap.W_FULL * CaveMap.CELL_FULL)
+	_camera.limit_bottom = int(CaveMap.H_FULL * CaveMap.CELL_FULL)
 
 
 # The first cave as the scene to build: its index in the scene list, so

@@ -28,6 +28,7 @@ const uint N_CAP = 8u;
 // Cell classes per render pixel, last tick's (render_write.glsl): 0 air,
 // 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell.
 const uint O_CT = 8294670u;
+const uint O_LN = 22291598u;   // cell classes with crumbs marked (cell_post.glsl), last tick's: 256 added on a crumb
 const uint O_LP = 22291470u;   // light and flow parameters (sim.gd): from [96] two currents, 8 floats each: x0 y0 x1 y1 dx dy speed on
 
 
@@ -256,7 +257,40 @@ void main() {
         }
     }
 
-    bool awake = has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral || mates_moving || pulled;
+    // --- Crumbs: a static particle whose cell was marked a crumb last
+    //     tick (cell_post.glsl: a bit of rock of at most N cells) comes
+    //     loose as stone when the gecko's body (the pusher capsules,
+    //     mode -1) touches it, so the body shoves it out of its way as it
+    //     does a grain instead of catching on it, and it falls ---
+    bool loosened = false;
+    if (!bonded && yield_s >= 5.0 && (mat == 3u || mat == 5u || mat == 6u) && rf(O_P + 23u) > 0.5) {
+        float cpsz = rf(O_P + 18u);
+        uint crw = uint(rf(O_P + 16u)), crh = uint(rf(O_P + 17u));
+        int crx = int(floor(px / cpsz)), cry = int(floor(py / cpsz));
+        if (crx >= 0 && cry >= 0 && crx < int(crw) && cry < int(crh) && buf.d[O_LN + uint(cry) * crw + uint(crx)] >= 256u) {
+            for (uint c = 0u; c < N_CAP && !loosened; c++) {
+                uint slot = O_CAP + c * 8u;
+                if (rf(slot + 6u) < 0.5) continue;
+                float mode = rf(slot + 7u);
+                if (mode > -0.5 || mode < -1.5) continue;
+                vec2 ca = vec2(rf(slot), rf(slot + 1u));
+                vec2 cd = vec2(rf(slot + 2u), rf(slot + 3u));
+                float cr = rf(slot + 4u), chl = rf(slot + 5u);
+                vec2 p0 = ca - cd * chl, ba = cd * chl * 2.0;
+                vec2 pa = vec2(px, py) - p0;
+                float t = clamp(dot(pa, ba) / max(dot(ba, ba), 0.001), 0.0, 1.0);
+                if (length(pa - ba * t) < cr + 2.0) loosened = true;
+            }
+        }
+    }
+    if (loosened) {
+        mat_f = 4.0 + min(fract(mat_f), 0.088);
+        mat = 4u;
+        yield_s = rf(O_M + 4u * 12u + 5u);
+        wf(b + 7u, mat_f);
+    }
+
+    bool awake = loosened || has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral || mates_moving || pulled;
 
     // --- Loose grains fall when undermined. The solver only moves what
     //     is awake, and a grain at rest sleeps, so a bite under a bed of

@@ -154,6 +154,14 @@ for h in (4, 8, 12, 16, 24, 32, 48):
 # 4. Bumps, specks and notches
 PAST = [1100, 0, 1920, 1080]
 add("specks_floor", [["specks", 3, 600, 1400, F - 2, 14]], ["floor", 500, 700], ["traverse"], state="cling", reach=[1000, 0, 1920, 1080])
+# Single cells of rock in the air at body and head height along the walk, and
+# scattered through a tunnel the body only just fits: crumbs, which the
+# senses pass through and the body loosens (sim.gd's crumb threshold; in
+# the bitmap world they are specks like any other).
+add("crumbs_air", [["cell", x, F - 10 - (8 if (x // 40) % 2 else 0), 1] for x in range(700, 1320, 40)],
+    ["floor", 500, 700], ["traverse"], state="cling", reach=[1000, 0, 1920, 1080])
+add("crumbs_tunnel", [["tunnel", 500, 600, 1500, 600, 11]] + [["cell", x, 600 + dy, 1] for x in range(700, 1320, 36) for dy in ((-6,), (0,), (6,))[(x // 36) % 3]],
+    ["floor", 560, 600], ["traverse"], base="solid", state="cling", reach=[1100, 0, 1920, 1080])
 add("notch_1", [["erase", 1000, F, 4, 4]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)
 add("notch_2", [["erase", 1000, F, 8, 4]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)
 add("notch_deep", [["erase", 1000, F, 4, 12]], ["floor", 800, 700], ["traverse"], state="cling", reach=PAST)

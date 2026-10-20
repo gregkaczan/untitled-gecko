@@ -30,7 +30,6 @@ signal blasted                 # A gas burst threw the gecko
 
 const Chain = preload("res://chain.gd")
 
-const CELL := 2.0              # The map's cell size (CaveMap.CELL)
 const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
@@ -151,7 +150,7 @@ const PULL_SPEED := 360.0      # The body reeled in on the tongue (the grapple)
 const PULL_ACCEL := 2400.0
 const STRIKE_R := 4.0          # Dent a tongue strike leaves in the ground: a cell or so (was 8: it ate the ground)
 const STRIKE_BREAK_R := 10.0   # Round the tip of a strike on a lump, its bonds break
-const PULL_MAX_CELLS := 320    # Biggest piece the tongue drags in (cells of 4 px, a turned lump fills more); a bigger one holds it
+const PULL_MAX_CELLS := 320    # Biggest piece the tongue drags in (cells of 2 px, a turned lump fills more); a bigger one holds it
 const EAT_MAX_CELLS := 64      # Biggest piece swallowed when it reaches the mouth
 const EAT_REACH := 16.0        # A dragged piece this close to the mouth is swallowed, or let go
 const EAT_R := 28.0            # How far round the mouth the swallow reaches
@@ -1555,12 +1554,12 @@ static func _axis(v: Vector2) -> Vector2:
 
 
 func _squeeze_r(h: float) -> float:
-	# The passage's walls are cells whose centres sit CELL / 2 outside
-	# its air; the centre of the passage is (h + CELL) / 2 from each, and
+	# The passage's walls are cells whose centres sit a cell / 2 outside
+	# its air; the centre of the passage is (h + a cell) / 2 from each, and
 	# the clearance leaves a pixel and a half of play, since the body is
 	# centred from whole-pixel scans. Never less than the narrowest
 	# passage allows: a crevice closing further is not squeezed into.
-	return clampf((maxf(h, SQUEEZE_MIN) + CELL) * 0.5 - 1.5, 0.0, BODY_R)
+	return clampf((maxf(h, SQUEEZE_MIN) + map.CELL) * 0.5 - 1.5, 0.0, BODY_R)
 
 
 func _begin_squeeze(h: float, u: Vector2, line: Vector2) -> void:

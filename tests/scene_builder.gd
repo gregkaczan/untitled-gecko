@@ -271,7 +271,7 @@ const DECOR := {
 
 # Cones: dir 1 grows down from a ceiling line, -1 up from a floor line.
 # Each is rows of rock narrowing from its base by a power curve, so it
-# comes out pointed, a cell at the tip, on the 4 px grid.
+# comes out pointed, a cell at the tip, on the cell grid.
 static func _cones(map: Node2D, x0: float, x1: float, y: float, n: int, seed_v: int, hmin: float, hmax: float, dir: float) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
@@ -327,11 +327,16 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> voi
 	else:
 		var f: Vector2 = map.floor_below(at)
 		cy = int(floor(f.y / cell))       # The first solid row of the floor
+	# The tables are on the 4 px grid: each entry fills a block of s by s
+	# cells on a finer one, so a stamp keeps its size in px.
+	var s := maxi(int(round(4.0 / cell)), 1)
 	for c in DECOR[name]:
-		var x: int = cx + c[0]
-		var y: int = cy + dir * c[1]
-		if not map.is_solid(x, y) and not map.is_water(x, y):
-			map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
+		for j in s:
+			for i in s:
+				var x: int = cx + c[0] * s + i
+				var y: int = cy + dir * (c[1] * s + j)
+				if not map.is_solid(x, y) and not map.is_water(x, y):
+					map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
 
 
 static func _kind(map: Node2D, name: String) -> int:

@@ -14,6 +14,8 @@ signal time_scale_changed(scale: float)
 signal paused(on: bool)
 signal step
 signal pixel_size_changed(size: float)
+signal sense_changed(cell: float)   # The senses' grid: 2 px (the sim's cells) or 4 px (folded), particle world only
+signal crumb_changed(n: int)        # Crumbs of up to n cells are air to the senses and loosened by the body's touch; 0 for none
 signal overlay_changed(on: bool)
 signal light_changed(on: bool)
 
@@ -26,6 +28,8 @@ var _time: HSlider
 var _pause: CheckButton
 var _overlay: CheckButton
 var _pixel: OptionButton
+var _sense: OptionButton
+var _crumb: SpinBox
 var _status: Label
 
 
@@ -105,6 +109,25 @@ func _ready() -> void:
 	_pixel.focus_mode = Control.FOCUS_NONE
 	_pixel.item_selected.connect(func(i: int) -> void: pixel_size_changed.emit(float(_pixel.get_item_id(i))))
 	px_row.add_child(_pixel)
+	var sense_row := HBoxContainer.new()
+	col.add_child(sense_row)
+	sense_row.add_child(_label("Senses"))
+	_sense = OptionButton.new()
+	_sense.add_item("2 px", 2)
+	_sense.add_item("4 px", 4)
+	_sense.focus_mode = Control.FOCUS_NONE
+	_sense.item_selected.connect(func(i: int) -> void: sense_changed.emit(float(_sense.get_item_id(i))))
+	sense_row.add_child(_sense)
+	var crumb_row := HBoxContainer.new()
+	col.add_child(crumb_row)
+	crumb_row.add_child(_label("Crumbs pushed, up to (cells)"))
+	_crumb = SpinBox.new()
+	_crumb.min_value = 0
+	_crumb.max_value = 25
+	_crumb.value = 4
+	_crumb.focus_mode = Control.FOCUS_NONE
+	_crumb.value_changed.connect(func(v: float) -> void: crumb_changed.emit(int(v)))
+	crumb_row.add_child(_crumb)
 	_overlay = CheckButton.new()
 	_overlay.text = "Overlay (up, probe, feet, bite)"
 	_overlay.button_pressed = true
@@ -155,6 +178,14 @@ func set_paused(on: bool) -> void:
 
 func set_pixel_size(v: float) -> void:
 	_pixel.select(_pixel.get_item_index(int(v)))
+
+
+func set_sense(v: float) -> void:
+	_sense.select(_sense.get_item_index(int(v)))
+
+
+func set_crumb(n: int) -> void:
+	_crumb.set_value_no_signal(n)
 
 
 func set_status(text: String) -> void:

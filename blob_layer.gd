@@ -3,8 +3,8 @@
 # soft circle splats additively. The color viewport holds flat circles
 # in each creature's color. A screen sprite runs metaball.gdshader over
 # both and upscales with nearest filtering, so blobs sit on a pixel grid
-# of pixel_sz world units: 2 px by default, twice as fine as the
-# terrain's, or 4 px to share the rock's grid (keys 1 and 2 in main.gd).
+# of pixel_sz world units: 1 px by default, twice as fine as the
+# terrain's, or 2 px to share the rock's grid (keys 1 and 2 in main.gd).
 #
 # Usage per frame: set_blobs([[pos, radius, color], ...]), and
 # set_marks([[pos, size, color], ...]) for flat rectangles (an eye, a
@@ -24,7 +24,7 @@ extends Node2D
 
 const WORLD_W := 1920
 const WORLD_H := 1080
-const PIXEL_SZ_FINE := 1.0      # The gecko reads at 2 px pixels over 4 px rock
+const PIXEL_SZ_FINE := 1.0      # The gecko draws at 1 px pixels over 2 px rock
 const PIXEL_SZ_COARSE := 2.0    # The old look: the gecko shares the rock's grid
 const SPLAT_SCALE := 1.6     # Splat draw radius over the body radius
 const SPLAT_TEX_SIZE := 64

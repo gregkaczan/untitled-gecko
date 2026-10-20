@@ -11,6 +11,24 @@ extends "res://cave_map.gd"
 
 var sim: Node2D
 var _slot := 0
+var sense_coarse := false      # The senses on the 4 px fold (sim.cells4) instead of the sim's own cells
+
+
+# The senses' grid: the sim's cells (2 px) or the same folded 2x2 to
+# 4 px (cell_fold.glsl), the debug panel's choice. The chunk queries
+# stay on the sim's grid.
+func set_sense(cell: float) -> void:
+	sense_coarse = cell >= sim.PIXEL_SZ * 1.5
+	sim.fold_on = sense_coarse
+	if sense_coarse:
+		W = sim.RENDER_W / 2
+		H = sim.RENDER_H / 2
+		CELL = sim.PIXEL_SZ * 2.0
+		sim.read_fold()
+	else:
+		W = sim.RENDER_W
+		H = sim.RENDER_H
+		CELL = sim.PIXEL_SZ
 
 
 func _ready() -> void:
@@ -32,13 +50,29 @@ func build_cells(kinds: PackedByteArray) -> void:
 	sim.tick()
 
 
+# A cell's class on the senses' grid. A crumb (CT_CRUMB added) reads
+# as air: the body walks through a speck and the sim loosens it.
 func _cls(x: int, y: int) -> int:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return 2
-	var c: PackedByteArray = sim.cells
+	var c: PackedByteArray = sim.cells4 if sense_coarse else sim.cells
 	if c.size() < W * H * 4:
 		return 0
-	return c.decode_u32((y * W + x) * 4)
+	var v := c.decode_u32((y * W + x) * 4)
+	return 0 if v >= sim.CT_CRUMB else v
+
+
+# A cell of the sim's own grid, whatever the senses' grid: the chunk
+# queries count a lump's cells, and the thresholds on them (gecko.gd)
+# are in these.
+func _cls_full(x: int, y: int) -> int:
+	if x < 0 or y < 0 or x >= sim.RENDER_W or y >= sim.RENDER_H:
+		return 2
+	var c: PackedByteArray = sim.cells
+	if c.size() < sim.RENDER_W * sim.RENDER_H * 4:
+		return 0
+	var v := c.decode_u32((y * sim.RENDER_W + x) * 4)
+	return 0 if v >= sim.CT_CRUMB else v
 
 
 func is_solid(x: int, y: int) -> bool:
@@ -104,14 +138,15 @@ func clear_currents() -> void:
 	sim.set_currents(currents)
 
 
-# The chunk whose particle fills this cell, or -1 for the ground and air.
+# The chunk whose particle fills this cell of the sim's grid, or -1 for
+# the ground and air.
 func chunk_at(x: int, y: int) -> int:
-	var c := _cls(x, y)
+	var c := _cls_full(x, y)
 	return c - sim.CT_CHUNK if c >= sim.CT_CHUNK else -1
 
 
 func chunk_at_world(p: Vector2) -> int:
-	return chunk_at(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+	return chunk_at(int(floor(p.x / sim.PIXEL_SZ)), int(floor(p.y / sim.PIXEL_SZ)))
 
 
 # The connected piece of chunk id round p: the centres (world px) of the
@@ -119,15 +154,16 @@ func chunk_at_world(p: Vector2) -> int:
 # to limit of them. Empty when none of its cells is within two of p.
 func chunk_piece(id: int, p: Vector2, limit := 1600) -> PackedVector2Array:
 	var out := PackedVector2Array()
-	var cx := int(floor(p.x / CELL))
-	var cy := int(floor(p.y / CELL))
+	var fc: float = sim.PIXEL_SZ
+	var cx := int(floor(p.x / fc))
+	var cy := int(floor(p.y / fc))
 	var start := Vector2i(-1, -1)
 	var best := INF
 	for y in range(cy - 2, cy + 3):
 		for x in range(cx - 2, cx + 3):
 			if chunk_at(x, y) != id:
 				continue
-			var d := p.distance_squared_to(Vector2((x + 0.5) * CELL, (y + 0.5) * CELL))
+			var d := p.distance_squared_to(Vector2((x + 0.5) * fc, (y + 0.5) * fc))
 			if d < best:
 				best = d
 				start = Vector2i(x, y)
@@ -139,7 +175,7 @@ func chunk_piece(id: int, p: Vector2, limit := 1600) -> PackedVector2Array:
 	while i < queue.size() and out.size() < limit:
 		var c: Vector2i = queue[i]
 		i += 1
-		out.append(Vector2((c.x + 0.5) * CELL, (c.y + 0.5) * CELL))
+		out.append(Vector2((c.x + 0.5) * fc, (c.y + 0.5) * fc))
 		for dy in range(-1, 2):
 			for dx in range(-1, 2):
 				var m := Vector2i(c.x + dx, c.y + dy)

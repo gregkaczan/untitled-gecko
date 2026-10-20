@@ -6,9 +6,9 @@ https://claude.ai/artifact/HeBpi84hMyeL581NWrvdvB
 This repo answers the first question in that document's next steps: is
 moving the gecko around a cave fun on its own? The world is the GPU
 particle sim from untitled-idle-shooter (`sim.gd`, `shaders/*.glsl`),
-read back every tick as one cell class per 4 px render pixel (air,
+read back every tick as one cell class per 2 px render pixel (air,
 water, static solid, lava, loose grain, a lump's id) into the same
-480x270 grid the gecko's queries run on (`sim_map.gd`). The CPU bitmap stand-in (`cave_map.gd`) is still
+960x540 grid the gecko's queries run on (`sim_map.gd`). The CPU bitmap stand-in (`cave_map.gd`) is still
 there behind `GECKO_WORLD=bitmap`: it starts instantly, runs headless,
 and the particle world is built from its generator. `chain.gd`,
 `blob_layer.gd` and the metaball shader also come from the shooter.
@@ -141,6 +141,18 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   that only grains block goes on through them at a third of walking
   speed, the body's push shoving them aside. Sand poured on the gecko
   piles on its back and buries it, and it walks out.
+- Crumbs: a bit of matter of at most a few cells (the debug panel's
+  "crumbs pushed", 4 by default, 0 for none: the cells eight-connected
+  to each within its 5x5, marked on the GPU in `cell_post.glsl`) is air
+  to the senses, and its static particles come loose as stone when the
+  body's pushers touch them, so a speck afloat in the air or lying in a
+  crevice is shoved aside and falls instead of stopping the walk or
+  catching a cling. A speck touching a wall is part of it and a convex
+  corner is nine cells or more, so walls and steps are untouched. The
+  senses themselves run on the sim's 2 px cells or on a 2x2 fold of
+  them to 4 px (`cell_fold.glsl`, the panel's "Senses"); the fold
+  keeps the gecko's tick at 1.4 ms against 3.9 at 2 px on the RTX 4080,
+  the sim's tick being 3 ms either way.
 - Loose lumps (B and C drop a boulder or a clump of clay at the cursor;
   the generated
   cave has a few of each) are solid to stand on, stepped over when
@@ -263,8 +275,8 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   tubes rather than rows of circles, so the back's edge is straight and
   does not flicker pixel by pixel as the body creeps along.
 - The face is drawn by the blob layer as marks on its own pixel grid,
-  over the body, so they are as crisp as the body: the eye, a 4 px
-  square one cell below the head's rim (any higher and its top row
+  over the body, so they are as crisp as the body: the eye, a black disc 4 px
+  across one cell below the head's rim (any higher and its top row
   takes the rim's place and reads as a notch), and what the idle
   animations add (below).
 - A ray cast down a crack narrower than the body (a slot in the floor)
@@ -379,11 +391,11 @@ What the first slice adds on top of the movement, each a first version
   the particles wrote (copper a little, lava a lot, glowshrooms green
   with a slow breath, `render_write.glsl`), daylight on the open cells
   of the exit's rect, and the glows (the gecko's head, warm and small;
-  each slug's); nine spread passes carry it a cell at a time, the
-  brightest neighbour times what the cell lets through (air 0.985,
-  water 0.93, loose grains 0.6, solid 0.45, so a rock face lights a
-  cell or two deep), at 16 bits a channel so it fades out instead of
-  sticking. The result is read back as a 480x270 texture and
+  each slug's); nineteen spread passes carry it a cell at a time, the
+  brightest neighbour times what the cell lets through (air 0.9925,
+  water 0.964, loose grains 0.775, solid 0.671, so a rock face lights a
+  few cells deep), at 16 bits a channel so it fades out instead of
+  sticking. The result is read back as a 960x540 texture and
   multiplied over the particles and the backdrop with an ambient floor
   (`light_overlay.gdshader`), under the gecko, whose whole body is
   drawn the same brightness (a shaded gecko read as a different
