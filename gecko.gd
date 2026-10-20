@@ -120,6 +120,7 @@ const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees f
 const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
 const SQUEEZE_MIN := 11.0      # Narrowest passage the body squeezes through (px between its walls; cells are 4)
 const SQUEEZE_MAX := 19.0      # Widest passage that is a squeeze; from 20 px the body walks at its full clearance
+const SQUEEZE_BLOCKED := 24.0  # ...unless the walk is blocked at its mouth: a ragged passage reads wider at the scan's column than at its narrowest, so one up to this tall is squeezed into when the body cannot enter it at full clearance
 const SQUEEZE_RECOVER := 0.5   # Px a tick the clearance grows back after a squeeze, so the body eases out, never pops
 const SQUEEZE_LOOK := 28.0     # How far across the walking line the passage scan looks
 const SQUEEZE_DEPTH := 16.0    # A passage must run at least this far to be entered (a dent is not a passage)
@@ -286,6 +287,7 @@ var _digging := false          # Chewing with rock within DIG_LOOK of the bite: 
 var _burrowing := false        # This tick the walk went on through loose grains (sand, clay)
 var _squeeze := false          # In a passage narrower than the body: less clearance, slow, the body thinned
 var _sq_r := BODY_R            # The clearance while squeezing
+var _sq_max := SQUEEZE_MAX      # Widest the passage may read, with the body in it, before the squeeze is released: SQUEEZE_BLOCKED for one entered from a blocked walk
 var _sq_in := false            # The body centre has been inside the passage
 var _sq_wide := 0              # Ticks in a row the passage has read wide
 var _sq_wait := 0              # Ticks at the mouth without getting in
@@ -774,7 +776,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		# Stopped by the lip of a passage narrower than the body, the way
 		# the press points: squeeze into it. The clearance drops to fit
 		# and the nudge below brings the body down (or up) to its middle.
-		if not _squeeze and not chewing and not shoving and s != 0.0:
+		# A body chewing its way in squeezes through what it chews, the
+		# bites' ragged cusps included.
+		if not _squeeze and not shoving and s != 0.0:
 			_passage_ahead()
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
@@ -1562,8 +1566,9 @@ func _squeeze_r(h: float) -> float:
 	return clampf((maxf(h, SQUEEZE_MIN) + map.CELL) * 0.5 - 1.5, 0.0, BODY_R)
 
 
-func _begin_squeeze(h: float, u: Vector2, line: Vector2) -> void:
+func _begin_squeeze(h: float, u: Vector2, line: Vector2, wide := SQUEEZE_MAX) -> void:
 	_squeeze = true
+	_sq_max = wide
 	_sq_up = u
 	_sq_line = line
 	_sq_in = false
@@ -1582,13 +1587,18 @@ func _end_squeeze() -> void:
 
 # A passage ahead along the walk, narrower than the body's clearance
 # allows but wide enough to squeeze through, running on at least
-# SQUEEZE_DEPTH: the squeeze begins. Called when the walk was blocked.
+# SQUEEZE_DEPTH: the squeeze begins. Called when the walk was blocked,
+# so the passage may read up to SQUEEZE_BLOCKED: wider than a squeeze
+# at the column scanned, but ragged, and the body did not get in at
+# full clearance. In the squeeze the clearance follows the narrowest
+# column ahead and the body keeps the middle line, which gets it
+# through; a straight passage that wide never blocks, and is walked.
 func _passage_ahead() -> bool:
 	var u := _axis(up)
 	var fwd := Vector2(-u.y, u.x) * facing
 	var at := pos + fwd * (BODY_R + 2.0)
 	var r := _narrow_run(at, u)
-	if not r.air or r.open or r.h < SQUEEZE_MIN or r.h > SQUEEZE_MAX:
+	if not r.air or r.open or r.h < SQUEEZE_MIN or r.h > SQUEEZE_BLOCKED:
 		return false
 	if absf(r.mid) > RIDE_H + 8.0:
 		return false
@@ -1596,13 +1606,13 @@ func _passage_ahead() -> bool:
 	if _free_span(mouth, fwd, SQUEEZE_DEPTH) < SQUEEZE_DEPTH:
 		return false
 	# Still a passage further in, not a crevice closing to nothing: the
-	# gecko is not wedged deeper and deeper into a V. Open cave there
-	# instead is a hole through a thin wall (a door), squeezed through
-	# all the same.
+	# gecko is not wedged deeper and deeper into a V. Open cave or a
+	# wider pocket there instead is a hole through a thin wall (a door)
+	# or a throat into a chamber, squeezed through all the same.
 	var deeper := _narrow_run(at + fwd * SQUEEZE_DEPTH, u)
-	if not deeper.air or (not deeper.open and (deeper.h < SQUEEZE_MIN or deeper.h > SQUEEZE_MAX + 4.0)):
+	if not deeper.air or (not deeper.open and deeper.h < SQUEEZE_MIN):
 		return false
-	_begin_squeeze(r.h, u, r.line)
+	_begin_squeeze(r.h, u, r.line, SQUEEZE_BLOCKED)
 	return true
 
 
@@ -1660,23 +1670,42 @@ func _squeeze_nudge() -> void:
 	# the walk.
 	if _up_rate > LIFT_TURN_MAX or up.dot(_sq_up) < 0.98:
 		return
-	# The middle averaged over the columns here and a body length ahead
-	# (those that read as the passage), so a ragged wall does not bob
-	# the body from cell to cell, and at the mouth the body lines up
-	# with the first columns, not one further in.
-	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
-	var mid := 0.0
-	var n := 0
-	for k in [0.0, 4.0, 8.0, 12.0]:
-		var a := _narrow_run(pos + fwd * k, _sq_up)
-		if a.air and not a.open and a.h <= SQUEEZE_MAX + 4.0:
-			mid += a.mid
-			n += 1
-	# A dead band above the scan's half-pixel steps, or the body rocks a
-	# fraction of a pixel each tick chasing a middle that is not there.
-	if n == 0 or absf(mid / n) < 0.75:
+	# Toward the middle of the corridor here and a body length ahead
+	# (_corridor), so a ragged wall does not bob the body from cell to
+	# cell, and at the mouth the body lines up with the first columns,
+	# not one further in.
+	var c := _corridor()
+	if not c.ok:
 		return
-	_move(_sq_up * clampf(mid / n * 0.5, -NUDGE_MAX, NUDGE_MAX))
+	var mid: float = (c.lo + c.hi) * 0.5
+	# A dead band above the scan's half-pixel steps, or the body rocks a
+	# fraction of a pixel each tick chasing a middle that is not there;
+	# narrower while the walk is blocked, since a body a pixel off the
+	# corridor's middle can be the one stopped by a wall's bump.
+	if absf(mid) < (0.25 if _blocked else 0.75):
+		return
+	_move(_sq_up * clampf(mid * 0.5, -NUDGE_MAX, NUDGE_MAX))
+
+
+# The corridor over the next body length: the overlap of the air
+# columns at every cell from the body's own to 12 px ahead (those that
+# read as the passage), as offsets along _sq_up from the body. Every
+# column may be tall enough and the corridor still narrow, where the
+# passage's middle wobbles; a column skipped is a bump stopped at.
+func _corridor() -> Dictionary:
+	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
+	var lo: float = -INF
+	var hi: float = INF
+	var n := 0
+	var i := 0
+	while i * map.CELL <= 12.0:
+		var a := _narrow_run(pos + fwd * (i * map.CELL), _sq_up)
+		if a.air and not a.open and a.h >= SQUEEZE_MIN - 1.0 and a.h <= _sq_max + 4.0:
+			lo = maxf(lo, a.mid - (a.h - 1.0) * 0.5)
+			hi = minf(hi, a.mid + (a.h - 1.0) * 0.5)
+			n += 1
+		i += 1
+	return {"ok": n > 0 and hi >= lo, "lo": lo, "hi": hi}
 
 
 # The squeeze ends once the passage round the body has read wide for
@@ -1684,28 +1713,28 @@ func _squeeze_nudge() -> void:
 func _update_squeeze() -> void:
 	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
 	var r := _narrow_run(pos, _sq_up)
-	var here: bool = r.air and not r.open and r.h <= SQUEEZE_MAX + 2.0
+	var here: bool = r.air and not r.open and r.h <= _sq_max + 2.0
 	if here and r.h < SQUEEZE_MIN - 1.0:
 		# Pinched: the passage has closed past what the body can squeeze
 		# through. The clearance grows back and pushes it out.
 		_end_squeeze()
 		return
-	# The clearance fits the narrowest column of the passage over the
-	# next body length (and here, once inside), so a narrowing step, or
-	# one cell of a ragged wall standing proud, is passed rather than
-	# stopped at, at the mouth as much as inside.
-	var h: float = r.h if here else INF
-	for k in [4.0, 8.0, 12.0]:
-		var ahead := _narrow_run(pos + fwd * k, _sq_up)
-		if ahead.air and not ahead.open and ahead.h >= SQUEEZE_MIN - 1.0 and ahead.h <= SQUEEZE_MAX + 2.0:
-			h = minf(h, ahead.h)
-	if h < INF:
-		_sq_r = _squeeze_r(h)
+	# The clearance fits the corridor the body has over the next body
+	# length (_corridor), so a narrowing step, one cell of a ragged wall
+	# standing proud, or a passage whose middle wobbles up and down is
+	# passed rather than stopped at, at the mouth as much as inside. The
+	# body is kept on that corridor's middle.
+	var c := _corridor()
+	var line_mid: float = r.mid
+	if c.ok:
+		_sq_r = _squeeze_r(c.hi - c.lo + 1.0)
+		if here:
+			line_mid = (c.lo + c.hi) * 0.5
 	if here:
 		_sq_in = true
 		_sq_wide = 0
 		_sq_wait = 0
-		_sq_line = r.line
+		_sq_line = pos.round() + _sq_up * line_mid + Vector2(0.5, 0.5)
 	elif _sq_in:
 		_sq_wide += 1
 		if _sq_wide >= SQUEEZE_RELEASE:
@@ -1871,7 +1900,7 @@ func _update_chain(dt: float) -> void:
 			# so the head heads for the passage from the moment the squeeze
 			# begins rather than being shoved in off the lip.
 			var run := _narrow_run(chain.head(), _sq_up)
-			var line: Vector2 = run.line if (run.air and not run.open and run.h <= SQUEEZE_MAX + 2.0) else _sq_line
+			var line: Vector2 = run.line if (run.air and not run.open and run.h <= _sq_max + 2.0) else _sq_line
 			want_lift = (line - _pos_s).dot(up)
 		_lift = move_toward(_lift, want_lift, LIFT_EASE)
 		var base := _pos_s + up * _lift

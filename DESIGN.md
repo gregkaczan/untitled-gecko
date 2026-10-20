@@ -17,7 +17,12 @@ Sim notes: every particle covers the full 1920x1080 (the shooter started
 at a ground line), so the shaders carry offsets different from the
 shooter's; `sim.gd` asserts the cell-class and bond offsets. Chewing
 and the brush are melt capsules (particles deleted on the GPU), a fill
-spawns particles. Loose lumps (boulders, stones, clumps of clay) are
+spawns particles. A carve takes the cells whose centres lie within its
+radius, so its opening is the radius plus half a cell: on 2 px cells
+every carve (a bite, a strike, a crumble, a scene's tunnel) is widened
+by the half cell lost against the 4 px cells the gecko's numbers were
+set on (`CARVE_PAD` in `sim.gd` and `cave_map.gd`), and a bite opens
+what it did. Loose lumps (boulders, stones, clumps of clay) are
 chunks: one particle per cell, each bonded to its eight lattice
 neighbours by a distance constraint (a bond record per particle at the
 buffer's tail, solved with the density constraints in `pbd_delta.glsl`,
@@ -229,12 +234,20 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
 - Turns are decided from the cell that actually blocked the step, never
   from the cell the body rests on.
 - A passage narrower than the body (11 to 19 px between its walls; 20
-  and up the body walks at its full clearance) is squeezed through.
-  Stopped at its lip, the gecko scans across the walk for the run of
-  air, and enters it if it goes on at least 16 px without closing, or
-  opens straight into cave beyond (a hole through a thin wall, a door):
-  the clearance drops to fit, the walk slows to 40 percent, the body is
-  nudged to the passage's middle, and its drawn points thin to the
+  and up the body walks at its full clearance, unless it is stopped at
+  the lip of one up to 24 px, which ragged walls make narrower than
+  the one column scanned) is squeezed through. Stopped at its lip, the
+  gecko scans across the walk for the run of air, and enters it if it
+  goes on at least 16 px without closing, or opens into cave or a
+  wider pocket beyond (a hole through a thin wall, a door; a throat
+  into a chamber): the clearance drops to fit the corridor the body
+  has, the overlap of the air columns read at every cell over the next
+  body length (every column may be tall enough and the corridor still
+  narrow where a chewed passage's middle wobbles up and down), the
+  walk slows to 40 percent, the body is nudged to that corridor's
+  middle (within a quarter pixel while the walk is blocked, since a
+  body a pixel off it can be the one a bump stops), and its drawn
+  points thin to the
   passage where they are between its walls and spring back as they
   leave it. A press straight into the surface over a slot in it (a
   crack in the floor, a slot in the ceiling overhead, a hole in the
@@ -243,7 +256,8 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   axis-aligned frame, ends once the passage has opened out round the
   body, and never follows a crevice that closes below 11 px.
   Afterwards the clearance grows back half a pixel a tick, so the body
-  eases out rather than pops.
+  eases out rather than pops. A body chewing its way in squeezes
+  through what it chews, the bites' cusps included.
 - In a passage the drawn body lies on the passage's middle line, not
   its usual 2 px above the body centre: the lift eases between the two
   at a pixel a tick from the moment the squeeze begins, so the head

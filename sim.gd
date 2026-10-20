@@ -122,6 +122,7 @@ const SLOT_BODY_A := 4
 const SLOT_PULL := 5
 const SLOT_EVENT := 6
 const SLOT_BODY_B := 7
+const CARVE_PAD := (4.0 - PIXEL_SZ) * 0.5     # A melt takes the particles within its radius, cell centres: widened by the half cell lost against 4 px cells, so a bite opens what it did (cave_map.gd says the same)
 const MELT_BRUSH := 2.0                          # A melt mode past 1.5 takes bedrock too (pbd_delta.glsl)
 
 const SHADER_FILES := [
@@ -354,7 +355,7 @@ func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length:
 # all of rock, a part of hard rock, none of bedrock). The brush (force)
 # takes everything.
 func melt_circle(pos: Vector2, radius: float, slot: int, force := false) -> void:
-	set_capsule(slot, pos, Vector2.RIGHT, radius, 0.0, true, MELT_BRUSH if force else 1.0)
+	set_capsule(slot, pos, Vector2.RIGHT, radius + CARVE_PAD, 0.0, true, MELT_BRUSH if force else 1.0)
 	_capsule_once[slot] = true
 
 

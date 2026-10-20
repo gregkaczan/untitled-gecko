@@ -14,6 +14,12 @@ const CELL_FULL := 2.0
 var W := W_FULL                # This map's grid; the particle world's senses can fold it to 4 px (sim_map.gd)
 var H := H_FULL
 var CELL := CELL_FULL
+# A carve takes the cells whose centres lie within its radius, so its
+# opening is the radius plus half a cell each way. The gecko's rules (a
+# bite of about 11 px, the clearance of 9) were set on 4 px cells, so a
+# carve on finer ones is widened by the half cell lost, and a bite or a
+# chewed tunnel comes out the size it did.
+const CARVE_PAD := (4.0 - CELL_FULL) * 0.5
 
 const ROCK := Color(0.17, 0.14, 0.12)
 const ROCK_VAR := Color(0.05, 0.04, 0.03)
@@ -224,10 +230,10 @@ func drop_near(p: Vector2, n: int) -> bool:
 func crumble(p: Vector2, radius: float) -> void:
 	var cx := int(floor(p.x / CELL))
 	var cy := int(floor(p.y / CELL))
-	var n := int(ceil(radius / CELL)) + 1
+	var n := int(ceil((radius + CARVE_PAD) / CELL)) + 1
 	for y in range(maxi(cy - n, 0), mini(cy + n, H - 1) + 1):
 		for x in range(maxi(cx - n, 0), mini(cx + n, W - 1) + 1):
-			if solid[y * W + x] == CELL_CRUMBLE and Vector2((x + 0.5) * CELL, (y + 0.5) * CELL).distance_to(p) < radius:
+			if solid[y * W + x] == CELL_CRUMBLE and Vector2((x + 0.5) * CELL, (y + 0.5) * CELL).distance_to(p) < radius + CARVE_PAD:
 				solid[y * W + x] = CELL_AIR
 	_repaint(cx - n - 1, cy - n - 1, cx + n + 1, cy + n + 1)
 
@@ -627,7 +633,7 @@ func fill_rect(r: Rect2) -> void:
 # hard rock, of which a bite takes HARD_GIVE of the cells. The brush
 # (force) takes anything.
 func erase_circle(p: Vector2, radius: float, force := false) -> void:
-	_paint_circle(p, radius, CELL_AIR, not force)
+	_paint_circle(p, radius + CARVE_PAD, CELL_AIR, not force)
 
 
 func fill_circle(p: Vector2, radius: float) -> void:
