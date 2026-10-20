@@ -59,10 +59,11 @@ func _physics_process(dt: float) -> void:
 	if _drip_t <= 0.0:
 		_drip_t = _rng.randf_range(DRIP_GAP_MIN, DRIP_GAP_MAX)
 		_drip()
+	# The drops land in silence: their sound misfired and was taken out
+	# (the pending list is kept for when a better one is tried).
 	for i in range(_pending.size() - 1, -1, -1):
 		_pending[i][0] -= dt
 		if _pending[i][0] <= 0.0:
-			_sound.play("drip", _pending[i][1], _sound.DRIP_DB, 0.8, 1.3)
 			_pending.remove_at(i)
 	for z in _zones:
 		z[4] += z[3] * dt

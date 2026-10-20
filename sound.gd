@@ -7,15 +7,15 @@
 extends Node2D
 
 const DIR := "res://sounds/"
-const ONE_SHOTS := ["step", "bite", "swallow", "tongue", "snap", "splash", "drip", "land", "burst", "crumble"]
+# No splash and no drip: both misfired (the user, 2026-10-21), so the
+# water is silent for now; the files stay in sounds/ for a later try.
+const ONE_SHOTS := ["step", "bite", "swallow", "tongue", "snap", "land", "burst", "crumble"]
 const POOL := 10                 # Positional players for the one-shots
 const STEP_DB := -26.0           # Footsteps barely there
 const BITE_DB := -14.0
 const SWALLOW_DB := -12.0
 const TONGUE_DB := -16.0
 const SNAP_DB := -14.0
-const SPLASH_DB := -12.0
-const DRIP_DB := -16.0
 const LAND_DB := -14.0
 const BURST_DB := -6.0
 const CRUMBLE_DB := -12.0
@@ -67,7 +67,6 @@ func listen(gecko: Node) -> void:
 	gecko.swallowed.connect(func() -> void: play("swallow", gecko.pos, SWALLOW_DB, 0.9, 1.1))
 	gecko.tongue_shot.connect(func() -> void: play("tongue", gecko.pos, TONGUE_DB, 0.9, 1.2))
 	gecko.tongue_hit.connect(func(at: Vector2) -> void: play("snap", at, SNAP_DB, 0.85, 1.15))
-	gecko.splashed.connect(func(at: Vector2) -> void: play("splash", at, SPLASH_DB, 0.9, 1.1))
 	gecko.landed.connect(func(speed: float) -> void:
 		if speed >= LAND_MIN:
 			play("land", gecko.pos, LAND_DB + clampf((speed - LAND_MIN) / 400.0, 0.0, 1.0) * 6.0 - 6.0, 0.9, 1.1))
