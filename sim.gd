@@ -117,12 +117,14 @@ func _draw() -> void:
 
 
 # Builds (or rebuilds) the whole buffer for the chamber with this seed.
-func build(seed_value: int) -> void:
+# Builds the world from the generator's cave for seed_value, or from a
+# cell map (one byte per render cell, CaveMap's values) when one is given.
+func build(seed_value: int, kinds := PackedByteArray()) -> void:
 	_rng.seed = seed_value
 	_dead.clear()
 	_explosions.clear()
 	_capsules.fill(0)
-	var data := _create_initial_data(seed_value)
+	var data := _create_initial_data(seed_value, kinds)
 	if _buf.is_valid():
 		_rd.buffer_update(_buf, 0, data.size(), data)
 	else:
@@ -312,11 +314,12 @@ func _bind(cl: int, idx: int, groups: int) -> void:
 
 # The chamber as particles: the bitmap generator decides what each cell
 # is (air, rock, water), one particle per cell with a little jitter.
-func _create_initial_data(seed_value: int) -> PackedByteArray:
-	var gen := CaveMap.new()
-	gen.generate(seed_value)
-	var kinds: PackedByteArray = gen.solid
-	gen.free()
+func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByteArray:
+	if kinds.is_empty():
+		var gen := CaveMap.new()
+		gen.generate(seed_value)
+		kinds = gen.solid
+		gen.free()
 
 	var data := PackedByteArray()
 	data.resize(TOTAL_UINTS * 4)

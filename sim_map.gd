@@ -22,6 +22,12 @@ func generate(seed_value: int) -> void:
 	sim.tick()
 
 
+# Rebuilds the particles from a cell map (a test scene built on a CaveMap).
+func build_cells(kinds: PackedByteArray) -> void:
+	sim.build(0, kinds)
+	sim.tick()
+
+
 func _cls(x: int, y: int) -> int:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return 2

@@ -2,7 +2,8 @@
 # readable place instead of project.godot. Rain World layout: WASD, the
 # arrows or the left stick move, Space or the south face button jumps,
 # E, Shift or the west face button chews. 1 and 2 pick the gecko's pixel
-# grid: 4 px like the rock, or the default 2 px.
+# grid: 4 px like the rock, or the default 2 px. Tab loads the next test
+# scene from tests/scenes.json, Shift+Tab goes back to the generated cave.
 # The mouse is reserved for the tongue and spit later; for the spike the
 # buttons drive the terrain brush instead.
 class_name InputSetup
@@ -22,6 +23,8 @@ static func ensure_actions() -> void:
 	_add("debug_toggle", [_key(KEY_F1)])
 	_add("render_coarse", [_key(KEY_1)])
 	_add("render_fine", [_key(KEY_2)])
+	_add("scene_next", [_key(KEY_TAB)])
+	_add("scene_main", [_key(KEY_TAB, true)])
 
 
 static func _add(action: String, events: Array, deadzone := 0.4) -> void:
@@ -38,9 +41,10 @@ static func _key_axis(action: String, keys: Array, axis: JoyAxis, value: float) 
 	_add(action, events, 0.25)
 
 
-static func _key(key: Key) -> InputEventKey:
+static func _key(key: Key, shift := false) -> InputEventKey:
 	var ev := InputEventKey.new()
 	ev.physical_keycode = key
+	ev.shift_pressed = shift
 	return ev
 
 
