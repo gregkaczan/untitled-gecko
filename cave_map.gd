@@ -218,9 +218,21 @@ func lava_near(p: Vector2, n: int) -> bool:
 func drop_near(p: Vector2, n: int) -> bool:
 	var cx := int(floor(p.x / CELL))
 	var cy := int(floor(p.y / CELL))
+	# A drop is water over air with no water for 12 px below it: a crest
+	# of a pool's surface, or the spray a 2 px water line throws up a
+	# bank, is not one (the gecko climbing out of a pool was knocked off
+	# by its own splash every other tick).
+	var depth := int(ceil(12.0 / CELL))
 	for y in range(cy - n, cy + n + 1):
 		for x in range(cx - n, cx + n + 1):
-			if is_water(x, y) and not is_water(x, y + 1) and not is_solid(x, y + 1):
+			if not is_water(x, y) or is_water(x, y + 1) or is_solid(x, y + 1):
+				continue
+			var falling := true
+			for k in range(2, depth + 1):
+				if is_water(x, y + k):
+					falling = false
+					break
+			if falling:
 				return true
 	return false
 
