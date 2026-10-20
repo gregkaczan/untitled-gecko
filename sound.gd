@@ -24,14 +24,14 @@ const LAND_MIN := 120.0          # px/s: a softer landing makes no sound
 const DRONE_DB := -22.0
 const HUM_DB := -10.0            # At the exit itself; attenuation takes it down with distance
 const HUM_REACH := 700.0         # px from the exit the hum fades over
-const STEP_GAP := 0.08           # s between footstep sounds at most (four feet trot)
+const STEP_GAP := 12             # Physics ticks between footstep sounds at least (0.2 s): the front feet only, at most five taps a second
 
 var _streams := {}
 var _pool: Array[AudioStreamPlayer2D] = []
 var _next := 0
 var _drone: AudioStreamPlayer
 var _hum: AudioStreamPlayer2D
-var _step_t := 0.0
+var _step_tick := -100         # Physics tick of the last footstep sound
 var _on := OS.get_environment("GECKO_SOUND") != "0"
 var _rng := RandomNumberGenerator.new()   # Its own: the gecko's steps and bites draw on the global one, and the suite seeds that
 
@@ -97,12 +97,15 @@ func play(name: String, at: Vector2, db: float, pitch_lo := 1.0, pitch_hi := 1.0
 	p.play()
 
 
-func _on_step(at: Vector2) -> void:
-	# Four feet in a trot would click twice at once: one click a gap.
-	var now := Time.get_ticks_msec() / 1000.0
-	if now - _step_t < STEP_GAP:
+func _on_step(at: Vector2, front: bool) -> void:
+	# Four feet planting would rattle: the front feet only, and never
+	# two taps within STEP_GAP, so a walk is a few taps a second.
+	if not front:
 		return
-	_step_t = now
+	var now := Engine.get_physics_frames()
+	if now - _step_tick < STEP_GAP:
+		return
+	_step_tick = now
 	play("step", at, STEP_DB, 0.8, 1.25)
 
 

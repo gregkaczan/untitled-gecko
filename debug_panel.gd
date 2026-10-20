@@ -15,6 +15,7 @@ signal paused(on: bool)
 signal step
 signal pixel_size_changed(size: float)
 signal overlay_changed(on: bool)
+signal light_changed(on: bool)
 
 const WIDTH := 300.0
 
@@ -110,6 +111,12 @@ func _ready() -> void:
 	_overlay.focus_mode = Control.FOCUS_NONE
 	_overlay.toggled.connect(func(on: bool) -> void: overlay_changed.emit(on))
 	col.add_child(_overlay)
+	var light := CheckButton.new()
+	light.text = "Light (off: the whole cave lit)"
+	light.button_pressed = true
+	light.focus_mode = Control.FOCUS_NONE
+	light.toggled.connect(func(on: bool) -> void: light_changed.emit(on))
+	col.add_child(light)
 	_status = Label.new()
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.add_theme_font_size_override("font_size", 13)

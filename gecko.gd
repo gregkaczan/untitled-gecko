@@ -16,7 +16,7 @@ extends Node2D
 
 signal ticked                  # The end of a physics tick: body, chain and blobs are this tick's (the camera follows on it)
 # Events for the sounds and the ambience (sound.gd, ambience.gd).
-signal stepped(at: Vector2)    # A foot planted at the end of a step
+signal stepped(at: Vector2, front: bool)   # A foot planted at the end of a step: where, and whether a front foot
 signal bit(at: Vector2)        # A bite landed there
 signal swallowed               # A piece went down
 signal tongue_shot             # The tongue left the mouth
@@ -2077,7 +2077,10 @@ func _update_feet(dt: float) -> void:
 				f.planted = true
 				f.anchor = f.step_to
 				f.pos = f.anchor
-				stepped.emit(f.pos)
+				# A step sounds only when the body is going somewhere: the
+				# feet re-step against a wall too, and that is no walk.
+				if absf(speed_along) > 20.0:
+					stepped.emit(f.pos, f.end > 0.0)
 			else:
 				# The step's arc, no higher than the leg's drop: flat in a passage.
 				var drop := (hip - f.step_to).dot(up) - FOOT_LIFT

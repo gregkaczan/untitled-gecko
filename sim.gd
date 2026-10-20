@@ -216,6 +216,12 @@ func _ready() -> void:
 	add_child(_light_sprite)
 
 
+# The light pass and its overlay on or off (the debug panel).
+func set_light(on: bool) -> void:
+	light_on = on
+	_light_sprite.visible = on
+
+
 # Daylight: the open cells of rect (world px) are lit with colour every
 # tick, and the light spreads from there. An empty rect is no daylight.
 func set_daylight(rect: Rect2, color: Color) -> void:

@@ -296,6 +296,9 @@ func _ready() -> void:
 		get_tree().paused = false)
 	_panel.pixel_size_changed.connect(func(v: float) -> void: blobs.set_pixel_size(v))
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
+	_panel.light_changed.connect(func(on: bool) -> void:
+		if sim:
+			sim.set_light(on))
 	if picked.is_empty() and _demo_name == "":
 		_pick_level()
 	_reset()
