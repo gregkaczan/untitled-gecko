@@ -1115,6 +1115,11 @@ func _update_chain(dt: float) -> void:
 		new_head = head + to.normalized() * minf(to.length(), HEAD_SPEED * dt)
 	if to.length() > 2.0:
 		dir = to.normalized()
+		# The snout drawing back from a wall moves against the facing; that
+		# is not a turn, and laying the body behind a backward heading
+		# folds it up the wall. The body stays laid the way it faces.
+		if clinging and dir.dot(_tangent() * facing) < -0.3:
+			dir = _tangent() * facing
 	elif clinging:
 		dir = _tangent() * facing
 	if clinging:

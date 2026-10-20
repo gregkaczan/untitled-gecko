@@ -26,6 +26,8 @@ from concurrent.futures import ThreadPoolExecutor
 CROP_W, CROP_H = 200, 140
 FLICKER = 0.35            # share of the silhouette that changes in one frame, outside a turn (legs stepping is ~0.12)
 TURN_GRACE = 20           # ticks after a facing flip where the body folds round by design
+SPAWN_GRACE = 12          # first ticks: the gecko settles onto its spawn
+LAND_GRACE = 12           # ticks after a landing: the feet re-seat and the chain catches up
 FRAGMENT = 8              # px of silhouette not attached to its largest piece
 SHIFTS = range(-2, 3)     # px of extra alignment searched each way
 MIN_MASK = 150            # px: smaller masks (gecko off screen or hidden) are skipped
@@ -142,9 +144,14 @@ def frame_positions(trace):
 
 
 def turn_ticks(trace):
-    """Ticks inside the grace after a facing flip, from the t lines."""
-    out = set()
+    """Ticks where a big silhouette change is by design: the grace after
+    a facing flip (the body folds round), the first ticks (settling onto
+    the spawn), every tick in the air (the body stretches, the legs
+    hang) and the grace after a landing (feet re-seat, the chain catches
+    up), from the t lines."""
+    out = set(range(0, SPAWN_GRACE + 1))
     last = None
+    last_state = None
     with open(trace) as f:
         for line in f:
             if not (line.startswith("t") and line[1:2].isdigit()):
@@ -152,12 +159,21 @@ def turn_ticks(trace):
             parts = line.split()
             tick = int(parts[0][1:])
             facing = None
+            state = None
             for kv in parts[1:]:
                 if kv.startswith("facing="):
                     facing = kv[7:]
+                elif kv.startswith("state="):
+                    state = kv[6:]
             if last is not None and facing != last:
                 out.update(range(tick, tick + TURN_GRACE))
+            if state != "cling":
+                out.add(tick)
+                out.add(tick + 1)
+            elif last_state is not None and last_state != "cling":
+                out.update(range(tick, tick + LAND_GRACE))
             last = facing
+            last_state = state
     return out
 
 
@@ -190,7 +206,7 @@ def analyze_run(run_dir):
         if change > FLICKER and t1 not in turning:
             events.append((t1, round(change, 3)))
         fr = fragments(m1)
-        if fr >= FRAGMENT:
+        if fr >= FRAGMENT and t1 not in turning:
             frag_events.append((t1, fr))
     changes.sort()
     med = changes[len(changes) // 2] if changes else 0.0
