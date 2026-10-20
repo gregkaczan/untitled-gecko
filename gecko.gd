@@ -173,7 +173,7 @@ const SWIM_KICK := 0.35        # Fraction of the period the legs push
 const BODY_COLOR := Color(0.56, 0.63, 0.40)
 const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
-const EYE_COLOR := Color(0.08, 0.07, 0.06)
+const EYE_COLOR := Color.BLACK
 const MOUTH_COLOR := Color(0.24, 0.08, 0.10)
 const LIFT_EASE := 1.0         # Px a tick the drawn body's lift moves between its lifted line and a passage's middle
 const IDLE_AFTER := 2.0        # Seconds of nothing happening before the idle animations begin
@@ -2242,7 +2242,7 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 
 # The face: the snout blob, and marks on the blob layer's pixel grid,
 # drawn over the body by the layer itself so they are as crisp as its
-# pixels: the eye, a 4 px square a cell below the head's rim, and what
+# pixels: the eye, a black disc 4 px across a cell below the head's rim, and what
 # the idle animation adds. A blink or a lick shuts the eye to a 4 by 2
 # line on its lower side. A yawn lifts the snout, drops a jaw blob
 # (added to list) below it and opens the dark inside of the mouth
@@ -2289,7 +2289,7 @@ func _face(list: Array) -> Array:
 	if shut:
 		marks.append([eye - ax - along * 2.0 - across, along * 4.0 + across * 2.0, EYE_COLOR])
 	else:
-		marks.append([eye + Vector2(-2.0, -2.0), 4.0, EYE_COLOR])
+		marks.append([eye + Vector2(-2.0, -2.0), 4.0, EYE_COLOR, true])
 	if lick > 0.0:
 		var m := _mouth()
 		var ctrl := chain.head() + look * (SNOUT + 8.0) + up * 3.0

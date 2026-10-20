@@ -10,7 +10,8 @@
 # set_marks([[pos, size, color], ...]) for flat rectangles (an eye, a
 # mouth) drawn over the composite on the same pixel grid, so they come
 # out as crisp as the body does; size is a float for a square or a
-# Vector2. set_pixel_size(sz) switches the grid at runtime.
+# Vector2, or a disc with a fourth element true. set_pixel_size(sz)
+# switches the grid at runtime.
 #
 # The grid's origin is set by the camera's follow (set_origin, main.gd):
 # its lines lie at origin + k * pixel_sz in the world, with the origin
@@ -108,7 +109,11 @@ func _draw_marks() -> void:
 		var p: Vector2 = ((m[0] - origin) / pixel_sz).floor()
 		var sz: Vector2 = m[1] if m[1] is Vector2 else Vector2(m[1], m[1])
 		var n: Vector2 = (sz / pixel_sz).round().max(Vector2.ONE)
-		_marks_canvas.draw_rect(Rect2(p, n), m[2])
+		if m.size() > 3 and m[3]:
+			# A disc: [pos, size, color, true], filling the rect's inscribed circle
+			_marks_canvas.draw_circle(p + n * 0.5, n.x * 0.5, m[2])
+		else:
+			_marks_canvas.draw_rect(Rect2(p, n), m[2])
 
 
 # Switch the blob grid: both viewports resize and the screen sprite
