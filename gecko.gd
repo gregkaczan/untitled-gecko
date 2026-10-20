@@ -51,13 +51,13 @@ const CHEW_MOUTH := 3.0        # Px the mouth mark opens per bite: the lips part
 const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
 # The surfaces that will not be held (_surface_rules): off a floor
 # (up.y above SLICK_UP) a planted foot on moss drops the gecko, a
-# falling drop within DROP_CELLS of the body knocks it off, HOT_HOLD
-# seconds of a foot within HOT_CELLS of lava lift it, CRUMBLE_HOLD of a
+# falling drop within DROP_REACH of the body knocks it off, HOT_HOLD
+# seconds of a foot within HOT_REACH of lava lift it, CRUMBLE_HOLD of a
 # foot on crumbling rock brings CRUMBLE_R of it down, and planted feet
 # on a loose heap steeper than SCREE_UP wake the grains under them.
 const SLICK_UP := -0.7
-const DROP_CELLS := 3
-const HOT_CELLS := 5
+const DROP_REACH := 12.0       # Px: a falling drop this near the body knocks it off
+const HOT_REACH := 20.0        # Px: lava this near a foot heats it
 const HOT_HOLD := 1.0
 const CRUMBLE_HOLD := 1.0
 const CRUMBLE_R := 10.0
@@ -436,7 +436,7 @@ func _physics_process(dt: float) -> void:
 	else:
 		_chew_t = 0.0
 		_digging = false
-	var in_water: bool = map.water_near(pos, 1)
+	var in_water: bool = map.water_near(pos, _cells(4.0))
 	if in_water and not clinging and not swimming and not tongue_anchored:
 		swimming = true
 		splashed.emit(pos)
@@ -1011,7 +1011,7 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 			_swim_phase = minf(_swim_phase + dt / SWIM_PERIOD, 1.0)
 			if _swim_phase >= 1.0:
 				_swim_phase = 0.0
-	if vel.y < 0.0 and not map.water_near(pos + Vector2(0.0, -RIDE_H), 1):
+	if vel.y < 0.0 and not map.water_near(pos + Vector2(0.0, -RIDE_H), _cells(4.0)):
 		vel.y = 0.0
 	# A current carries the swimmer with the water, on top of the swim:
 	# the kick's mean of 120 px/s makes no way against a faster flow.
@@ -1045,13 +1045,13 @@ func _surface_rules(dt: float) -> void:
 			_drop(SLIP_NO_CLING)
 			slipped.emit()
 			return
-		if map.lava_near(f.pos, HOT_CELLS):
+		if map.lava_near(f.pos, _cells(HOT_REACH)):
 			hot = true
 		if map.crumble_world(f.pos):
 			crumb_at = f.pos
 		if up.y > SCREE_UP and map.loose_at_world(f.pos):
 			map.wake(f.pos, SCREE_R)
-	if off_floor and not swimming and map.drop_near(pos, DROP_CELLS):
+	if off_floor and not swimming and map.drop_near(pos, _cells(DROP_REACH)):
 		_drop(SLIP_NO_CLING)
 		slipped.emit()
 		return
@@ -1221,7 +1221,7 @@ func _hold_tongue() -> void:
 	if not clinging:
 		return
 	if tongue_chunk < 0:
-		if not map.solid_near(tongue_tip, 1):
+		if not map.solid_near(tongue_tip, _cells(4.0)):
 			_release_tongue()
 		elif tongue_mode == 2:
 			straining = true
@@ -1291,7 +1291,7 @@ func _update_gape(dt: float) -> void:
 # Reeling in: the body flies at the anchor and clings where it arrives.
 # An anchor whose rock gets destroyed lets go.
 func _update_pull(dt: float) -> void:
-	if not map.solid_near(tongue_tip, 1):
+	if not map.solid_near(tongue_tip, _cells(4.0)):
 		_release_tongue()
 		return
 	var to := tongue_tip - pos
@@ -1494,6 +1494,13 @@ func _short_wall_ahead() -> bool:
 # The clearance the body centre keeps from rock: BODY_R, less in a
 # squeeze, where the passage is narrower than that allows, and growing
 # back at SQUEEZE_RECOVER after one.
+# A reach in px as cells of the senses' grid: the near tests count
+# cells, and a count set on 4 px cells reached half as far on 2 px
+# ones (the swim flickered at a 2 px water line).
+func _cells(px: float) -> int:
+	return int(ceil(px / map.CELL))
+
+
 func _clear_r() -> float:
 	return _sq_r
 
@@ -2121,7 +2128,7 @@ func _update_feet(dt: float) -> void:
 				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * arc * sin(PI * f.step_t)
 			continue
 		if f.planted:
-			if map.solid_near(f.anchor, 1) and f.anchor.distance_to(hip) < MAX_LEG:
+			if map.solid_near(f.anchor, _cells(4.0)) and f.anchor.distance_to(hip) < MAX_LEG:
 				f.pos = f.anchor
 			else:
 				f.planted = false
