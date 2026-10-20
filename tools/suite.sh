@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Runs the movement suite: every scene and script in tests/scenes.json,
+# without a sound (Godot's dummy audio driver on every run that has a window),
 # headless on the bitmap world with the trace on, each to
 # runs/<scene>/<script>/trace.log, then tools/analyze.py over the lot.
 #
@@ -53,15 +54,15 @@ run_one() {
   if [[ "$FRAMES" == 1 && "$ONSCREEN" != 1 ]] && command -v xvfb-run >/dev/null; then
     rm -f "$dir"/f*.png
     VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
-      timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan \
+      timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan --audio-driver Dummy \
       --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
   elif [[ "$FRAMES" == 1 ]]; then
     rm -f "$dir"/f*.png
     GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
-      timeout 600 "$GODOT" --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
+      timeout 600 "$GODOT" --audio-driver Dummy --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
   elif [[ "$SIM" == 1 ]]; then
     VK_ICD_FILENAMES="$SIM_ICD" GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
-      timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan \
+      timeout 600 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan --audio-driver Dummy \
       --path . --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
   else
     GECKO_WORLD=bitmap GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \

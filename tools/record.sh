@@ -20,10 +20,10 @@ rm -f "$dir"/f*.png "$dir"/f*.png.import
 export GODOT="${GODOT:-$HOME/.local/bin/godot}"
 if [[ "${ONSCREEN:-0}" == 1 ]]; then
   GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
-    timeout 900 "$GODOT" --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
+    timeout 900 "$GODOT" --audio-driver Dummy --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
 else
   VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json GECKO_SCENE="$spec" GECKO_TRACE=1 GECKO_SEED=1 \
-    timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan \
+    timeout 900 xvfb-run -a -s "-screen 0 1920x1080x24" "$GODOT" --display-driver x11 --rendering-driver vulkan --audio-driver Dummy \
     --path . --write-movie "$dir/f.png" --fixed-fps 60 --disable-vsync > "$dir/trace.log" 2>&1 || true
 fi
 echo "$spec: $(grep -c '^t' "$dir/trace.log") ticks, $(ls "$dir"/f*.png 2>/dev/null | wc -l) frames"
