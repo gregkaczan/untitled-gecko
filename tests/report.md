@@ -31,7 +31,7 @@ Compared against baseline baseline.json.
 | clutch_gulf_grapple:cl_gulf_grapple | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 236 | ok |
 | clutch_hall:cl_hall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 | 3 |  | 926 | ok |
 | clutch_hatch:cl_hatch | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 544 | ok |
-| clutch_leap:cl_leap | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 926 | ok |
+| clutch_leap:cl_leap | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 913 | ok |
 | clutch_pinch:cl_pinch | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 321 | ok |
 | clutch_pit:cl_pit | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  | 1 | 585 | ok |
 | clutch_pool:cl_pool | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 | 1 | 972 | ok |
@@ -80,7 +80,7 @@ Compared against baseline baseline.json.
 | pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  (-3) |  |  | 955 | ok |
 | pool:swim_across | pass |  (-1) |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  |  |  (-4) |  |  | 1000 | ok |
 | pool_bank_slope:swim_across | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  (-2) |  | 1 | 961 | ok |
-| pool_current:swim_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 523 | ok |
+| pool_current:swim_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 521 | ok |
 | pool_drop:float | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 441 | ok |
 | shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  |  |  | 1159 | ok |
 | slope_down_10:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  |  |  | 1179 | ok |
