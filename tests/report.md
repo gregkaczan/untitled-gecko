@@ -1,6 +1,6 @@
 # Movement suite report
 
-Runs: 119, passing: 119, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 125, passing: 125, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 Compared against baseline baseline.json.
 
@@ -38,6 +38,7 @@ Compared against baseline baseline.json.
 | clutch_shaft:cl_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 614 | ok |
 | clutch_turn:cl_turn | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1 | 806 | ok |
 | corner_climb:wall_ceiling | pass |  (-2) |  (-2) |  |  |  |  |  |  |  |  |  |  |  |  |  (-2) | 3 (+3) |  | 1602 | ok |
+| crumble_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 757 | ok |
 | dig_45:dig_45 | pass |  |  |  |  |  |  |  |  |  |  (-2) |  |  |  |  |  |  |  | 215 | ok |
 | dig_level_wall:dig_level | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 312 | ok |
 | dig_shaft:dig_shaft | pass |  |  (-13) |  |  |  |  |  |  |  |  (-3) |  |  |  |  |  (-1) |  |  | 208 | ok |
@@ -62,11 +63,15 @@ Compared against baseline baseline.json.
 | gap_lower_16:traverse | pass |  (-1) |  (-2) |  |  |  |  |  |  |  |  (-4) |  |  |  |  | 1 (-6) |  |  | 1153 | ok |
 | gap_lower_32:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1 | 1234 | ok |
 | gap_lower_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  | 1338 | ok |
+| gas_pocket:dig_pocket | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 357 | ok |
 | jump_flat:jump_right | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  |  |  | 692 | ok |
 | jump_flat:jump_up | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 129 | ok |
 | jump_wall:jump_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 213 | ok |
+| moss_bitten:bite_climb | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 652 | ok |
+| moss_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 561 | ok |
 | notch_1:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1165 | ok |
 | notch_2:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1166 | ok |
+| notch_climb:bite_climb | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 652 | ok |
 | notch_deep:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  |  | 1176 | ok |
 | notch_wide_deep:traverse | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  | 2 (-2) |  |  | 1154 | ok |
 | overhang_shelf_under:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1163 | ok |
@@ -75,6 +80,7 @@ Compared against baseline baseline.json.
 | pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  (-3) |  |  | 955 | ok |
 | pool:swim_across | pass |  (-1) |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  |  |  (-4) |  |  | 1000 | ok |
 | pool_bank_slope:swim_across | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  (-2) |  | 1 | 961 | ok |
+| pool_current:swim_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 523 | ok |
 | pool_drop:float | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 441 | ok |
 | shelf_lip:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  |  |  | 1159 | ok |
 | slope_down_10:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  |  |  |  |  | 1179 | ok |

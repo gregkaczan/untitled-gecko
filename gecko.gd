@@ -24,6 +24,9 @@ signal tongue_hit(at: Vector2) # The tip met something solid (stuck or struck)
 signal splashed(at: Vector2)   # Into the water
 signal landed(speed: float)    # Onto a surface from the air or the water, at that speed
 signal jumped
+signal slipped                 # Dropped off a surface: moss, hot rock, a drop's hit
+signal crumbled(at: Vector2)   # Rock gave way under a foot there
+signal blasted                 # A gas burst threw the gecko
 
 const Chain = preload("res://chain.gd")
 
@@ -47,6 +50,22 @@ const CHEW_PERIOD := 0.4       # Seconds per bite: the jaw opens through the cyc
 const CHEW_SNAP := 0.25        # The last part of the cycle, over which the jaw shuts
 const CHEW_MOUTH := 3.0        # Px the mouth mark opens per bite: the lips part, the head keeps its shape
 const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
+# The surfaces that will not be held (_surface_rules): off a floor
+# (up.y above SLICK_UP) a planted foot on moss drops the gecko, a
+# falling drop within DROP_CELLS of the body knocks it off, HOT_HOLD
+# seconds of a foot within HOT_CELLS of lava lift it, CRUMBLE_HOLD of a
+# foot on crumbling rock brings CRUMBLE_R of it down, and planted feet
+# on a loose heap steeper than SCREE_UP wake the grains under them.
+const SLICK_UP := -0.7
+const DROP_CELLS := 3
+const HOT_CELLS := 5
+const HOT_HOLD := 1.0
+const CRUMBLE_HOLD := 1.0
+const CRUMBLE_R := 10.0
+const SCREE_UP := -0.85
+const SCREE_R := 6.0
+const SLIP_NO_CLING := 0.35    # After a slip, no cling for this long: the fall is seen and the same cells are not caught again at once
+const BLAST_SNUFF := 4.0       # Seconds the glow is out after a gas burst
 const BURROW_SLOW := 0.3       # Walking speed through loose grains (a bed of sand), as a fraction of the walk
 const PUSH_R_FRONT := 8.0      # Radius of the body's push on loose grains, head to mid-body (sim_map.gd)
 const PUSH_R_BACK := 5.0       # And mid-body to the tail's root
@@ -225,6 +244,9 @@ var _gape_want := false        # This tick a piece is coming in: the mouth opens
 var _gape_chew := false        # The gape is a bite's: drawn as parted lips, not the yawn's dropped jaw
 var extra_blobs: Array = []    # Blobs drawn with the body's by the blob layer: the slugs (main.gd sets it before the tick)
 var glow_boost := 0.0          # Seconds left of the brighter glow a swallowed slug gives (main.gd reads it)
+var glow_snuff := 0.0          # Seconds left with the glow out after a gas burst
+var _heat := 0.0               # Seconds a foot has been on hot rock
+var _crumble_load := 0.0       # Seconds a foot has been on crumbling rock
 var _agape := 0.0              # Seconds left of holding the mouth open after a swallow
 var _block_cell = null         # The cell that stopped this tick's walk, null when none
 var _push_ticks := 0           # Ticks in a row the walk has been shoving the same lump
@@ -374,6 +396,7 @@ func _physics_process(dt: float) -> void:
 	no_cling = maxf(no_cling - dt, 0.0)
 	_gulp = maxf(_gulp - dt, 0.0)
 	glow_boost = maxf(glow_boost - dt, 0.0)
+	glow_snuff = maxf(glow_snuff - dt, 0.0)
 	_dig_aim = Vector2.ZERO
 	if not _squeeze:
 		_sq_r = move_toward(_sq_r, BODY_R, SQUEEZE_RECOVER)
@@ -425,6 +448,7 @@ func _physics_process(dt: float) -> void:
 			inp = Vector2.ZERO
 			jump = false
 		_update_clinging(inp, jump, dt)
+		_surface_rules(dt)
 	else:
 		_update_airborne(inp, dt)
 	_update_tongue(dt)
@@ -981,7 +1005,10 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 				_swim_phase = 0.0
 	if vel.y < 0.0 and not map.water_near(pos + Vector2(0.0, -RIDE_H), 1):
 		vel.y = 0.0
-	if not _move(vel * dt):
+	# A current carries the swimmer with the water, on top of the swim:
+	# the kick's mean of 120 px/s makes no way against a faster flow.
+	var flow: Vector2 = map.current_at(pos)
+	if not _move((vel + flow) * dt):
 		vel = Vector2.ZERO
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
@@ -991,6 +1018,60 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 		if inp.normalized().dot(-n) > 0.3:
 			swimming = false
 			_land(n)
+
+
+# What the surface under the feet does to the hold: see the constants.
+func _surface_rules(dt: float) -> void:
+	if not clinging:
+		return
+	var off_floor := up.y > SLICK_UP
+	var hot := false
+	var crumb_at := Vector2.INF
+	for f in feet:
+		if not f.planted:
+			continue
+		# Moss off a floor drops the gecko, unless it is chewing: the jaws
+		# in the rock hold it, so a mossy wall is climbed by eating the
+		# coat off ahead of the feet, slowly, and not by walking.
+		if off_floor and not chewing and map.slick_world(f.pos):
+			_drop(SLIP_NO_CLING)
+			slipped.emit()
+			return
+		if map.lava_near(f.pos, HOT_CELLS):
+			hot = true
+		if map.crumble_world(f.pos):
+			crumb_at = f.pos
+		if up.y > SCREE_UP and map.loose_at_world(f.pos):
+			map.wake(f.pos, SCREE_R)
+	if off_floor and not swimming and map.drop_near(pos, DROP_CELLS):
+		_drop(SLIP_NO_CLING)
+		slipped.emit()
+		return
+	_heat = _heat + dt if hot else maxf(_heat - dt, 0.0)
+	if _heat >= HOT_HOLD:
+		_heat = 0.0
+		_drop(SLIP_NO_CLING)
+		slipped.emit()
+		return
+	_crumble_load = _crumble_load + dt if crumb_at != Vector2.INF else maxf(_crumble_load - dt * 2.0, 0.0)
+	if _crumble_load >= CRUMBLE_HOLD:
+		_crumble_load = 0.0
+		map.crumble(crumb_at, CRUMBLE_R)
+		crumbled.emit(crumb_at)
+		_drop(SLIP_NO_CLING)
+
+
+# A gas burst from a point (main.gd): thrown away from it, the hold
+# lost, the glow out for a while.
+func blast(from: Vector2, speed: float) -> void:
+	_drop()
+	swimming = false
+	var away := (pos - from).normalized()
+	if away == Vector2.ZERO:
+		away = Vector2.UP
+	vel = away * speed
+	glow_snuff = BLAST_SNUFF
+	blasted.emit()
 
 
 # The mouth is at the snout's tip, on its underside, well away from the eye.
@@ -1245,13 +1326,16 @@ func _land(n: Vector2) -> void:
 	feet_short = 0.0
 
 
-func _drop() -> void:
+# Lets go of the surface (the feet lost, or a surface that will not
+# be held, _surface_rules): a fall that keeps the walk's speed, with
+# no cling for a while so the drop is seen.
+func _drop(no_cling_for := NO_CLING_TIME) -> void:
 	clinging = false
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
 	vel = _tangent() * speed_along
 	speed_along = 0.0
-	no_cling = NO_CLING_TIME
+	no_cling = no_cling_for
 	_unplant()
 
 

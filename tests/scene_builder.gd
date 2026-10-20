@@ -30,12 +30,25 @@ class_name SceneBuilder
 extends RefCounted
 
 const PATH := "res://tests/scenes.json"
-const LEVELS := ["res://levels/clutch.json"]
+const LEVELS_DIR := "res://levels"
+
+
+# Every level file in levels/ (the clutch, and what the editor saves).
+static func level_files() -> Array:
+	var out: Array = []
+	var dir := DirAccess.open(LEVELS_DIR)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		if f.ends_with(".json"):
+			out.append(LEVELS_DIR + "/" + f)
+	out.sort()
+	return out
 
 
 static func load_all() -> Dictionary:
 	var data: Dictionary = _load(PATH)
-	for path in LEVELS:
+	for path in level_files():
 		var level: Dictionary = _load(path)
 		for key in ["bases", "scripts", "scenes"]:
 			if not data.has(key):
@@ -120,6 +133,21 @@ static func _rect(op: Array, i: int) -> Rect2:
 	return Rect2(float(op[i]), float(op[i + 1]), float(op[i + 2]), float(op[i + 3]))
 
 
+# The ops of one name in a scene's base and its own terrain, for what
+# main.gd and ambience.gd apply themselves (gas pockets, currents,
+# drip zones), since the build runs on a CPU map the sim is made from.
+static func ops_of(scene: Dictionary, bases: Dictionary, name: String) -> Array:
+	var out: Array = []
+	var ops: Array = []
+	if scene.has("base"):
+		ops.append_array(bases.get(scene.base, []))
+	ops.append_array(scene.get("terrain", []))
+	for op in ops:
+		if String(op[0]) == name:
+			out.append(op)
+	return out
+
+
 static func _apply(map: Node2D, op: Array) -> void:
 	match String(op[0]):
 		"blank":
@@ -158,6 +186,9 @@ static func _apply(map: Node2D, op: Array) -> void:
 				map.set_cell_world(Vector2(x, float(op[4])), 1)
 		"cell":
 			map.set_cell_world(Vector2(op[1], op[2]), int(op[3]))
+		"cells":
+			# ["cells", path]: the whole cell map from a PNG the editor saved.
+			map.load_cells_png(String(op[1]))
 		"water":
 			map.water_rect(_rect(op, 1))
 		"copper":
@@ -169,6 +200,19 @@ static func _apply(map: Node2D, op: Array) -> void:
 			# set cell by cell on the first floor below (x, y), or hanging
 			# from the first ceiling above, only where there is air.
 			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor")
+		"moss":
+			# ["moss", x, y, w, h]: the rock faces inside the rect are coated.
+			map.coat_moss(_rect(op, 1))
+		"crumble":
+			# ["crumble", x, y, w, h]: the rock inside the rect crumbles under a hold.
+			map.paint_kind(_rect(op, 1), map.CELL_ROCK, map.CELL_CRUMBLE)
+		"gas":
+			# ["gas", x, y, w, h]: a sealed pocket of gas (main.gd bursts it).
+			map.material_rect(_rect(op, 1), map.CELL_GAS)
+		"current", "drips":
+			# ["current", x, y, w, h, dx, dy, speed] and ["drips", x0, x1, y,
+			# rate]: read by main.gd and ambience.gd (ops_of), not built here.
+			pass
 		"stalactites", "stalagmites":
 			# [op, x0, x1, y, n, seed, hmin, hmax]: n cones of rock between
 			# x0 and x1 hanging from the ceiling line y (stalactites) or
@@ -257,6 +301,15 @@ static func _column(map: Node2D, x: float, y0: float, y1: float, w: float, seed_
 		var rw := maxf(snappedf(lerpf(cell * 1.5, w, pow(k, 1.6)), cell), cell)
 		var cx := snappedf(x + lean * (t - 0.5) * (y1 - y0), cell)
 		map.fill_rect(Rect2(cx - rw * 0.5, y0 + r * cell, rw, cell))
+
+
+# For the editor: a stamp or a cone placed by hand.
+static func stamp(map: Node2D, name: String, at: Vector2, where: String) -> void:
+	_stamp(map, name, at, where)
+
+
+static func cone(map: Node2D, at: Vector2, h: float, down: bool) -> void:
+	_cones(map, at.x - 2.0, at.x + 2.0, at.y, 1, int(at.x) + int(at.y), h, h, 1.0 if down else -1.0)
 
 
 static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> void:

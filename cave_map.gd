@@ -23,6 +23,9 @@ const SAND := Color(0.42, 0.36, 0.23)     # A bed or heap of sand: ground here, 
 const CLAY := Color(0.33, 0.22, 0.14)
 const LAVA := Color(0.80, 0.28, 0.05)     # A pool: neither solid nor water here, a glowing liquid in the sim
 const SHROOM := Color(0.42, 0.82, 0.46)  # Glowshroom flesh
+const MOSS := Color(0.20, 0.42, 0.20)    # Slippery moss
+const CRUMBLE := Color(0.46, 0.40, 0.33) # Crumbling rock, paler and dry
+const GAS := Color(0.05, 0.07, 0.04)     # A gas pocket: air with a tint
 const LAVA_TOP := Color(0.98, 0.62, 0.20)
 const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
 const BEDROCK := Color(0.10, 0.09, 0.13)  # Rock no bite opens
@@ -40,6 +43,9 @@ const CELL_LAVA := 6           # Lava: a drawn pool here (neither solid nor wate
 const CELL_HARD := 7           # Hard rock: a bite takes HARD_GIVE of its cells
 const CELL_BEDROCK := 8        # Bedrock: no bite opens it
 const CELL_SHROOM := 9         # Glowshroom: decor that is ground to the gecko and a green light in the sim; a bite takes it
+const CELL_MOSS := 10          # Slippery moss: a coat on rock, solid, but the feet cannot hold it off a floor; a bite takes it
+const CELL_CRUMBLE := 11       # Crumbling rock: gives way under a hold of a second (gecko.gd), to grains in the sim
+const CELL_GAS := 12           # A gas pocket: air that bursts when a bite opens it (main.gd)
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
@@ -146,7 +152,8 @@ func is_solid(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return true
 	var v := solid[y * W + x]
-	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK or v == CELL_SHROOM
+	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK \
+			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE
 
 
 # Loose grains live in the particle world only (sim_map.gd): here a bed
@@ -168,6 +175,127 @@ func is_water(x: int, y: int) -> bool:
 
 func is_water_world(p: Vector2) -> bool:
 	return is_water(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+
+
+# The surface rules' senses (gecko.gd): moss under a point, crumbling
+# rock under a point, lava within n cells, a falling drop (a water cell
+# with air under it) within n cells.
+func slick_world(p: Vector2) -> bool:
+	return _kind_world(p) == CELL_MOSS
+
+
+func crumble_world(p: Vector2) -> bool:
+	return _kind_world(p) == CELL_CRUMBLE
+
+
+func _kind_world(p: Vector2) -> int:
+	var x := int(floor(p.x / CELL))
+	var y := int(floor(p.y / CELL))
+	if x < 0 or y < 0 or x >= W or y >= H:
+		return CELL_AIR
+	return solid[y * W + x]
+
+
+func lava_near(p: Vector2, n: int) -> bool:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	for y in range(maxi(cy - n, 0), mini(cy + n, H - 1) + 1):
+		for x in range(maxi(cx - n, 0), mini(cx + n, W - 1) + 1):
+			if solid[y * W + x] == CELL_LAVA:
+				return true
+	return false
+
+
+func drop_near(p: Vector2, n: int) -> bool:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if is_water(x, y) and not is_water(x, y + 1) and not is_solid(x, y + 1):
+				return true
+	return false
+
+
+# Crumbling rock within radius of p gives way: to air here, to grains
+# in the sim (sim_map.gd).
+func crumble(p: Vector2, radius: float) -> void:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	var n := int(ceil(radius / CELL)) + 1
+	for y in range(maxi(cy - n, 0), mini(cy + n, H - 1) + 1):
+		for x in range(maxi(cx - n, 0), mini(cx + n, W - 1) + 1):
+			if solid[y * W + x] == CELL_CRUMBLE and Vector2((x + 0.5) * CELL, (y + 0.5) * CELL).distance_to(p) < radius:
+				solid[y * W + x] = CELL_AIR
+	_repaint(cx - n - 1, cy - n - 1, cx + n + 1, cy + n + 1)
+
+
+# Moss on the rock faces inside r: rock cells with an open neighbour.
+func coat_moss(r: Rect2) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
+	var coat: Array[Vector2i] = []
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			if solid[y * W + x] != CELL_ROCK:
+				continue
+			if not is_solid(x - 1, y) or not is_solid(x + 1, y) or not is_solid(x, y - 1) or not is_solid(x, y + 1):
+				coat.append(Vector2i(x, y))
+	for c in coat:
+		solid[c.y * W + c.x] = CELL_MOSS
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
+# Cells of one kind inside r become another (crumbling rock out of rock).
+func paint_kind(r: Rect2, from_kind: int, to_kind: int) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			if solid[y * W + x] == from_kind:
+				solid[y * W + x] = to_kind
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
+# A gas pocket burst: its cells are plain air now.
+func clear_gas(r: Rect2) -> void:
+	var x0 := int(floor(r.position.x / CELL))
+	var y0 := int(floor(r.position.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
+	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
+		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
+			if solid[y * W + x] == CELL_GAS:
+				solid[y * W + x] = CELL_AIR
+	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
+
+
+# Currents: [rect, unit direction, speed] each (the scene's ops). The
+# gecko swimming in one is carried; the sim's water runs with it.
+var currents: Array = []
+
+
+func add_current(r: Rect2, dir: Vector2, speed: float) -> void:
+	currents.append([r, dir.normalized(), speed])
+
+
+func clear_currents() -> void:
+	currents.clear()
+
+
+func current_at(p: Vector2) -> Vector2:
+	for c in currents:
+		if c[0].has_point(p):
+			return c[1] * c[2]
+	return Vector2.ZERO
+
+
+# The bitmap's grains do not move: nothing to wake.
+func wake(_p: Vector2, _radius: float) -> void:
+	pass
 
 
 # True when any cell within n of the one under p is water. Particle water
@@ -390,6 +518,29 @@ func save_png(path: String) -> void:
 		_img.save_png(path)
 
 
+# The cells as a PNG for a level file (editor.gd): one pixel a cell,
+# its kind in the red channel, so it loads back exactly; the dump above
+# is the drawn look, for a glance.
+func save_cells_png(path: String) -> void:
+	var img := Image.create(W, H, false, Image.FORMAT_RGBA8)
+	for y in H:
+		for x in W:
+			img.set_pixel(x, y, Color8(solid[y * W + x], 0, 0, 255))
+	img.save_png(path)
+
+
+func load_cells_png(path: String) -> bool:
+	var img := Image.load_from_file(path)
+	if img == null or img.get_width() != W or img.get_height() != H:
+		push_error("no cell map at " + path)
+		return false
+	for y in H:
+		for x in W:
+			solid[y * W + x] = img.get_pixel(x, y).r8
+	repaint_all()
+	return true
+
+
 # Rock under the line from a to b (world px), from the line down to the
 # bottom of the map, between the two x's: a slope of any angle.
 func fill_below_line(a: Vector2, b: Vector2) -> void:
@@ -515,6 +666,8 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 				col = LAVA_TOP if y > 0 and solid[(y - 1) * W + x] == CELL_AIR else LAVA
 			elif v == CELL_COPPER:
 				col = COPPER
+			elif v == CELL_GAS:
+				col = GAS
 			elif is_solid(x, y):
 				var rim := not (is_solid(x - 1, y) and is_solid(x + 1, y) and is_solid(x, y - 1) and is_solid(x, y + 1))
 				var grain := _noise.get_noise_2d(x * 0.7, y * 0.7)
@@ -529,6 +682,10 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 						col = BEDROCK.lightened(0.12) if rim else BEDROCK
 					CELL_SHROOM:
 						col = SHROOM.lightened(0.15) if rim else SHROOM
+					CELL_MOSS:
+						col = MOSS.lightened(0.1) if rim else MOSS
+					CELL_CRUMBLE:
+						col = CRUMBLE.lightened(0.12) if rim else CRUMBLE + ROCK_VAR * grain
 					_:
 						col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)

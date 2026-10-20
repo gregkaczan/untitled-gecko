@@ -47,7 +47,7 @@ func is_solid(x: int, y: int) -> bool:
 		return not ignore_chunks
 	if c == sim.CT_LOOSE:
 		return not ignore_loose
-	return c == sim.CT_SOLID
+	return c == sim.CT_SOLID or c == sim.CT_SLICK or c == sim.CT_CRUMBLE
 
 
 # A loose grain's cell (sand, clay, the stone of a broken lump).
@@ -61,6 +61,47 @@ func loose_at_world(p: Vector2) -> bool:
 
 func is_water(x: int, y: int) -> bool:
 	return _cls(x, y) == 1
+
+
+func slick_world(p: Vector2) -> bool:
+	return _cls(int(floor(p.x / CELL)), int(floor(p.y / CELL))) == sim.CT_SLICK
+
+
+func crumble_world(p: Vector2) -> bool:
+	return _cls(int(floor(p.x / CELL)), int(floor(p.y / CELL))) == sim.CT_CRUMBLE
+
+
+func lava_near(p: Vector2, n: int) -> bool:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if _cls(x, y) == 3:
+				return true
+	return false
+
+
+# Crumbling rock gives way to grains: the ground within radius is
+# melted and sand poured into the hole a moment later (the readback
+# must see the cells empty first).
+func crumble(p: Vector2, radius: float) -> void:
+	sim.melt_circle(p, radius, _slot, false)
+	_slot = (_slot + 1) % 4
+	get_tree().create_timer(0.05).timeout.connect(func() -> void: sim.spawn_sand_disc(p, radius * 0.8))
+
+
+func wake(p: Vector2, radius: float) -> void:
+	sim.wake_circle(p, radius)
+
+
+func add_current(r: Rect2, dir: Vector2, speed: float) -> void:
+	super.add_current(r, dir, speed)
+	sim.set_currents(currents)
+
+
+func clear_currents() -> void:
+	super.clear_currents()
+	sim.set_currents(currents)
 
 
 # The chunk whose particle fills this cell, or -1 for the ground and air.
@@ -177,8 +218,12 @@ func copper_rect(r: Rect2) -> void:
 
 
 func material_rect(r: Rect2, kind: int) -> void:
-	sim.fill_rect(r, sim.material_of(kind))
+	if kind == CELL_GAS:
+		return
+	sim.fill_rect(r, sim.material_of(kind), sim.frac_of(kind))
 
 
 func material_circle(p: Vector2, radius: float, kind: int) -> void:
-	sim.fill_circle(p, radius, sim.material_of(kind))
+	if kind == CELL_GAS:
+		return
+	sim.fill_circle(p, radius, sim.material_of(kind), sim.frac_of(kind))

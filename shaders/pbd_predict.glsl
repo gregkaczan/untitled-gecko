@@ -28,6 +28,8 @@ const uint N_CAP = 8u;
 // Cell classes per render pixel, last tick's (render_write.glsl): 0 air,
 // 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell.
 const uint O_CT = 2073870u;
+const uint O_LP = 5573070u;   // light and flow parameters (sim.gd): from [96] two currents, 8 floats each: x0 y0 x1 y1 dx dy speed on
+
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }    // Read float from flat uint SSBO
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); } // Write float to flat uint SSBO
@@ -321,6 +323,20 @@ void main() {
             vy += dt * gravity;
         } else if (yield_s < 5.0) {
             vy += dt * gravity;
+        }
+    }
+
+    // --- Currents: water inside a flow rect is drawn toward the flow's
+    //     velocity, so a channel runs and carries what swims in it. ---
+    if (mat == 1u) {
+        for (uint ci = 0u; ci < 2u; ci++) {
+            uint cb = O_LP + 96u + ci * 8u;
+            if (rf(cb + 7u) < 0.5) continue;
+            if (px >= rf(cb) && px < rf(cb + 2u) && py >= rf(cb + 1u) && py < rf(cb + 3u)) {
+                float spd = rf(cb + 6u);
+                vx += (rf(cb + 4u) * spd - vx) * 0.12;
+                vy += (rf(cb + 5u) * spd - vy) * 0.12;
+            }
         }
     }
 

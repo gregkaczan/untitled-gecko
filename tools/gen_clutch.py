@@ -134,6 +134,19 @@ TERRAIN = [
     ["stalagmites", 560, 740, 984, 3, 4, 4, 8],
     ["stalactites", 1020, 1480, 284, 4, 5, 12, 32],
     ["column", 876, 184, 264, 20, 6],
+    # Surfaces that will not be held: moss on the hall's left wall (the
+    # first thing climbed, and it drops you: the lesson) and on the
+    # turning chamber's right wall, so the left wall is the climb; a
+    # curtain of drops down the turning chamber's right side from the
+    # corridor's ceiling; the dead end's neck walls crumble, so the
+    # lamp that leads nowhere drops you back; a gas pocket in the rock
+    # between the hall and the roll corridor, where a straight dig up
+    # from the hall would go.
+    ["moss", 256, 804, 12, 100],
+    ["moss", 180, 440, 12, 260],
+    ["drips", 100, 170, 344, 1.5],
+    ["crumble", 796, 268, 8, 72], ["crumble", 840, 268, 8, 72],
+    ["gas", 820, 736, 56, 36],
     # Glowshrooms: lamps along the route (the sim's light pass), decor
     # that is ground to the gecko and goes with a bite. Off the lines
     # the stations walk at speed, or small where on them.

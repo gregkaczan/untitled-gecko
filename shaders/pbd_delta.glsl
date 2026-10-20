@@ -534,6 +534,13 @@ void main() {
                 }
                 continue;
             } else {
+                // A waker (mode -5, the gecko's feet on a steep heap):
+                // loose grains in it are nudged down, so they wake and the
+                // heap flows from under the climber; nothing else moves.
+                if (melt < -4.5) {
+                    if (yield_s < 5.0 && !bonded && mat_i < 8u && mat_i != 1u) py += 0.6;
+                    continue;
+                }
                 // A pusher (the gecko's body, mode -1) shoves loose grains
                 // out of its way and nothing else: the ground it stands on
                 // stays, a lump is moved as one by the pull slot, and

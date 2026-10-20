@@ -20,6 +20,7 @@ var _surfaces: PackedVector2Array = []   # World points on water surfaces (cell 
 var _scan_t := 0.0
 var _drip_t := 2.0
 var _pending: Array = []       # [time left, position] drip sounds waiting for their drop to land
+var _zones: Array = []         # Drip zones: [x0, x1, y, rate, accumulator]: a ceiling segment that drips at rate a second
 var _rng := RandomNumberGenerator.new()
 
 
@@ -36,7 +37,15 @@ func reset() -> void:
 	_surfaces = []
 	_scan_t = 0.0
 	_pending.clear()
+	_zones.clear()
 	_drip_t = _rng.randf_range(1.0, 2.5)
+
+
+# ["drips", x0, x1, y, rate] ops from the scene: curtains of drops.
+func set_drip_zones(ops: Array) -> void:
+	_zones.clear()
+	for op in ops:
+		_zones.append([float(op[1]), float(op[2]), float(op[3]), float(op[4]), 0.0])
 
 
 func _physics_process(dt: float) -> void:
@@ -55,6 +64,15 @@ func _physics_process(dt: float) -> void:
 		if _pending[i][0] <= 0.0:
 			_sound.play("drip", _pending[i][1], _sound.DRIP_DB, 0.8, 1.3)
 			_pending.remove_at(i)
+	for z in _zones:
+		z[4] += z[3] * dt
+		while z[4] >= 1.0:
+			z[4] -= 1.0
+			var x := _rng.randf_range(z[0], z[1])
+			_map.spawn_drop(Vector2(x, z[2] + 3.0))
+			var fl = _map.ray_hit(Vector2(x, z[2] + 6.0), Vector2.DOWN, 800.0)
+			if fl != null:
+				_pending.append([sqrt(2.0 * maxf(fl.y - z[2], 1.0) / DRIP_FALL_G), fl])
 	if _gecko.swimming and _rng.randf() < BUBBLE_CHANCE:
 		_map.spawn_puff(_gecko.chain.head() + Vector2(0.0, -2.0), 1, Vector2(0.0, -20.0), 8.0, BUBBLE_LIFE)
 

@@ -23,6 +23,7 @@ static func ensure_actions() -> void:
 	_add("chew", [_key(KEY_E), _key(KEY_SHIFT), _button(JOY_BUTTON_X)])
 	_add("regenerate", [_key(KEY_R)])
 	_add("debug_toggle", [_key(KEY_F1)])
+	_add("edit_toggle", [_key(KEY_F2)])
 	_add("render_coarse", [_key(KEY_1)])
 	_add("render_fine", [_key(KEY_2)])
 	_add("scene_next", [_key(KEY_TAB)])

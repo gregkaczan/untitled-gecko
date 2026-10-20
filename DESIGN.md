@@ -440,6 +440,73 @@ What the first slice adds on top of the movement, each a first version
   the gecko's glow is brighter and greener for twenty seconds. Hunting
   and lighting the way are the same act.
 
+## Surfaces that will not be held
+
+Ways the cave resists free climbing and digging straight through, all
+first versions (2026-10-21), with no failure state: the gecko is
+dropped, thrown, slowed or left in the dark, never hurt. The decisions
+left open: a failure model (lava, falls), a full gut (a meter), a
+general grip model (dry moss that holds better, steep wet rock that
+slides) and how much is laid by hand against grown by rule.
+
+- Slippery moss: a coat of cells on rock faces (cell kind 10; in the
+  sim rock in its top fraction band, cell class 5). Solid to everything,
+  but off a floor (the body's up more than 45 degrees from straight up)
+  a planted foot on it drops the gecko, with 0.35 s of no cling so the
+  slip is seen. A bite takes it and leaves a hold. `["moss", x, y, w,
+  h]` coats the rock faces in a rect. In the clutch: the hall's left
+  wall (the first thing climbed, so the lesson is early and harmless)
+  and the turning chamber's right wall, so the left wall is the climb.
+- Drops: a falling water cell within three cells of a gecko on a wall
+  or ceiling knocks it off. The ambience's drips do it over pools, and
+  `["drips", x0, x1, y, rate]` hangs a curtain from a ceiling segment
+  (the turning chamber's right side, from the corridor's ceiling).
+- Hot rock: a second of a planted foot within five cells of lava lifts
+  the feet. Lava itself is not entered on purpose yet; standing in it
+  hops.
+- Crumbling rock (kind 11, class 6): a second's hold on it brings down
+  10 px round the foot, to air in the bitmap and to a pour of sand in
+  the sim, and the gecko with it. `["crumble", x, y, w, h]` turns the
+  rock in a rect. In the clutch: the dead end's neck walls, so the lamp
+  that leads nowhere drops you back into the corridor.
+- Scree: planted feet on a loose heap steeper than about 30 degrees
+  nudge the grains under them awake (capsule mode -5), so the heap
+  flows from under the climber. Sim only.
+- Gas pockets (kind 12, air with a tint): a sealed pocket whose wall a
+  bite or a strike opens (a cell on the ring round it reads open)
+  bursts: the gecko is thrown from its centre at 480 px/s, its hold
+  lost and its glow out for four seconds; the sim gets a blast and a
+  puff. `["gas", x, y, w, h]`. In the clutch: between the hall and the
+  roll corridor, where a straight dig up from the hall would go.
+- Currents: `["current", x, y, w, h, dx, dy, speed]` runs the water in
+  a rect; the sim's water is drawn to the flow and a swimming gecko is
+  carried with it on top of its kicks (mean about 170 px/s), so a flow
+  faster than that cannot be swum against. Two at most.
+
+Scenes guard each: `moss_wall` (the climb drops and ends on the floor),
+`moss_bitten` (a coat one bite tall is bitten off and the climb goes
+on), `notch_climb` (the same bites on bare rock), `crumble_wall`,
+`pool_current` and `gas_pocket`.
+
+## The map editor
+
+F2 opens the editor (`editor.gd`), a panel down the left: paints (every
+cell kind), stamps (the decor table's glowshrooms, a stalactite or
+stalagmite of the brush's size, a vine of four times the brush's
+length, a slug), the spawn point and the exit (dragged), the brush size
+(the wheel too), and Save, Load and Blank by name. The left button
+paints, the right erases. Every edit goes to the live world (the
+particle sim: an erase this tick and a fill the next, once the readback
+shows the cells empty; or the bitmap) and to an authoring cell map, the
+CPU map the sim was built from, kept for this. Save writes
+`levels/<name>.cells.png` (one pixel a cell, its kind in the red
+channel, exact) and `levels/<name>.json`: a base of those cells and one
+scene on it with the spawn, the exit, the vines and lumps, and the
+slugs. Every `levels/*.json` loads like the clutch (Tab cycles them,
+the suite runs any with scripts), so a painted level is a level.
+Painted gas pockets are found from the cells. `GECKO_EDIT_TEST=1`
+runs a headless round trip of save and load.
+
 ## Controls
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots

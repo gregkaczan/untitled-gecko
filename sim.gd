@@ -101,6 +101,12 @@ const MAT_SMOKE := 9                             # Ephemeral: rises and fades (t
 const MAT_SHROOM := 12                           # Glowshroom: the shooter's purple ore slot, made static, green and a light (hard coded in the shaders)
 const CT_SOLID := 2                              # Cell class of static solid (rock, hard rock, bedrock, copper)
 const CT_LOOSE := 4                              # Cell class of a loose grain (sand, clay, stone off a lump)
+const CT_SLICK := 5                              # Cell class of moss: rock in its top fraction band, solid but no hold for the feet
+const CT_CRUMBLE := 6                            # Cell class of crumbling rock: the band below, gives way under a hold
+const FRAC_MOSS := 0.097                         # Rock's fraction for moss (render_write.glsl reads the bands)
+const FRAC_CRUMBLE := 0.092
+const FRAC_MAX := 0.89                           # Random fractions stay under 0.089, below the bands
+const MODE_WAKE := -5.0                          # Capsule mode: nudges loose grains awake (pbd_delta.glsl)
 
 # Capsule slots: 0 to 3 melt (chew and brush, in turn), the body's two
 # pushers (loose grains shoved out of its way), the pull (the tongue's
@@ -379,7 +385,7 @@ func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO, life := -1.0) -
 	# The fraction is the material's variation, or for fire and smoke
 	# the life left (pbd_finalize.glsl: smoke loses about 0.00008 a
 	# tick, fire 0.00055), random unless given.
-	var encoded := float(mat) + (life if life >= 0.0 else _rng.randf_range(0.0, 0.99) * 0.1)
+	var encoded := float(mat) + (life if life >= 0.0 else _rng.randf_range(0.0, FRAC_MAX) * 0.1)
 	var p := PackedFloat32Array([pos.x, pos.y, vel.x, vel.y, pos.x, pos.y, 0.0, encoded])
 	_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, p.to_byte_array())
 	# A slot that once held a chunk's particle keeps its bonds: cleared.
@@ -409,7 +415,7 @@ func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0) -> int:
 		# frac, if given, is the fraction for the rest (a look: a vine's
 		# clay sits in the top band, render_write.glsl).
 		var cm: int = mats.get(c, mat)
-		var f: float = _rng.randf_range(0.0, 0.99) * 0.1 if (frac < 0.0 or mats.has(c)) else frac
+		var f: float = _rng.randf_range(0.0, FRAC_MAX) * 0.1 if (frac < 0.0 or mats.has(c)) else frac
 		var encoded := float(cm) + f
 		var rec := PackedFloat32Array([p.x, p.y, 0.0, 0.0, p.x, p.y, 0.0, encoded])
 		_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, rec.to_byte_array())
@@ -512,23 +518,23 @@ func spawn_chunk_disc(centre: Vector2, radius: float, mat: int) -> int:
 	return spawn_chunk(list, mat)
 
 
-func fill_rect(r: Rect2, mat := MAT_ROCK) -> void:
+func fill_rect(r: Rect2, mat := MAT_ROCK, frac := -1.0) -> void:
 	var y := floorf(r.position.y / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
 	while y < r.end.y:
 		var x := floorf(r.position.x / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
 		while x < r.end.x:
-			spawn_particle(Vector2(x, y), mat)
+			spawn_particle(Vector2(x, y), mat, Vector2.ZERO, frac)
 			x += PIXEL_SZ
 		y += PIXEL_SZ
 
 
-func fill_circle(centre: Vector2, radius: float, mat := MAT_ROCK) -> void:
+func fill_circle(centre: Vector2, radius: float, mat := MAT_ROCK, frac := -1.0) -> void:
 	var y := floorf((centre.y - radius) / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
 	while y < centre.y + radius:
 		var x := floorf((centre.x - radius) / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
 		while x < centre.x + radius:
 			if Vector2(x, y).distance_to(centre) < radius:
-				spawn_particle(Vector2(x, y), mat)
+				spawn_particle(Vector2(x, y), mat, Vector2.ZERO, frac)
 			x += PIXEL_SZ
 		y += PIXEL_SZ
 
@@ -702,7 +708,7 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 		for xi in RENDER_W:
 			var kind := kinds[yi * RENDER_W + xi]
 			var b := O_PT + idx * 8
-			if kind == CaveMap.CELL_AIR:
+			if kind == CaveMap.CELL_AIR or kind == CaveMap.CELL_GAS:
 				_wf(data, b + 0, -1000.0)
 				_wf(data, b + 1, -1000.0)
 				_wf(data, b + 4, -1000.0)
@@ -720,17 +726,62 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 					cls = 3
 				elif mat == MAT_SAND or mat == MAT_CLAY:
 					cls = CT_LOOSE
+				elif kind == CaveMap.CELL_MOSS:
+					cls = CT_SLICK
+				elif kind == CaveMap.CELL_CRUMBLE:
+					cls = CT_CRUMBLE
 				data.encode_u32((O_CT + yi * RENDER_W + xi) * 4, cls)
 				_wf(data, b + 0, x)
 				_wf(data, b + 1, y)
 				_wf(data, b + 4, x)
 				_wf(data, b + 5, y)
-				_wf(data, b + 7, float(mat) + _rng.randf_range(0.0, 0.99) * 0.1)
+				var fr := frac_of(kind)
+				_wf(data, b + 7, float(mat) + (fr if fr >= 0.0 else _rng.randf_range(0.0, FRAC_MAX) * 0.1))
 			_wf(data, b + 2, 0.0)
 			_wf(data, b + 3, 0.0)
 			_wf(data, b + 6, 0.0)
 			idx += 1
 	return data
+
+
+# The fraction a cell of the map's kind is built with, or -1 for random:
+# moss and crumbling rock are rock in a band of their own.
+static func frac_of(kind: int) -> float:
+	match kind:
+		CaveMap.CELL_MOSS:
+			return FRAC_MOSS
+		CaveMap.CELL_CRUMBLE:
+			return FRAC_CRUMBLE
+		_:
+			return -1.0
+
+
+# Two currents at most (pbd_predict.glsl): [rect, dir, speed] each.
+func set_currents(list: Array) -> void:
+	for i in 2:
+		var b := (96 + i * 8) * 4
+		if i < list.size():
+			var r: Rect2 = list[i][0]
+			var d: Vector2 = list[i][1]
+			_light.encode_float(b, r.position.x)
+			_light.encode_float(b + 4, r.position.y)
+			_light.encode_float(b + 8, r.end.x)
+			_light.encode_float(b + 12, r.end.y)
+			_light.encode_float(b + 16, d.x)
+			_light.encode_float(b + 20, d.y)
+			_light.encode_float(b + 24, float(list[i][2]))
+			_light.encode_float(b + 28, 1.0)
+		else:
+			_light.encode_float(b + 28, 0.0)
+
+
+# Wakes the loose grains within radius of pos on the next tick (a foot
+# on a steep heap), when the event slot is free this tick.
+func wake_circle(pos: Vector2, radius: float) -> void:
+	if _capsule_once[SLOT_EVENT]:
+		return
+	set_capsule(SLOT_EVENT, pos, Vector2.RIGHT, radius, 0.0, true, MODE_WAKE)
+	_capsule_once[SLOT_EVENT] = true
 
 
 # The material a cell of the map's kind is built from.
@@ -752,6 +803,8 @@ static func material_of(kind: int) -> int:
 			return MAT_BEDROCK
 		CaveMap.CELL_SHROOM:
 			return MAT_SHROOM
+		CaveMap.CELL_MOSS, CaveMap.CELL_CRUMBLE:
+			return MAT_ROCK
 		_:
 			return MAT_ROCK
 

@@ -35,6 +35,8 @@ const GLOW_COLOR := Color(1.0, 0.82, 0.58)   # The gecko's own light, warm and s
 const GLOW_R := 14.0                         # Px round the head seeded at full glow; the spread carries it on
 const DAYLIGHT := Color(0.85, 0.92, 1.0)     # The light at the exit's crack
 const VINE_HOLD := 1.2                       # Seconds the gecko may hang on a vine before its anchor gives
+const BLAST_SPEED := 480.0                   # px/s a gas burst throws the gecko
+const BLAST_R := 45.0                        # The sim's blast round a burst pocket's centre
 const CaveMap = preload("res://cave_map.gd")
 const SimMap = preload("res://sim_map.gd")
 const Sim = preload("res://sim.gd")
@@ -42,6 +44,7 @@ const SoundBank = preload("res://sound.gd")
 const Ambience = preload("res://ambience.gd")
 const Backdrop = preload("res://backdrop.gd")
 const Slug = preload("res://slug.gd")
+const Editor = preload("res://editor.gd")
 const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
@@ -186,6 +189,11 @@ var _ambience: Node2D           # ambience.gd: drips, bite dust, bubbles
 var _vines := {}                # Chunk id -> {top, load}: the vines hanging in the level and how long the gecko has hung on each
 var _backdrop: Node2D           # backdrop.gd: the far wall and the near dripstone, particle world only
 var _slugs: Array = []          # slug.gd: the glow slugs in the level
+var _gas: Array = []            # Rect2 of each sealed gas pocket still to burst (the scene's gas ops)
+var _editor: CanvasLayer        # editor.gd: the map editor's panel (F2)
+var _editing := false
+var _author: CaveMap            # The cells as authored: the bitmap map itself, or the CPU map the sim was built from, kept for the editor
+var _fills: Array = []          # Editor paints waiting for the sim's erase to land: [p, r, kind]
 var _won := false              # The gecko reached the exit: the camera pulls back
 
 
@@ -228,6 +236,13 @@ func _ready() -> void:
 	_ambience = Ambience.new()
 	add_child(_ambience)
 	_ambience.setup(map, gecko, _sound)
+	gecko.bit.connect(func(_at: Vector2) -> void: _check_gas())
+	gecko.tongue_hit.connect(func(_at: Vector2) -> void: _check_gas())
+	_editor = Editor.new()
+	_editor.setup(self)
+	add_child(_editor)
+	if not sim:
+		_author = map
 	if sim:
 		_backdrop = Backdrop.new()
 		_backdrop.set_grid(CAM_GRID)
@@ -284,6 +299,10 @@ func _ready() -> void:
 	if picked.is_empty() and _demo_name == "":
 		_pick_level()
 	_reset()
+	if OS.get_environment("GECKO_EDIT_TEST") != "":
+		# The editor's save and load, headless: paint, stamp, save, load,
+		# count the kinds, quit (tools and the memory notes).
+		_edit_self_test.call_deferred()
 	var dump := OS.get_environment("GECKO_DUMP_MAP")
 	if dump != "":
 		if not sim:
@@ -311,7 +330,10 @@ func _reset() -> void:
 			SceneBuilder.build(gen, _scene, _scene_bases)
 			map.build_cells(gen.solid)
 			_backdrop.build(gen.solid, CaveMap.W, CaveMap.H, seed_value)
-			gen.free()
+			# Kept as the authoring map for the editor (what Save writes).
+			if _author and _author != map:
+				_author.free()
+			_author = gen
 		else:
 			SceneBuilder.build(map, _scene, _scene_bases)
 		_vines.clear()
@@ -330,6 +352,14 @@ func _reset() -> void:
 			sim.set_daylight(_exit, DAYLIGHT)
 		_sound.set_exit(_exit)
 		_ambience.reset()
+		_ambience.set_drip_zones(SceneBuilder.ops_of(_scene, _scene_bases, "drips"))
+		_gas.clear()
+		for op in SceneBuilder.ops_of(_scene, _scene_bases, "gas"):
+			_gas.append(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])))
+		_gas_from_cells()
+		map.clear_currents()
+		for op in SceneBuilder.ops_of(_scene, _scene_bases, "current"):
+			map.add_current(Rect2(float(op[1]), float(op[2]), float(op[3]), float(op[4])), Vector2(float(op[5]), float(op[6])), float(op[7]))
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
 		_camera_home()
@@ -337,6 +367,8 @@ func _reset() -> void:
 		return
 	_exit = Rect2()
 	_clear_slugs()
+	_gas.clear()
+	map.clear_currents()
 	if sim:
 		sim.set_daylight(_exit, DAYLIGHT)
 	_sound.set_exit(_exit)
@@ -452,9 +484,17 @@ func _physics_process(dt: float) -> void:
 			get_tree().set_deferred("paused", true)
 			_panel.set_paused(true)
 	_update_slugs(dt)
+	if sim and not _fills.is_empty():
+		# Editor paints: the erase of a tick ago has landed, the cells
+		# read empty, the fill can spawn into them.
+		for f in _fills:
+			map.material_circle(f[0], f[1], f[2])
+		_fills.clear()
 	if sim:
-		var glows: Array = [[gecko.chain.head(), GLOW_COLOR.lerp(Color(0.8, 1.0, 0.6), 0.5 if gecko.glow_boost > 0.0 else 0.0),
-				GLOW_R * (1.8 if gecko.glow_boost > 0.0 else 1.0)]]
+		var glows: Array = []
+		if gecko.glow_snuff <= 0.0:
+			glows.append([gecko.chain.head(), GLOW_COLOR.lerp(Color(0.8, 1.0, 0.6), 0.5 if gecko.glow_boost > 0.0 else 0.0),
+					GLOW_R * (1.8 if gecko.glow_boost > 0.0 else 1.0)])
 		for s in _slugs:
 			glows.append(s.glow())
 		sim.set_glows(glows)
@@ -474,6 +514,270 @@ func _physics_process(dt: float) -> void:
 		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
+
+
+func _edit_self_test() -> void:
+	print("EDIT: " + blank_level())
+	edit_paint(Vector2(600.0, 700.0), 40.0, CaveMap.CELL_ROCK)
+	edit_paint(Vector2(700.0, 790.0), 30.0, CaveMap.CELL_WATER)
+	edit_paint(Vector2(900.0, 780.0), 20.0, CaveMap.CELL_MOSS)
+	edit_paint(Vector2(1000.0, 500.0), 24.0, CaveMap.CELL_GAS)
+	edit_stamp("shroom_cluster", Vector2(1200.0, 790.0), 12.0)
+	edit_stamp("stalactite", Vector2(1300.0, 170.0), 12.0)
+	edit_stamp("vine", Vector2(1400.0, 300.0), 12.0)
+	edit_stamp("slug", Vector2(1500.0, 790.0), 12.0)
+	print("EDIT: " + edit_spawn(Vector2(500.0, 780.0)))
+	print("EDIT: " + edit_exit(Rect2(1700.0, 700.0, 60.0, 60.0)))
+	print("EDIT: " + save_level("edtest"))
+	var counts := {}
+	for v in _author.solid:
+		counts[v] = counts.get(v, 0) + 1
+	print("EDIT: kinds before load ", counts)
+	print("EDIT: " + load_level("edtest"))
+	var counts2 := {}
+	for v in _author.solid:
+		counts2[v] = counts2.get(v, 0) + 1
+	print("EDIT: kinds after load ", counts2, " gas pockets ", _gas.size(), " slugs ", _slugs.size(), " spawn ", gecko.pos, " exit ", _exit)
+	print("EDIT TEST " + ("OK" if counts == counts2 else "DIFFERS"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.json"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.cells.png"))
+	get_tree().quit()
+
+
+# --- The editor's hands on the world (editor.gd) ---
+
+# A circle of kind at p: the live world and the authoring map alike.
+# In the sim the circle is erased now and filled next tick, once the
+# readback shows it empty (fill_circle spawns only into air).
+func edit_paint(p: Vector2, r: float, kind: int) -> void:
+	if _author == null:
+		return
+	if kind == CaveMap.CELL_AIR:
+		_author.erase_circle(p, r, true)
+	else:
+		_author.material_circle(p, r, kind)
+	if sim:
+		map.erase_circle(p, r, true)
+		if kind != CaveMap.CELL_AIR:
+			_fills.append([p, r, kind])
+	if kind == CaveMap.CELL_GAS:
+		_gas_from_cells()
+
+
+# A stamp at p: decor on the surface under or over the cursor (whichever
+# is nearer), a dripstone cone of the brush's size, a vine of the brush's
+# length times four hanging from the ceiling above, a slug on the
+# nearest surface. Returns the name placed.
+func edit_stamp(name: String, p: Vector2, r: float) -> void:
+	if _author == null:
+		return
+	match name:
+		"vine":
+			var c: Vector2 = map.ceiling_above(p)
+			var top := Vector2(p.x, c.y + 2.0)
+			var id: int = map.spawn_vine(top, r * 4.0)
+			if id > 0:
+				_vines[id] = {"top": top, "load": 0.0}
+			_edit_lumps.append(["vine", p.x, p.y, r * 4.0])
+		"slug":
+			var s := Slug.new()
+			s.setup(map, p, 31 + _slugs.size())
+			add_child(s)
+			_slugs.append(s)
+			_edit_slugs.append([p.x, p.y])
+		"stalactite", "stalagmite":
+			var down := name == "stalactite"
+			var line: Vector2 = map.ceiling_above(p) if down else map.floor_below(p)
+			var h := maxf(r * 2.0, 8.0)
+			SceneBuilder.cone(_author, Vector2(p.x, line.y), h, down)
+			if sim:
+				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down)
+		_:
+			var fl: Vector2 = map.floor_below(p)
+			var ce: Vector2 = map.ceiling_above(p)
+			var where := "floor" if (fl.y - p.y) <= (p.y - ce.y) else "ceiling"
+			SceneBuilder.stamp(_author, name, p, where)
+			if sim:
+				_stamp_live(name, p, where)
+
+
+# A stamp into the live sim: its cells spawned one by one (set_cell is
+# the bitmap's; the sim fills).
+func _stamp_live(name: String, p: Vector2, where: String) -> void:
+	var before := _author.solid.duplicate()
+	# The authoring map already has the stamp: find its cells by the
+	# difference and fill those in the sim.
+	var cell := CaveMap.CELL
+	for i in before.size():
+		pass
+	var tmp := CaveMap.new()
+	tmp.blank()
+	tmp.solid = before
+	SceneBuilder.stamp(tmp, name, p, where)
+	for i in tmp.solid.size():
+		if tmp.solid[i] != before[i]:
+			var x := i % CaveMap.W
+			var y := i / CaveMap.W
+			_fills.append([Vector2((x + 0.5) * cell, (y + 0.5) * cell), 2.0, tmp.solid[i]])
+	tmp.free()
+
+
+var _edit_lumps: Array = []     # Vines and lumps placed in the editor, for the saved level
+var _edit_slugs: Array = []
+var _edit_spawn := Vector2.INF
+var _edit_exit := Rect2()
+
+
+func edit_spawn(p: Vector2) -> String:
+	_edit_spawn = p
+	gecko.spawn(p, Vector2.UP)
+	_cam_reset()
+	return "spawn at %d, %d" % [int(p.x), int(p.y)]
+
+
+func edit_exit(r: Rect2) -> String:
+	_edit_exit = r
+	_exit = r
+	if sim:
+		sim.set_daylight(_exit, DAYLIGHT)
+	_sound.set_exit(_exit)
+	return "exit %d, %d, %d x %d" % [int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)]
+
+
+# Writes levels/<name>.cells.png (the authored cells) and levels/<name>.json:
+# a base of those cells and one scene on it with the spawn, the exit, the
+# vines and lumps, and the slugs. The game and the suite load it like
+# the clutch (tests/scene_builder.gd level_files).
+func save_level(name: String) -> String:
+	if _author == null or name == "":
+		return "nothing to save"
+	var dir := "res://levels/"
+	var png := dir + name + ".cells.png"
+	_author.save_cells_png(ProjectSettings.globalize_path(png))
+	var spawn: Array = ["at", _edit_spawn.x, _edit_spawn.y, 0, -1] if _edit_spawn != Vector2.INF else _scene.get("spawn", ["floor", 960, 540])
+	var lumps: Array = []
+	lumps.append_array(_scene.get("lumps", []))
+	lumps.append_array(_edit_lumps)
+	var slugs: Array = []
+	slugs.append_array(_scene.get("slugs", []))
+	slugs.append_array(_edit_slugs)
+	var sc := {"base": name, "spawn": spawn, "lumps": lumps, "slugs": slugs}
+	var ex := _edit_exit if _edit_exit.has_area() else _exit
+	if ex.has_area():
+		sc["exit"] = [ex.position.x, ex.position.y, ex.size.x, ex.size.y]
+	var level := {"bases": {name: [["blank"], ["cells", png]]}, "scripts": {}, "scenes": {name: sc}}
+	var f := FileAccess.open(dir + name + ".json", FileAccess.WRITE)
+	if f == null:
+		return "cannot write " + dir + name + ".json"
+	f.store_string(JSON.stringify(level, " "))
+	f.close()
+	return "saved " + name
+
+
+# Loads levels/<name>.json as the scene and builds it.
+func load_level(name: String) -> String:
+	_scene_all = {}
+	_ensure_scenes()
+	var scenes: Dictionary = _scene_all.get("scenes", {})
+	if not scenes.has(name):
+		return "no level " + name
+	_scene = scenes[name]
+	_scene_bases = _scene_all.get("bases", {})
+	_scene_i = scenes.keys().find(name)
+	_demo_step = -1
+	gecko.input_override = null
+	_edit_lumps.clear()
+	_edit_slugs.clear()
+	_edit_spawn = Vector2.INF
+	_edit_exit = Rect2()
+	_reset()
+	return "loaded " + name
+
+
+# An empty rock world to paint in: a blank scene with a room to stand in.
+func blank_level() -> String:
+	_scene = {"base": "room", "terrain": [], "spawn": ["floor", 960, 700], "lumps": [], "slugs": []}
+	_scene_bases = {"room": [["blank"], ["room", 0, 160, 1920, 640]]}
+	_scene_i = -1
+	_demo_step = -1
+	gecko.input_override = null
+	_edit_lumps.clear()
+	_edit_slugs.clear()
+	_edit_spawn = Vector2.INF
+	_edit_exit = Rect2()
+	_reset()
+	return "blank"
+
+
+# Gas pockets from the authored cells (painted ones have no op): each
+# connected patch of gas cells as its bounding rect.
+func _gas_from_cells() -> void:
+	if _author == null:
+		return
+	var W: int = CaveMap.W
+	var H: int = CaveMap.H
+	var seen := {}
+	for i in _author.solid.size():
+		if _author.solid[i] != CaveMap.CELL_GAS or seen.has(i):
+			continue
+		var queue := [i]
+		seen[i] = true
+		var x0 := W
+		var y0 := H
+		var x1 := -1
+		var y1 := -1
+		while not queue.is_empty():
+			var c: int = queue.pop_back()
+			var x := c % W
+			var y := c / W
+			x0 = mini(x0, x)
+			y0 = mini(y0, y)
+			x1 = maxi(x1, x)
+			y1 = maxi(y1, y)
+			for d in [c - 1, c + 1, c - W, c + W]:
+				if d >= 0 and d < W * H and not seen.has(d) and _author.solid[d] == CaveMap.CELL_GAS:
+					seen[d] = true
+					queue.append(d)
+		var r := Rect2(x0 * CaveMap.CELL, y0 * CaveMap.CELL, (x1 - x0 + 1) * CaveMap.CELL, (y1 - y0 + 1) * CaveMap.CELL)
+		var known := false
+		for g in _gas:
+			if g.intersects(r):
+				known = true
+		if not known:
+			_gas.append(r)
+
+
+# A gas pocket whose wall has been opened (a cell on the ring just
+# outside it reads open after a bite or a strike) bursts: the gecko is
+# thrown from its centre with its glow out, the pocket is plain air, the
+# sim gets a blast and a puff.
+func _check_gas() -> void:
+	for i in range(_gas.size() - 1, -1, -1):
+		var r: Rect2 = _gas[i]
+		if not _gas_opened(r):
+			continue
+		var c := r.get_center()
+		_gas.remove_at(i)
+		map.clear_gas(r)
+		gecko.blast(c, BLAST_SPEED)
+		if sim:
+			sim.trigger_explosion_at(c, BLAST_R)
+		map.spawn_puff(c, 14, Vector2(0.0, -40.0), 70.0, 0.004)
+
+
+func _gas_opened(r: Rect2) -> bool:
+	var cell: float = map.CELL
+	var x0 := int(floor(r.position.x / cell)) - 1
+	var y0 := int(floor(r.position.y / cell)) - 1
+	var x1 := int(ceil(r.end.x / cell))
+	var y1 := int(ceil(r.end.y / cell))
+	for x in range(x0, x1 + 1):
+		if not map.is_solid(x, y0) or not map.is_solid(x, y1):
+			return true
+	for y in range(y0 + 1, y1):
+		if not map.is_solid(x0, y) or not map.is_solid(x1, y):
+			return true
+	return false
 
 
 # The slugs creep (slug.gd), one swallowed at the mouth is gone and the
@@ -720,7 +1024,7 @@ func _process(_dt: float) -> void:
 		print("F%d %d %d %d %.2f %.2f %.1f %.1f %.2f %.2f %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick,
 			cam.x, cam.y, body.x, body.y, base.x, base.y, 1 if _won else 0])
 	var m := get_global_mouse_position()
-	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position())
+	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position()) or _editing
 	gecko.mouse_blocked = over_panel
 	if over_panel or get_tree().paused:
 		pass
@@ -750,6 +1054,9 @@ func _process(_dt: float) -> void:
 		_next_scene()
 	if Input.is_action_just_pressed("scene_main", true):
 		_main_cave()
+	if Input.is_action_just_pressed("edit_toggle"):
+		_editing = not _editing
+		_editor.visible = _editing
 	if Input.is_action_just_pressed("debug_toggle"):
 		_debug = not _debug
 		_panel.visible = _debug

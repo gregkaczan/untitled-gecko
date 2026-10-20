@@ -160,6 +160,22 @@ def land():
     return mix(gain(thud, 0.8), gain(dust, 0.3))
 
 
+def burst():
+    # A gas pocket going: a low whoomp with a rush of air after it.
+    n = int(0.45 * RATE)
+    whoomp = mul(sine_sweep(n, 95.0, 38.0, 0.5), env(n, 0.004, 0.3, 1.8))
+    rush = mul(lowpass(noise(n), [900.0 - 700.0 * (i / n) ** 0.6 for i in range(n)]), env(n, 0.01, 0.35, 1.6))
+    return mix(gain(whoomp, 0.9), gain(rush, 0.55))
+
+
+def crumble():
+    # Rock giving way: grit pouring with a short rumble under it.
+    n = int(0.4 * RATE)
+    grit = mul(highpass(lowpass(noise(n), 2400.0), 350.0), env(n, 0.01, 0.3, 1.3))
+    rumble = mul(lowpass(noise(n), 160.0), env(n, 0.005, 0.2, 1.5))
+    return mix(gain(grit, 0.55), gain(rumble, 0.8))
+
+
 def loop(seconds, voices, noise_cut, noise_gain, lfo=0.1):
     """A seamless loop: sines at whole cycles per loop, a slow swell,
     and a filtered noise bed faded across the join."""
@@ -196,6 +212,8 @@ def main():
     write("splash", splash())
     write("drip", drip())
     write("land", land())
+    write("burst", burst())
+    write("crumble", crumble())
     # The cave: a low hum under a breath of air, 6 s, whole cycles so it loops.
     write("drone", loop(6.0, [(55.0, 0.35), (82.5, 0.15), (110.0, 0.1), (164.0, 0.04)], 260.0, 0.12, 0.08))
     # Daylight at the crack: higher, airier, growing as the gecko climbs (sound.gd places it at the exit).

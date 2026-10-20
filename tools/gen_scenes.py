@@ -59,6 +59,15 @@ SCRIPTS = {
     # Off the bank with a jump into deep water, then nothing: the gecko
     # must float where it is, not sink to the bottom.
     "float": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(6.0, Z)],
+    # To a wall and up it, as long as the wall will have it.
+    "climb_wall": [step(2.0, R), step(3.5, U), step(1.0, Z)],
+    # To the wall, a bite at its foot (the aim within CHEW_REACH, so the
+    # body does not creep after it), then the climb.
+    "bite_climb": [step(1.6, R), step(0.5, Z, chew=True, aim=[12, -14]), step(3.5, U), step(0.5, Z)],
+    # A jump into the pool and a swim to the right against whatever runs there.
+    "swim_right": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(5.0, R)],
+    # A dig straight down, into whatever is sealed under the floor.
+    "dig_pocket": [step(0.4, Z), step(2.4, Z, chew=True, aim=[0, 140]), step(2.0, Z)],
     # Digging is a bite every 0.4 s and a creep of 45 px/s behind it,
     # so a 100 px dig takes a few seconds.
     "dig_45": [step(0.4, Z), step(6.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
@@ -240,6 +249,21 @@ add("pool_bank_slope", [["erase", 1000, F, 400, 100], ["below", 1300, F + 100, 1
 # tools/record.sh pool_drop:float runs it on the sim's water.
 add("pool_drop", [["erase", 1000, F, 400, 160], ["water", 1000, F, 400, 160]], ["floor", 800, 700], ["float"], state="swim",
     end=[1000, F - 20, 1400, F + 80], note="a jump into deep water, then no input: floats in the top half of the pool, never the bottom")
+
+# 13b. Surfaces that will not be held
+add("moss_wall", [["fill", 1100, 300, 200, 500], ["moss", 1096, 560, 12, 200]], ["floor", 900, 700], ["climb_wall"],
+    end=[880, 700, 1120, 800], note="a wall coated with moss from 560 to 760: the climb reaches the coat and drops; it ends on the floor")
+add("moss_bitten", [["fill", 1100, 300, 200, 500], ["moss", 1096, 760, 12, 16]], ["floor", 900, 700], ["bite_climb"],
+    reach=[1040, 0, 1120, 540], note="a wall with a coat of moss at its foot, one bite tall: the bite takes it and the climb goes on past it")
+add("notch_climb", [["fill", 1100, 300, 200, 500]], ["floor", 900, 700], ["bite_climb"], reach=[1040, 0, 1120, 540],
+    note="the bare wall with the same bites at its foot: the climb out of the notch they leave, and on up")
+add("crumble_wall", [["fill", 1100, 300, 200, 500], ["crumble", 1100, 560, 8, 240]], ["floor", 900, 700], ["climb_wall"],
+    end=[880, 700, 1130, 800], note="a wall whose lower face crumbles after a second's hold: the climber comes down with it")
+add("pool_current", [["erase", 1000, F, 400, 160], ["water", 1000, F, 400, 160], ["current", 1000, F, 400, 160, -1, 0, 230]],
+    ["floor", 800, 700], ["swim_right"], end=[1000, F - 20, 1200, F + 160],
+    note="a pool running left at 230 px/s, faster than the swim's kick: a swim to the right gets nowhere")
+add("gas_pocket", [["gas", 940, 840, 80, 40]], ["floor", 980, 700], ["dig_pocket"], reach=[880, 0, 1080, 720],
+    note="a sealed pocket of gas under the floor: the dig down opens it and the burst throws the gecko up, its glow out")
 
 # 14. Generated caves
 for sd in (1, 2, 3, 4, 5, 6):

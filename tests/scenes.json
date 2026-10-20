@@ -897,6 +897,162 @@
     false
    ]
   ],
+  "climb_wall": [
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "bite_climb": [
+   [
+    1.6,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     12,
+     -14
+    ]
+   ],
+   [
+    3.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "swim_right": [
+   [
+    1.3,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    0.4,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    5.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "dig_pocket": [
+   [
+    0.4,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.4,
+    [
+     0,
+     0
+    ],
+    false,
+    true,
+    false,
+    [
+     0,
+     140
+    ]
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
   "dig_45": [
    [
     0.4,
@@ -3606,6 +3762,206 @@
    ],
    "state": "swim",
    "note": "a jump into deep water, then no input: floats in the top half of the pool, never the bottom"
+  },
+  "moss_wall": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ],
+    [
+     "moss",
+     1096,
+     560,
+     12,
+     200
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "climb_wall"
+   ],
+   "end": [
+    880,
+    700,
+    1120,
+    800
+   ],
+   "note": "a wall coated with moss from 560 to 760: the climb reaches the coat and drops; it ends on the floor"
+  },
+  "moss_bitten": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ],
+    [
+     "moss",
+     1096,
+     760,
+     12,
+     16
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "bite_climb"
+   ],
+   "reach": [
+    1040,
+    0,
+    1120,
+    540
+   ],
+   "note": "a wall with a coat of moss at its foot, one bite tall: the bite takes it and the climb goes on past it"
+  },
+  "notch_climb": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "bite_climb"
+   ],
+   "reach": [
+    1040,
+    0,
+    1120,
+    540
+   ],
+   "note": "the bare wall with the same bites at its foot: the climb out of the notch they leave, and on up"
+  },
+  "crumble_wall": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ],
+    [
+     "crumble",
+     1100,
+     560,
+     8,
+     240
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "climb_wall"
+   ],
+   "end": [
+    880,
+    700,
+    1130,
+    800
+   ],
+   "note": "a wall whose lower face crumbles after a second's hold: the climber comes down with it"
+  },
+  "pool_current": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     400,
+     160
+    ],
+    [
+     "water",
+     1000,
+     800,
+     400,
+     160
+    ],
+    [
+     "current",
+     1000,
+     800,
+     400,
+     160,
+     -1,
+     0,
+     230
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "swim_right"
+   ],
+   "end": [
+    1000,
+    780,
+    1200,
+    960
+   ],
+   "note": "a pool running left at 230 px/s, faster than the swim's kick: a swim to the right gets nowhere"
+  },
+  "gas_pocket": {
+   "base": "room",
+   "terrain": [
+    [
+     "gas",
+     940,
+     840,
+     80,
+     40
+    ]
+   ],
+   "spawn": [
+    "floor",
+    980,
+    700
+   ],
+   "scripts": [
+    "dig_pocket"
+   ],
+   "reach": [
+    880,
+    0,
+    1080,
+    720
+   ],
+   "note": "a sealed pocket of gas under the floor: the dig down opens it and the burst throws the gecko up, its glow out"
   },
   "cave_1": {
    "base": "solid",

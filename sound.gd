@@ -7,7 +7,7 @@
 extends Node2D
 
 const DIR := "res://sounds/"
-const ONE_SHOTS := ["step", "bite", "swallow", "tongue", "snap", "splash", "drip", "land"]
+const ONE_SHOTS := ["step", "bite", "swallow", "tongue", "snap", "splash", "drip", "land", "burst", "crumble"]
 const POOL := 10                 # Positional players for the one-shots
 const STEP_DB := -26.0           # Footsteps barely there
 const BITE_DB := -14.0
@@ -17,6 +17,9 @@ const SNAP_DB := -14.0
 const SPLASH_DB := -12.0
 const DRIP_DB := -16.0
 const LAND_DB := -14.0
+const BURST_DB := -6.0
+const CRUMBLE_DB := -12.0
+const SLIP_DB := -20.0
 const LAND_MIN := 120.0          # px/s: a softer landing makes no sound
 const DRONE_DB := -22.0
 const HUM_DB := -10.0            # At the exit itself; attenuation takes it down with distance
@@ -68,6 +71,9 @@ func listen(gecko: Node) -> void:
 	gecko.landed.connect(func(speed: float) -> void:
 		if speed >= LAND_MIN:
 			play("land", gecko.pos, LAND_DB + clampf((speed - LAND_MIN) / 400.0, 0.0, 1.0) * 6.0 - 6.0, 0.9, 1.1))
+	gecko.blasted.connect(func() -> void: play("burst", gecko.pos, BURST_DB, 0.9, 1.1))
+	gecko.crumbled.connect(func(at: Vector2) -> void: play("crumble", at, CRUMBLE_DB, 0.85, 1.15))
+	gecko.slipped.connect(func() -> void: play("step", gecko.pos, SLIP_DB, 0.55, 0.7))
 
 
 # The daylight hum sits at the exit; no exit, no hum.

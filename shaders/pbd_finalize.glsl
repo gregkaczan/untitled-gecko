@@ -177,7 +177,8 @@ void main() {
         uint rw = uint(rf(O_P + 16u)), rh = uint(rf(O_P + 17u));
         int rx = int(floor(px / psz)), ry = int(floor(py / psz));
         if (rx >= 0 && ry >= 0 && rx < int(rw) && ry < int(rh)) {
-            if (buf.d[O_CT + uint(ry) * rw + uint(rx)] == 2u) {
+            uint ct = buf.d[O_CT + uint(ry) * rw + uint(rx)];
+            if (ct == 2u || ct == 5u || ct == 6u) {
                 px = ox;
                 py = oy;
                 vx = 0.0;
