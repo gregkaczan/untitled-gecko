@@ -257,7 +257,8 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   body, and never follows a crevice that closes below 11 px.
   Afterwards the clearance grows back half a pixel a tick, so the body
   eases out rather than pops. A body chewing its way in squeezes
-  through what it chews, the bites' cusps included.
+  through what it chews, the bites' cusps included. There is no jump
+  out of a squeeze.
 - In a passage the drawn body lies on the passage's middle line, not
   its usual 2 px above the body centre: the lift eases between the two
   at a pixel a tick from the moment the squeeze begins, so the head

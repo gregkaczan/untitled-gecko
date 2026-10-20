@@ -953,7 +953,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 			if back < 0.0 and absf(speed_along) > 1.0:
 				pull -= fwd * back
 			_move(pull)
-	if jump:
+	# No jump out of a squeeze: there is no room to push off into, and
+	# the body shot out of passages.
+	if jump and not _squeeze:
 		_jumped = true
 		_jump()
 		return
