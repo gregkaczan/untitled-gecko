@@ -257,7 +257,8 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   body, and never follows a crevice that closes below 11 px.
   Afterwards the clearance grows back half a pixel a tick, so the body
   eases out rather than pops. A body chewing its way in squeezes
-  through what it chews, the bites' cusps included.
+  through what it chews, the bites' cusps included. There is no jump
+  out of a squeeze.
 - In a passage the drawn body lies on the passage's middle line, not
   its usual 2 px above the body centre: the lift eases between the two
   at a pixel a tick from the moment the squeeze begins, so the head
@@ -405,7 +406,8 @@ What the first slice adds on top of the movement, each a first version
   the particles wrote (copper a little, lava a lot, glowshrooms green
   with a slow breath, `render_write.glsl`), daylight on the open cells
   of the exit's rect, and the glows (the gecko's head, warm and small;
-  each slug's); nineteen spread passes carry it a cell at a time, the
+  each slug's; the level's lights, thirteen glows in all); nineteen
+  spread passes carry it a cell at a time, the
   brightest neighbour times what the cell lets through (air 0.9925,
   water 0.964, loose grains 0.775, solid 0.671, so a rock face lights a
   few cells deep), at 16 bits a channel so it fades out instead of
@@ -430,15 +432,20 @@ What the first slice adds on top of the movement, each a first version
   the pools (the sim's own water, a drip sound when they land), a bite
   throws up a puff of dust, a swimming gecko blows bubbles (both the
   shooter's smoke particles, short-lived).
-- Decor as stamps: `["decor", name, x, y, "floor" | "ceiling", flags]`
-  in a scene's terrain sets a stamp's cells on the first floor below
-  the point (its bottom row on the floor) or hanging from the first
-  ceiling above it (its top row under it), only into air. A stamp is a
-  PNG in `decor/stamps/` (`tests/scene_builder.gd` png_stamps reads
-  the files themselves, so no import is needed): each pixel becomes a
-  decor cell, kind 16 plus the nearest of the 16 colours in
-  `cave_map.gd` DECOR_PALETTE, plus 16 for a glow on the pale greens of
-  the shroom groups; flags "h" mirrors it, "v" turns it over. In the
+- Decor as stamps: `["decor", name, x, y, "floor" | "ceiling" |
+  "wall_left" | "wall_right", flags]` in a scene's terrain sets a
+  stamp's cells with its bottom row on the first floor below the
+  point, under the first ceiling above it (upside down, as the table
+  shrooms hang) or against the first wall to that side (sideways),
+  only into air. A stamp is a PNG in `decor/stamps/`
+  (`tests/scene_builder.gd` png_stamps reads the files themselves, so
+  no import is needed): each pixel becomes a decor cell, kind 16 plus
+  the nearest of the 16 colours in `cave_map.gd` DECOR_PALETTE (greens
+  cut from the takes, with a mid grey, a light grey and a white for the
+  moss), plus 16 for a glow on the pale greens of the shroom groups;
+  flags "h" mirrors it along the surface, "v" turns it over, "d" drapes
+  it (each column sits on the surface under it, up to three cells off
+  the base's; a column with no surface that near is left out). In the
   sim a decor cell is material 12 with its fraction in a band of 0.003
   per colour (`sim.gd` FRAC_BAND, `render_write.glsl` DECOR_PAL), a
   glow band seeding the light pass in its own colour; the table
@@ -446,12 +453,19 @@ What the first slice adds on top of the movement, each a first version
   grid and hanging upside down) sit above the bands (FRAC_SHROOM) and
   look as before. Decor cells are solid, ground to the gecko, gone
   with a bite. The PNGs are Retro Diffusion takes (`decor/rd/`;
-  `tools/decor_process.py` cleans them and maps them to the palette)
-  cut into pieces by `tools/decor_split.py`: a cluster's single
-  mushrooms (`_p<n>`), slices of the moss clumps and the hanging moss
-  (`_s<n>`), so a brush can scatter them; a stamp and its pieces share
-  a group, the name before the take number. `levels/decor_gallery.json`
-  shows one of each.
+  `tools/decor_process.py` cleans them, keying a white or a black
+  background out, and maps them to the palette) cut into pieces by
+  `tools/decor_split.py`: a cluster's single mushrooms (`_p<n>`), and
+  the moss into a left end, middles and a right end (`_l`, `_m`,
+  `_r`), the roles the editor's brush lays a run with; a stamp and its
+  pieces share a group, the name before the take number. The moss is
+  white and spiky, six takes on a black background (the green takes
+  are retired in `decor/retired/`); a flipped clump is the hanging
+  moss. `levels/decor_gallery.json` shows one of each.
+- Lights: `"lights": [[x, y, kind], ...]` in a scene sets glow sources
+  for the light pass, the kinds in `tests/scene_builder.gd` LIGHTS
+  (ember, torch, crystal, glow, moon: a colour and the radius in px
+  it is seeded at, the spread carrying it on). The editor sets them.
 - Dripstone, procedural from a seed: `["stalactites" | "stalagmites",
   x0, x1, y, n, seed, hmin, hmax]` grows n cones of rock off a ceiling
   or floor line, `["column", x, y0, y1, w, seed]` a stalagnate with a
@@ -487,6 +501,15 @@ left open: a failure model (lava, falls), a full gut (a meter), a
 general grip model (dry moss that holds better, steep wet rock that
 slides) and how much is laid by hand against grown by rule.
 
+- Thorns: a sharp plant on a rock face, pale and bony (cell kind 13;
+  in the sim rock in a fraction band of its own, cell class 7). Solid
+  to everything, but no foot holds it and a touch, by a foot or by the
+  body stopped against it in any state, throws the body back at 140
+  px/s with 0.35 s of no cling, so a patch is neither stood on nor
+  climbed past; a bite takes it. The `thorn` and `thorn_s` stamps go on
+  floors, ceilings and walls (`["decor", "thorn", x, y, "wall_right"]`;
+  the editor picks the nearest surface). Scenes: `thorn_wall` (the
+  climb ends below the patch), `thorn_floor` (the walk never passes).
 - Slippery moss: a coat of cells on rock faces (cell kind 10; in the
   sim rock in its top fraction band, cell class 5). Solid to everything,
   but off a floor (the body's up more than 45 degrees from straight up)
@@ -529,23 +552,48 @@ on), `notch_climb` (the same bites on bare rock), `crumble_wall`,
 ## The map editor
 
 F2 opens the editor (`editor.gd`), a panel down the left (it scrolls):
-paints (every cell kind); decor (every stamp in `decor/stamps/` as an
-icon, its name on hover); stamps (the table glowshrooms, a stalactite
-or stalagmite of the brush's size, a vine of four times the brush's
-length, a slug); the spawn point and the exit (dragged); the brush
+paints (every cell kind); decor (one icon a group of `decor/stamps/`,
+its name on hover, the group's variants under it); stamps (the table
+glowshrooms and thorns, a stalactite or stalagmite of the brush's
+size, a vine of four times the brush's length, a slug); lights (a
+glow source of a kind, set by a click); the spawn point and the exit
+(dragged); the brush
 size ([ and ] too); undo and redo (Ctrl+Z, Ctrl+Y); and the files. The
 left button paints, the right erases (and drops the decor it covers).
 
-The decor brush: dragged along a floor or a ceiling it sets a stamp
-wherever the next one, grown by the spacing slider, would stand clear
-of every placed one, so a sweep lays a bed of moss or a row of shrooms
-without overlaps; "Random in group" picks any of the stamp's group
-(the takes and the pieces of one name) for each, "Mirror at random"
-flips half of them, "Anchor" chooses the surface (nearest, floor,
-ceiling); "Free" places one per click, wherever, overlapping or not.
-Every placed stamp is kept with its rect for the spacing rule and
-saved in the level file's "decor" list, from which a loaded level
-seeds the list again.
+The decor brush (`decor_brush.gd`): dragged along a surface it lays a
+run of the group picked, edge to edge plus the spacing slider, the
+variant of each slot picked by its rules. A carpet group, one with
+ends and middles (the moss), runs as a left end, middles and a right
+end, each draped over the ground; a middle goes down only with ground
+for an end past it, so the run ends with its end before a cliff or a
+pit, and a new run starts once the cursor is on ground the old one
+could not reach (six cells up or down). Any other group (shrooms,
+plants) is a scatter: whole takes and parts at random, each slot
+taking the first variant whose feet (the columns of the art that reach
+its bottom row) find level ground within a cell, a single mushroom
+where a cluster would not stand, the stamp set down on its lowest foot
+when nothing fits level. "Mirror at random" flips half of them (a
+mirrored end serves as the other end), "Anchor" chooses the surface
+(nearest, floor, ceiling, wall left, wall right), the variants grid
+pins the brush to one variant ("any" gives the rules back); "Free"
+places the variant picked (or a whole take) once per click, wherever,
+overlapping or not. A click with no drag lays one whole take. Every
+placed stamp is kept with its rect, so a run passes stamps in its
+way, and saved in the level file's "decor" list, from which a loaded
+level seeds the list again. `godot --headless --path . -s
+tests/brush_test.gd` drags the brush over grounds of its own (flat, a
+slope, bumps, steps, a pit, a ceiling, a wall, backwards) and checks
+the rules: no overlaps, every foot on solid, the runs' roles and
+spacing, the drag spanned, the same seed laying the same run; it
+draws each case to `runs/brush/<case>.png` (`BRUSH_DEBUG=1` prints
+the runs).
+
+Lights: a click sets a glow source of the kind picked (ember, torch,
+crystal, glow, moon) for the sim's light pass, drawn as a ring in its
+colour while the editor is open; air painted over one takes it. They
+go in the level file's "lights" list, and a level's own come back as
+the editor's on a reset.
 
 Undo: a stroke (button down to up) is one step, a copy of the authored
 cells and the editor's lists before it (40 kept); undo puts the cells
@@ -572,8 +620,9 @@ cells filled one by one; or the bitmap) and to an authoring cell map,
 the CPU map the sim was built from, kept for this. Save writes
 `levels/<name>.cells.png` (one pixel a cell, its kind in the red
 channel, exact) and `levels/<name>.json`: a base of those cells and one
-scene on it with the spawn, the exit, the vines and lumps, the slugs
-and the decor list. Every `levels/*.json` loads like the clutch (Tab
+scene on it with the spawn, the exit, the vines and lumps, the slugs,
+the decor list and the lights. Every `levels/*.json` loads like the
+clutch (Tab
 cycles them, the suite runs any with scripts), so a painted level is a
 level. Painted gas pockets are found from the cells. `GECKO_EDIT_TEST=1`
 runs a headless round trip: paint, stamps, a PNG stamp undone and

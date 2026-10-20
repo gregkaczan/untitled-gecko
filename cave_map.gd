@@ -34,6 +34,7 @@ const LAVA := Color(0.80, 0.28, 0.05)     # A pool: neither solid nor water here
 const SHROOM := Color(0.42, 0.82, 0.46)  # Glowshroom flesh
 const MOSS := Color(0.20, 0.42, 0.20)    # Slippery moss
 const CRUMBLE := Color(0.46, 0.40, 0.33) # Crumbling rock, paler and dry
+const THORN := Color(0.80, 0.82, 0.78)   # Thorns, pale and bony
 const GAS := Color(0.05, 0.07, 0.04)     # A gas pocket: air with a tint
 const LAVA_TOP := Color(0.98, 0.62, 0.20)
 const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
@@ -55,6 +56,7 @@ const CELL_SHROOM := 9         # Glowshroom: decor that is ground to the gecko a
 const CELL_MOSS := 10          # Slippery moss: a coat on rock, solid, but the feet cannot hold it off a floor; a bite takes it
 const CELL_CRUMBLE := 11       # Crumbling rock: gives way under a hold of a second (gecko.gd), to grains in the sim
 const CELL_GAS := 12           # A gas pocket: air that bursts when a bite opens it (main.gd)
+const CELL_THORN := 13         # Thorns: a sharp plant on a rock face, solid, but no foot holds it and a touch throws the body off (gecko.gd); a bite takes it
 const CELL_DECOR := 16         # Decor, 16 to 47: a stamp's pixel (tests/scene_builder.gd), its colour DECOR_PALETTE[kind - 16 & 15], a glow from 32 up; solid, ground to the gecko, gone with a bite
 const DECOR_PALETTE: Array[Color] = [   # The decor stamps' 16 colours (decor/palette.png; render_write.glsl holds the same)
 	Color(0.024, 0.043, 0.016),
@@ -62,16 +64,16 @@ const DECOR_PALETTE: Array[Color] = [   # The decor stamps' 16 colours (decor/pa
 	Color(0.137, 0.224, 0.118),
 	Color(0.212, 0.255, 0.145),
 	Color(0.251, 0.325, 0.180),
-	Color(0.286, 0.333, 0.161),
+	Color(0.588, 0.616, 0.627),   # A mid grey, a light grey (9) and a white (14): the white moss
 	Color(0.278, 0.373, 0.220),
 	Color(0.388, 0.416, 0.267),
 	Color(0.451, 0.557, 0.369),
-	Color(0.565, 0.584, 0.431),
+	Color(0.839, 0.867, 0.878),
 	Color(0.580, 0.616, 0.455),
 	Color(0.631, 0.702, 0.529),
 	Color(0.710, 0.804, 0.608),
 	Color(0.804, 0.824, 0.655),
-	Color(0.839, 0.871, 0.702),
+	Color(0.953, 0.965, 0.957),
 	Color(0.945, 0.933, 0.788),
 ]
 
@@ -181,7 +183,7 @@ func is_solid(x: int, y: int) -> bool:
 		return true
 	var v := solid[y * W + x]
 	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK \
-			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE or v >= CELL_DECOR
+			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE or v == CELL_THORN or v >= CELL_DECOR
 
 
 # Loose grains live in the particle world only (sim_map.gd): here a bed
@@ -216,6 +218,10 @@ func crumble_world(p: Vector2) -> bool:
 	return _kind_world(p) == CELL_CRUMBLE
 
 
+func thorn_world(p: Vector2) -> bool:
+	return _kind_world(p) == CELL_THORN
+
+
 func _kind_world(p: Vector2) -> int:
 	var x := int(floor(p.x / CELL))
 	var y := int(floor(p.y / CELL))
@@ -237,9 +243,21 @@ func lava_near(p: Vector2, n: int) -> bool:
 func drop_near(p: Vector2, n: int) -> bool:
 	var cx := int(floor(p.x / CELL))
 	var cy := int(floor(p.y / CELL))
+	# A drop is water over air with no water for 12 px below it: a crest
+	# of a pool's surface, or the spray a 2 px water line throws up a
+	# bank, is not one (the gecko climbing out of a pool was knocked off
+	# by its own splash every other tick).
+	var depth := int(ceil(12.0 / CELL))
 	for y in range(cy - n, cy + n + 1):
 		for x in range(cx - n, cx + n + 1):
-			if is_water(x, y) and not is_water(x, y + 1) and not is_solid(x, y + 1):
+			if not is_water(x, y) or is_water(x, y + 1) or is_solid(x, y + 1):
+				continue
+			var falling := true
+			for k in range(2, depth + 1):
+				if is_water(x, y + k):
+					falling = false
+					break
+			if falling:
 				return true
 	return false
 
@@ -493,6 +511,16 @@ func floor_below(p: Vector2) -> Vector2:
 	return Vector2(p.x, cy * CELL)
 
 
+# The near edge of the first solid cell to the right (dir 1) or the
+# left (dir -1) of p on p's row, or the world's edge.
+func wall_beside(p: Vector2, dir: int) -> Vector2:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	while cx >= 0 and cx < W and not is_solid(cx, cy):
+		cx += dir
+	return Vector2((cx + (1 if dir < 0 else 0)) * CELL, p.y)
+
+
 # All rock, no repaint: the test scenes carve their rooms out of this.
 func blank() -> void:
 	if solid.size() != W * H:
@@ -719,6 +747,8 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 						col = MOSS.lightened(0.1) if rim else MOSS
 					CELL_CRUMBLE:
 						col = CRUMBLE.lightened(0.12) if rim else CRUMBLE + ROCK_VAR * grain
+					CELL_THORN:
+						col = THORN.lightened(0.1) if rim else THORN - ROCK_VAR * grain
 					_:
 						if v >= CELL_DECOR:
 							col = DECOR_PALETTE[(v - CELL_DECOR) & 15]   # A stamp's pixel, as drawn

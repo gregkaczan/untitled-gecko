@@ -4450,6 +4450,67 @@
    ],
    "note": "a wall coated with moss from 560 to 760: the climb reaches the coat and drops; it ends on the floor"
   },
+  "thorn_wall": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1100,
+     300,
+     200,
+     500
+    ],
+    [
+     "decor",
+     "thorn",
+     1090,
+     640,
+     "wall_right"
+    ]
+   ],
+   "spawn": [
+    "floor",
+    900,
+    700
+   ],
+   "scripts": [
+    "climb_wall"
+   ],
+   "end": [
+    880,
+    660,
+    1130,
+    800
+   ],
+   "note": "thorns on the wall at 640: the climb is thrown off them and ends below"
+  },
+  "thorn_floor": {
+   "base": "room",
+   "terrain": [
+    [
+     "decor",
+     "thorn",
+     1000,
+     790,
+     "floor"
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "walk_right"
+   ],
+   "end": [
+    600,
+    700,
+    990,
+    800
+   ],
+   "note": "thorns on the floor at 1000: the walk is thrown back and never passes"
+  },
   "moss_bitten": {
    "base": "room",
    "terrain": [
@@ -5045,6 +5106,43 @@
    ],
    "state": "cling",
    "note": "a hole 16 px tall at the floor through a wall 24 px thick, squeezed through and back"
+  },
+  "squeeze_window_jagged": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     16,
+     640
+    ],
+    [
+     "ragged",
+     988,
+     752,
+     1028,
+     752,
+     7,
+     13
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "window"
+   ],
+   "reach": [
+    1052,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a chewed hole 9 to 15 px tall through a 16 px wall, 48 px above the floor, its edges ragged: up the wall, a press into it enters the hole, out the far side"
   },
   "squeeze_window_12": {
    "base": "room",

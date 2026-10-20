@@ -26,6 +26,7 @@ signal landed(speed: float)    # Onto a surface from the air or the water, at th
 signal jumped
 signal slipped                 # Dropped off a surface: moss, hot rock, a drop's hit
 signal crumbled(at: Vector2)   # Rock gave way under a foot there
+signal pricked(at: Vector2)    # Thrown off thorns there
 signal blasted                 # A gas burst threw the gecko
 
 const Chain = preload("res://chain.gd")
@@ -61,6 +62,10 @@ const HOT_REACH := 20.0        # Px: lava this near a foot heats it
 const HOT_HOLD := 1.0
 const CRUMBLE_HOLD := 1.0
 const CRUMBLE_R := 10.0
+# Thorns (cell kind 13): no foot holds them, and a touch, by a foot or by
+# the body stopped against them in any state, throws the body back.
+const PRICK_SPEED := 140.0     # Px/s the body is thrown back off thorns
+const PRICK_NO_CLING := 0.35   # No cling after a prick, so the recoil is seen
 const SCREE_UP := -0.85
 const SCREE_R := 6.0
 const SLIP_NO_CLING := 0.35    # After a slip, no cling for this long: the fall is seen and the same cells are not caught again at once
@@ -287,8 +292,11 @@ var _chew_t := 0.0             # Seconds into the bite cycle while chewing
 var _digging := false          # Chewing with rock within DIG_LOOK of the bite: the walk slows to the dig
 var _burrowing := false        # This tick the walk went on through loose grains (sand, clay)
 var _squeeze := false          # In a passage narrower than the body: less clearance, slow, the body thinned
+var _pricked_t := 0.0          # Seconds left of a prick's recoil, during which the keys do not steer the fall
 var _sq_r := BODY_R            # The clearance while squeezing
 var _sq_max := SQUEEZE_MAX      # Widest the passage may read, with the body in it, before the squeeze is released: SQUEEZE_BLOCKED for one entered from a blocked walk
+var _sq_cw := -1.0             # The corridor's width (px) in a squeeze, for the trace; -1 for none
+var _tube_full := 0            # Segments drawn as a tube this tick with neither end thinned a pixel (the trace; always 0 by the rule in _push_blobs, a guard)
 var _sq_in := false            # The body centre has been inside the passage
 var _sq_wide := 0              # Ticks in a row the passage has read wide
 var _sq_wait := 0              # Ticks at the mouth without getting in
@@ -465,6 +473,10 @@ func _physics_process(dt: float) -> void:
 	_update_feet(dt)
 	_update_idle(inp, dt)
 	_tick += 1
+	# Thorns: the cell that stopped a move this tick, in any state (a
+	# landing, a walk into a patch), throws the body back off them.
+	if _block_cell != null and map.thorn_world(_block_cell):
+		_prick(_block_cell)
 	_inp = inp
 	if _trace:
 		_print_trace()
@@ -512,13 +524,13 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
 		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
-		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, cp, fs])
+		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, cp, fs])
 
 
 # in, out, stuck, grapple, drag, strain, back: what the tongue is doing (trace, panel).
@@ -944,7 +956,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 			if back < 0.0 and absf(speed_along) > 1.0:
 				pull -= fwd * back
 			_move(pull)
-	if jump:
+	# No jump out of a squeeze: there is no room to push off into, and
+	# the body shot out of passages.
+	if jump and not _squeeze:
 		_jumped = true
 		_jump()
 		return
@@ -968,7 +982,8 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 
 func _update_airborne(inp: Vector2, dt: float) -> void:
 	vel.y += GRAVITY * dt
-	if absf(inp.x) > 0.2:
+	_pricked_t = maxf(_pricked_t - dt, 0.0)
+	if absf(inp.x) > 0.2 and _pricked_t <= 0.0:
 		vel.x = move_toward(vel.x, inp.x * AIR_MAX, AIR_ACCEL * dt)
 	var blocked := not _move(vel * dt)
 	var p: Dictionary = map.probe(pos, PROBE_R)
@@ -1045,6 +1060,9 @@ func _surface_rules(dt: float) -> void:
 		if off_floor and not chewing and map.slick_world(f.pos):
 			_drop(SLIP_NO_CLING)
 			slipped.emit()
+			return
+		if map.thorn_world(f.pos):
+			_prick(f.pos)
 			return
 		if map.lava_near(f.pos, _cells(HOT_REACH)):
 			hot = true
@@ -1338,6 +1356,18 @@ func _land(n: Vector2) -> void:
 # Lets go of the surface (the feet lost, or a surface that will not
 # be held, _surface_rules): a fall that keeps the walk's speed, with
 # no cling for a while so the drop is seen.
+# Thorns: a touch throws the body back off them, so a patch is neither
+# stood on nor climbed past; a bite takes it. The keys do not steer the
+# recoil (a held walk would carry the body straight back in).
+func _prick(at: Vector2) -> void:
+	var away := pos - at
+	away = away.normalized() if away.length() > 0.001 else -up
+	_drop(PRICK_NO_CLING)
+	vel = away * PRICK_SPEED
+	_pricked_t = PRICK_NO_CLING
+	pricked.emit(at)
+
+
 func _drop(no_cling_for := NO_CLING_TIME) -> void:
 	clinging = false
 	_grab_n = Vector2.ZERO
@@ -1587,6 +1617,7 @@ func _begin_squeeze(h: float, u: Vector2, line: Vector2, wide := SQUEEZE_MAX) ->
 
 func _end_squeeze() -> void:
 	_squeeze = false
+	_sq_cw = -1.0
 	_sq_enter = false
 	_sq_in = false
 	_sq_wide = 0
@@ -1733,12 +1764,20 @@ func _update_squeeze() -> void:
 	# passed rather than stopped at, at the mouth as much as inside. The
 	# body is kept on that corridor's middle.
 	var c := _corridor()
+	_sq_cw = c.hi - c.lo + 1.0 if c.ok else -1.0
 	var line_mid: float = r.mid
+	# Wide: the straight corridor takes the body at its full clearance,
+	# so the squeeze has nothing left to do. A squeeze entered from a
+	# blocked walk reads a passage up to SQUEEZE_BLOCKED as here, and
+	# without this it would walk a 24 px passage to its end in the
+	# squeeze's posture, legs tucked and slow, swollen to the walls.
+	var wide := false
 	if c.ok:
 		_sq_r = _squeeze_r(c.hi - c.lo + 1.0)
+		wide = c.hi - c.lo + 1.0 > SQUEEZE_MAX + 2.0
 		if here:
 			line_mid = (c.lo + c.hi) * 0.5
-	if here:
+	if here and not wide:
 		_sq_in = true
 		_sq_wide = 0
 		_sq_wait = 0
@@ -2167,6 +2206,8 @@ func _update_feet(dt: float) -> void:
 		var q: Dictionary = map.probe(rest, LEG_REACH)
 		if q.found and q.nearest.distance_to(hip) > MAX_LEG:
 			q.found = false
+		if q.found and map.thorn_world(q.nearest):
+			q.found = false   # No foot holds thorns
 		if not q.found:
 			if not f.planted:
 				f.pos = f.pos.move_toward(rest, FOOT_SETTLE * dt)
@@ -2225,6 +2266,7 @@ func _push_blobs() -> void:
 	var gulp_at := -1.0
 	if _gulp > 0.0:
 		gulp_at = (1.0 - _gulp / GULP_TIME) * 4.0
+	_tube_full = 0
 	for i in chain.size():
 		var r_i: float = _draw_r[i]
 		if gulp_at >= 0.0:
@@ -2232,10 +2274,16 @@ func _push_blobs() -> void:
 		list.append([chain.points[i], r_i, BODY_COLOR])
 		if i == 0:
 			continue
-		if _thin_on[i] or _thin_on[i - 1]:
+		if (_thin_on[i] or _thin_on[i - 1]) and (_draw_r[i] < chain.radii[i] - 1.0 or _draw_r[i - 1] < chain.radii[i - 1] - 1.0):
 			# A segment thinned to a passage is drawn as a tube: blobs
 			# every 2 px, so its edge is straight rather than scalloped,
 			# and does not flicker pixel by pixel as the body creeps along.
+			# Only once the radius has really come down: the tube's summed
+			# splats render fatter than one blob of the same radius, and a
+			# body read as narrow but barely thinned (a passage of 20 px,
+			# squeezed into from a blocked walk) swelled past the walls.
+			if _draw_r[i] >= chain.radii[i] - 1.0 and _draw_r[i - 1] >= chain.radii[i - 1] - 1.0:
+				_tube_full += 1
 			for k in range(1, 4):
 				var t := k / 4.0
 				list.append([chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), BODY_COLOR])

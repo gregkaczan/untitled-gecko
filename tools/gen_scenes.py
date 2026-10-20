@@ -280,6 +280,13 @@ add("pool_drop", [["erase", 1000, F, 400, 160], ["water", 1000, F, 400, 160]], [
 # 13b. Surfaces that will not be held
 add("moss_wall", [["fill", 1100, 300, 200, 500], ["moss", 1096, 560, 12, 200]], ["floor", 900, 700], ["climb_wall"],
     end=[880, 700, 1120, 800], note="a wall coated with moss from 560 to 760: the climb reaches the coat and drops; it ends on the floor")
+# Thorns: a sharp plant on a rock face no foot holds, and a touch throws
+# the body off (gecko.gd _prick): on a wall the climb ends below the
+# patch, on a floor the walk never passes it.
+add("thorn_wall", [["fill", 1100, 300, 200, 500], ["decor", "thorn", 1090, 640, "wall_right"]], ["floor", 900, 700], ["climb_wall"],
+    end=[880, 660, 1130, 800], note="thorns on the wall at 640: the climb is thrown off them and ends below")
+add("thorn_floor", [["decor", "thorn", 1000, 790, "floor"]], ["floor", 700, 700], ["walk_right"],
+    end=[600, 700, 990, 800], note="thorns on the floor at 1000: the walk is thrown back and never passes")
 add("moss_bitten", [["fill", 1100, 300, 200, 500], ["moss", 1096, 760, 12, 16]], ["floor", 900, 700], ["bite_climb"],
     reach=[1040, 0, 1120, 540], note="a wall with a coat of moss at its foot, one bite tall: the bite takes it and the climb goes on past it")
 add("notch_climb", [["fill", 1100, 300, 200, 500]], ["floor", 900, 700], ["bite_climb"], reach=[1040, 0, 1120, 540],
@@ -325,6 +332,9 @@ for thick in (12, 24):
             note="a hole %d px tall at the floor through a wall %d px thick, squeezed through and back" % (h, thick))
 # A hole 12 px tall through a 12 px wall with its sill 40 px up: climbed
 # to, entered with a press into the wall, left on the far side.
+add("squeeze_window_jagged", [["fill", 1000, C, 16, F - C], ["ragged", 988, F - 48, 1028, F - 48, 7, 13]], ["floor", 800, 700], ["window"],
+    state="cling", reach=[1052, 0, 1920, 1080],
+    note="a chewed hole 9 to 15 px tall through a 16 px wall, 48 px above the floor, its edges ragged: up the wall, a press into it enters the hole, out the far side")
 add("squeeze_window_12", [["fill", 1000, C, 12, F - C - 52], ["fill", 1000, F - 40, 12, 40]], ["floor", 800, 700], ["window"],
     state="cling", reach=[1052, 0, 1920, 1080],
     note="a 12 px hole through a 12 px wall, 40 px above the floor: up the wall, a press into it enters the hole, out the far side")

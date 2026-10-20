@@ -1,10 +1,12 @@
-# Cuts the decor stamps into pieces the editor's brush can scatter:
-# every stamp's connected parts (a cluster's single mushrooms, a clump
-# and its sporophytes) as <name>_p<n>.png, and the carpets (moss
-# clumps, hanging moss) into vertical slices as <name>_s<n>.png, each
-# cropped to its pixels. The editor groups a stamp with its pieces by
-# the name before the take number (tests/scene_builder.gd), so a brush
-# set to random picks among them.
+# Cuts the decor stamps into pieces the editor's brush can lay: every
+# stamp's connected parts (a cluster's single mushrooms, a clump and
+# its sporophytes) as <name>_p<n>.png, and the carpets (the moss) into
+# three slices with a role each, <name>_l.png, <name>_m.png and
+# <name>_r.png (the left end, a middle, the right end), each cropped to
+# its pixels, so a run of moss is an l, any number of m's and an r laid
+# edge to edge. The editor groups a stamp with its pieces by the name
+# before the take number (tests/scene_builder.gd stamp_group) and reads
+# the role off the suffix (stamp_role). Old pieces are removed first.
 #
 #   python3 -I tools/decor_split.py decor/stamps
 import os, sys, random
@@ -12,7 +14,7 @@ from collections import deque
 from PIL import Image
 folder = sys.argv[1]
 random.seed(3)
-SLICED = ('moss_a', 'moss_hang')
+SLICED = ('moss',)
 MIN_PART = 6
 
 def components(im):
@@ -40,13 +42,17 @@ def crop_pixels(im, pixels):
         op[x - x0, y - y0] = ip[x, y]
     return out
 
+def is_piece(name):
+    last = name.split('_')[-1]
+    return last in ('l', 'm', 'r') or (len(last) >= 2 and last[0] in 'ps' and last[1:].isdigit())
+
 made = []
+for f in sorted(os.listdir(folder)):
+    if f.endswith('.png') and is_piece(f[:-4]):
+        os.remove(os.path.join(folder, f))
 names = sorted(f for f in os.listdir(folder) if f.endswith('.png'))
 for f in names:
     name = f[:-4]
-    tokens = name.split('_')
-    if tokens[-1][0] in 'ps' and tokens[-1][1:].isdigit():
-        continue            # a piece already
     im = Image.open(os.path.join(folder, f)).convert('RGBA')
     comps = [c for c in components(im) if len(c) >= MIN_PART]
     if len(comps) >= 2:
@@ -54,11 +60,13 @@ for f in names:
             out = crop_pixels(im, c); out.save(os.path.join(folder, f'{name}_p{i}.png')); made.append((f'{name}_p{i}', out.size))
     if name.startswith(SLICED):
         w, h = im.size; px = im.load()
-        cuts = [0] + [int(w * k / 3 + random.randint(-2, 2)) for k in (1, 2)] + [w]
-        for i in range(3):
+        xs = [x for y in range(h) for x in range(w) if px[x, y][3]]
+        x0, x1 = min(xs), max(xs) + 1          # The columns the carpet spans, cut in thirds
+        cuts = [x0] + [int(x0 + (x1 - x0) * k / 3 + random.randint(-2, 2)) for k in (1, 2)] + [x1]
+        for i, role in enumerate('lmr'):
             pixels = [(x, y) for y in range(h) for x in range(cuts[i], cuts[i + 1]) if px[x, y][3]]
             if len(pixels) >= MIN_PART:
-                out = crop_pixels(im, pixels); out.save(os.path.join(folder, f'{name}_s{i}.png')); made.append((f'{name}_s{i}', out.size))
+                out = crop_pixels(im, pixels); out.save(os.path.join(folder, f'{name}_{role}.png')); made.append((f'{name}_{role}', out.size))
 for n, sz in made:
     print(f'{n:22s} {sz[0]:2d} x {sz[1]:2d}')
 print(len(made), 'pieces')

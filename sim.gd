@@ -83,7 +83,7 @@ const O_C4 := O_LN + RENDER_W * RENDER_H         # 22809998, the same folded 2x2
 const TOTAL_UINTS := O_C4 + (RENDER_W / 2) * (RENDER_H / 2)
 const CT_CRUMB := 256                            # Added to a crumb's class in the O_LN copy: a speck the senses read as air and the body loosens
 const LIGHT_PASSES := 19                         # Cells the light travels per tick; odd, see above
-const MAX_GLOWS := 8                             # Glow sources (the gecko, slugs) the seed takes
+const MAX_GLOWS := 13                            # Glow sources (the gecko, the slugs, the level's lights) the seed takes: 6 floats each from [16], under the currents at [96]
 const LIGHT_DECAY := 0.8                         # Of last tick's light kept before this tick's spread: a moved glow leaves a short trail
 # Passage per cell. Beyond one tick's passes the light is carried on
 # from the decayed field, so the fall-off there is the passage times
@@ -110,8 +110,10 @@ const CT_SOLID := 2                              # Cell class of static solid (r
 const CT_LOOSE := 4                              # Cell class of a loose grain (sand, clay, stone off a lump)
 const CT_SLICK := 5                              # Cell class of moss: rock in its top fraction band, solid but no hold for the feet
 const CT_CRUMBLE := 6                            # Cell class of crumbling rock: the band below, gives way under a hold
+const CT_THORN := 7                              # Cell class of thorns: the band between, no hold and a touch throws the body off
 const FRAC_MOSS := 0.097                         # Rock's fraction for moss (render_write.glsl reads the bands)
 const FRAC_CRUMBLE := 0.092
+const FRAC_THORN := 0.094                        # Rock's fraction for thorns, between the two
 const FRAC_BAND := 0.003                         # A decor cell (mat 12, CaveMap.CELL_DECOR and up) sits at 0.0015 + band * 0.003: the band's low four bits its palette colour, 16 and up a glow (render_write.glsl)
 const FRAC_SHROOM := 0.098                       # The table glowshroom (kind 9): mat 12 above the bands, the old green flesh
 const FRAC_MAX := 0.89                           # Random fractions stay under 0.089, below the bands
@@ -250,13 +252,13 @@ func set_daylight(rect: Rect2, color: Color) -> void:
 
 
 # The glows this tick: up to MAX_GLOWS of [position, colour, radius],
-# the gecko's head and the slugs. Set before tick().
+# the gecko's head, the slugs and the level's lights. Set before tick().
 func set_glows(glows: Array) -> void:
 	var n := mini(glows.size(), MAX_GLOWS)
 	_light.encode_float(1 * 4, float(n))
 	for i in n:
 		var g: Array = glows[i]
-		var b := (16 + i * 8) * 4
+		var b := (16 + i * 6) * 4
 		_light.encode_float(b, g[0].x)
 		_light.encode_float(b + 4, g[0].y)
 		_light.encode_float(b + 8, g[1].r)
@@ -792,6 +794,8 @@ static func frac_of(kind: int) -> float:
 			return FRAC_CRUMBLE
 		CaveMap.CELL_SHROOM:
 			return FRAC_SHROOM
+		CaveMap.CELL_THORN:
+			return FRAC_THORN
 		_:
 			return FRAC_BAND * (float(kind - CaveMap.CELL_DECOR) + 0.5) if kind >= CaveMap.CELL_DECOR else -1.0
 

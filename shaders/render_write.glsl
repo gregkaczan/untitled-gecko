@@ -20,7 +20,7 @@ const uint O_EM = 21254670u;   // emission per cell for the light pass (light_se
 const uint BD = 20u;
 // The decor stamps' palette (cave_map.gd DECOR_PALETTE): a mat 12 particle in a
 // fraction band under 0.097 is one of these, band & 15; a band of 16 and up glows.
-const vec3 DECOR_PAL[16] = vec3[16](vec3(0.024, 0.043, 0.016), vec3(0.114, 0.176, 0.086), vec3(0.137, 0.224, 0.118), vec3(0.212, 0.255, 0.145), vec3(0.251, 0.325, 0.180), vec3(0.286, 0.333, 0.161), vec3(0.278, 0.373, 0.220), vec3(0.388, 0.416, 0.267), vec3(0.451, 0.557, 0.369), vec3(0.565, 0.584, 0.431), vec3(0.580, 0.616, 0.455), vec3(0.631, 0.702, 0.529), vec3(0.710, 0.804, 0.608), vec3(0.804, 0.824, 0.655), vec3(0.839, 0.871, 0.702), vec3(0.945, 0.933, 0.788));
+const vec3 DECOR_PAL[16] = vec3[16](vec3(0.024, 0.043, 0.016), vec3(0.114, 0.176, 0.086), vec3(0.137, 0.224, 0.118), vec3(0.212, 0.255, 0.145), vec3(0.251, 0.325, 0.180), vec3(0.588, 0.616, 0.627), vec3(0.278, 0.373, 0.220), vec3(0.388, 0.416, 0.267), vec3(0.451, 0.557, 0.369), vec3(0.839, 0.867, 0.878), vec3(0.580, 0.616, 0.455), vec3(0.631, 0.702, 0.529), vec3(0.710, 0.804, 0.608), vec3(0.804, 0.824, 0.655), vec3(0.953, 0.965, 0.957), vec3(0.945, 0.933, 0.788));
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -124,11 +124,13 @@ void main() {
             float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 8.0;   // 12, the glowshroom, is static
             cls = (chunk != 0u) ? 16u + chunk : ((yield_s >= 5.0) ? 2u : 4u);
             // Rock in its fraction bands (sim.gd frac_of): moss, a slick
-            // coat the feet cannot hold (5), and rock that crumbles under
-            // a hold (6). Both static solid to everything else.
+            // coat the feet cannot hold (5), thorns that throw the body
+            // off (7), and rock that crumbles under a hold (6). All
+            // static solid to everything else.
             if (mat == 3u && chunk == 0u) {
                 float f = fract(mat_f);
-                if (f >= 0.0945) cls = 5u;
+                if (f >= 0.0965) cls = 5u;
+                else if (f >= 0.0935) cls = 7u;
                 else if (f >= 0.090) cls = 6u;
             }
         }
@@ -272,11 +274,13 @@ void main() {
         cb = rf(O_M + mat * 12u + 8u);
         // A vine: clay spawned with its fraction in the top band
         // (sim.gd spawn_vine), green-brown instead of clay. Rock in its
-        // bands: moss (a dark wet green) and crumbling rock (paler, dry).
+        // bands: moss (a dark wet green), thorns (pale, bony) and
+        // crumbling rock (paler, dry).
         if (mat == 2u && fract(mat_f) >= 0.0945) { cr = 0.30; cg = 0.52; cb = 0.22; }
         if (mat == 3u) {
             float f = fract(mat_f);
-            if (f >= 0.0945) { cr = 0.20; cg = 0.42; cb = 0.20; }
+            if (f >= 0.0965) { cr = 0.20; cg = 0.42; cb = 0.20; }
+            else if (f >= 0.0935) { cr = 0.80; cg = 0.82; cb = 0.78; }
             else if (f >= 0.090) { cr = 0.46; cg = 0.40; cb = 0.33; }
         }
 

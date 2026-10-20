@@ -17,7 +17,7 @@ const uint O_LA = 19181070u;   // light, two uints per cell (RG and B as 16-bit)
 const uint O_LB = 20217870u;   // light, the spread's other half
 const uint O_EM = 21254670u;   // emission per cell, packed RGB8, written by the particles (render_write.glsl)
 const uint O_LO = 21773070u;   // the light as RGB8 per cell, for the overlay texture (light_out.glsl, read back by sim.gd)
-const uint O_LP = 22291470u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 8 floats each: x y r g b radius
+const uint O_LP = 22291470u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 6 floats each: x y r g b radius
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -47,9 +47,9 @@ void main() {
     if (open && c.x >= rf(O_LP + 4u) && c.x < rf(O_LP + 6u) && c.y >= rf(O_LP + 5u) && c.y < rf(O_LP + 7u)) {
         l = max(l, vec3(rf(O_LP + 8u), rf(O_LP + 9u), rf(O_LP + 10u)));
     }
-    uint n = min(uint(rf(O_LP + 1u)), 8u);
+    uint n = min(uint(rf(O_LP + 1u)), 13u);
     for (uint i = 0u; i < n; i++) {
-        uint s = O_LP + 16u + i * 8u;
+        uint s = O_LP + 16u + i * 6u;
         float rad = rf(s + 5u);
         float dist = length(c - vec2(rf(s), rf(s + 1u)));
         if (dist < rad) {

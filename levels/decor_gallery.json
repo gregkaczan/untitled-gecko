@@ -1,29 +1,163 @@
 {
  "bases": {
-  "decor_gallery": [["blank"], ["room", 0, 160, 1920, 640]]
+  "decor_gallery": [
+   [
+    "blank"
+   ],
+   [
+    "room",
+    0,
+    160,
+    1920,
+    640
+   ]
+  ]
  },
  "scripts": {},
  "scenes": {
   "decor_gallery": {
    "base": "decor_gallery",
-   "spawn": ["floor", 300, 700],
+   "spawn": [
+    "floor",
+    300,
+    700
+   ],
    "terrain": [
-    ["decor", "shroom_s_0", 400, 790, "floor"],
-    ["decor", "cluster_0", 460, 790, "floor"],
-    ["decor", "tall_a_0", 540, 790, "floor"],
-    ["decor", "tall_b_1", 590, 790, "floor", "h"],
-    ["decor", "moss_a_0", 660, 790, "floor"],
-    ["decor", "moss_a_1_s0", 720, 790, "floor"],
-    ["decor", "moss_a_1_s2", 744, 790, "floor"],
-    ["decor", "fern_0", 820, 790, "floor"],
-    ["decor", "plant_1", 900, 790, "floor"],
-    ["decor", "cluster_2_p1", 980, 790, "floor"],
-    ["decor", "cluster_2_p2", 1010, 790, "floor", "h"],
-    ["decor", "vine_leaves_0", 1080, 790, "floor"],
-    ["decor", "moss_hang_0", 500, 200, "ceiling"],
-    ["decor", "moss_hang_1_s1", 560, 200, "ceiling"],
-    ["decor", "vine_leaves_1", 640, 200, "ceiling"],
-    ["decor", "shroom_cluster", 760, 200, "ceiling"]
+    [
+     "decor",
+     "shroom_s_0",
+     400,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "cluster_0",
+     460,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "tall_a_0",
+     540,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "tall_b_1",
+     590,
+     790,
+     "floor",
+     "h"
+    ],
+    [
+     "decor",
+     "moss_2_l",
+     650,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_3_m",
+     664,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_1_m",
+     676,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_2_r",
+     690,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_0",
+     730,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_5",
+     780,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "fern_0",
+     820,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "plant_1",
+     900,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "cluster_2_p1",
+     980,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "cluster_2_p2",
+     1010,
+     790,
+     "floor",
+     "h"
+    ],
+    [
+     "decor",
+     "vine_leaves_0",
+     1080,
+     790,
+     "floor"
+    ],
+    [
+     "decor",
+     "moss_3",
+     500,
+     200,
+     "ceiling"
+    ],
+    [
+     "decor",
+     "moss_4_m",
+     560,
+     200,
+     "ceiling"
+    ],
+    [
+     "decor",
+     "vine_leaves_1",
+     640,
+     200,
+     "ceiling"
+    ],
+    [
+     "decor",
+     "shroom_cluster",
+     760,
+     200,
+     "ceiling"
+    ]
    ]
   }
  }

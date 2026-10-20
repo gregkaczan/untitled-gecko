@@ -61,7 +61,7 @@ SHAKE_MIN = 1.0            # screen px: a reversal of the drawn body's screen mo
 CREEP_WIN = 12             # frames the body has been still before a moving camera counts as creeping
 
 SCORED = ["draw_jump", "head_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
-          "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake"]
+          "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake", "tube_full"]
 INFO = ["body_jump", "stuck", "cam_creep"]
 
 
@@ -121,6 +121,7 @@ def parse(path):
                 "sq": d["sq"] == "1", "chew": d["chew"] == "1", "jump": d["jump"] == "1",
                 "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1",
                 "sqz": d.get("sqz", "0") == "1", "ps": d.get("ps", "0") == "1", "feet": feet,
+                "cw": float(d.get("cw", "-1")), "sqin": d.get("sqin", "0") == "1", "tube": int(d.get("tube", "0")),
             })
     return ticks
 
@@ -349,6 +350,16 @@ def metrics(ticks, frames=()):
             ev["sink"].append((tk["tick"], tk["dist"]))
         if run_float == SINK_TICKS:
             ev["float"].append((tk["tick"], tk["dist"]))
+    # A body segment drawn as a tube of splats with neither end thinned a
+    # pixel: the tube renders fatter than one blob of the radius, and a
+    # body read as narrow but barely thinned (a 22 px passage, squeezed
+    # into from a blocked walk) swelled past the walls. gecko.gd draws
+    # no such tube now (the trace's tube count), so one is a regression.
+    last_tube = -SINK_TICKS
+    for i, tk in enumerate(ticks):
+        if tk["tube"] and i - last_tube >= SINK_TICKS:
+            ev["tube_full"].append((tk["tick"], tk["tube"]))
+            last_tube = i
     return ev
 
 
@@ -436,7 +447,7 @@ def analyze(runs_dir, baseline_path=None):
     short = {"draw_jump": "draw", "head_jump": "head", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
              "foot_jump": "fjump", "sink": "sink", "float": "float", "cam_jerk": "cjerk", "shake": "shake",
-             "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*"}
+             "tube_full": "tube", "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*"}
     lines = ["# Movement suite report", "",
              "Runs: %d, passing: %d, failing: %d. Columns are event counts; * marks informational metrics; "
              "travel is the body's path length in px, a check that the scene was exercised." % (total, passing, total - passing), ""]

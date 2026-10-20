@@ -1,14 +1,18 @@
 # The in-game map editor (F2): a panel down the left, the world painted
 # with the mouse. Paints are the cell kinds (air, rock, hard rock,
 # bedrock, copper, sand, clay, water, lava, glowshroom, moss, crumbling
-# rock, gas). Decor is the stamps drawn as PNGs in decor/stamps
-# (tools/decor_split.py cuts them into pieces), shown as icons and laid
-# by a brush: dragged along a surface it sets one wherever the next
-# stands clear of every placed one by the spacing, picking among the
-# stamp's group at random and mirroring at random when asked; set free,
-# a click places one anywhere, overlapping or not. Stamps are the table
-# glowshrooms, dripstone cones, a vine and a slug; the level tools set
-# the spawn and the exit. Everything goes through main.gd, which paints
+# rock, gas, thorn). Decor is the stamps drawn as PNGs in decor/stamps
+# (tools/decor_split.py cuts them into pieces), one icon a group, laid
+# by the brush (decor_brush.gd): dragged along a surface it lays a run
+# of the group edge to edge, the variants picked by its rules (a carpet
+# as a left end, middles and a right end draped over the ground, a
+# scatter of shrooms or plants spaced out), mirrored at random when
+# asked; the group's variants show under the grid, and one picked there
+# pins the brush to it. Set free, a click places the variant picked
+# anywhere, overlapping or not. Stamps are the table glowshrooms and
+# thorns, dripstone cones, a vine and a slug; lights are glow sources
+# of a few kinds, one set by a click; the level tools set the spawn and
+# the exit. Everything goes through main.gd, which paints
 # the live world (the particle sim or the bitmap) and an authoring cell
 # map alike, keeps every stroke for undo (Ctrl+Z, Ctrl+Y), and saves and
 # loads levels/<name>.json with its cells (levels/<name>.cells.png).
@@ -21,14 +25,15 @@ const WIDTH := 236.0
 const PAINTS := [
 	["Air", 0], ["Rock", 1], ["Hard rock", 7], ["Bedrock", 8], ["Copper", 3],
 	["Sand", 4], ["Clay", 5], ["Water", 2], ["Lava", 6],
-	["Glowshroom", 9], ["Moss", 10], ["Crumble", 11], ["Gas", 12],
+	["Glowshroom", 9], ["Moss", 10], ["Crumble", 11], ["Gas", 12], ["Thorn", 13],
 ]
 const STAMPS := [
 	["Shroom small", "shroom_s"], ["Shroom", "shroom_m"], ["Shroom cluster", "shroom_cluster"],
 	["Stalactite", "stalactite"], ["Stalagmite", "stalagmite"], ["Vine", "vine"], ["Slug", "slug"],
+	["Thorn", "thorn"], ["Thorn small", "thorn_s"],
 ]
 const TOOLS := [["Spawn", "spawn"], ["Exit (drag)", "exit"]]
-const ANCHORS := ["nearest", "floor", "ceiling"]
+const ANCHORS := ["nearest", "floor", "ceiling", "wall_left", "wall_right"]
 const BRUSH_MIN := 4.0
 const BRUSH_MAX := 48.0
 const ICON := 36               # The decor grid's icons, px square: a stamp at 2x when it fits, else at 1x, else shrunk
@@ -38,12 +43,13 @@ var _panel: PanelContainer
 var _title: Label
 var _paints: ItemList
 var _decor: ItemList
+var _variants: ItemList
+var _lights: ItemList
 var _stamps: ItemList
 var _tools: ItemList
 var _files: ItemList
 var _brush: HSlider
 var _spacing: HSlider
-var _random: CheckButton
 var _mirror: CheckButton
 var _free: CheckButton
 var _anchor: OptionButton
@@ -51,11 +57,14 @@ var _undo_b: Button
 var _redo_b: Button
 var _name: LineEdit
 var _status: Label
-var _mode := "paint"           # paint | decor | stamp | tool
-var _pick := 1                 # Kind, stamp index, or tool index
-var _decor_name := ""          # The decor stamp picked
-var _decor_names: Array = []   # Every PNG stamp, in the grid's order
-var _groups := {}              # Group -> its stamps' names (SceneBuilder.stamp_group)
+var _mode := "paint"           # paint | decor | stamp | light | tool
+var _pick := 1                 # Kind, stamp index, light index, or tool index
+var _group := ""               # The decor group picked
+var _group_names: Array = []   # Every group, in the grid's order
+var _groups := {}              # Group -> its stamps' names, sorted (SceneBuilder.stamp_group)
+var _variant_names: Array = [] # The picked group's stamps in the variants grid's order, "" first for any
+var _pin := ""                 # The variant the brush is pinned to, or "" for its rules' pick
+var _lights_items: Array = []  # The light kinds, [label, kind]
 var _radius := 12.0
 var _drag_from := Vector2.INF  # The exit rect's first corner while dragging
 var _was_down := false
@@ -93,13 +102,18 @@ func _ready() -> void:
 	_paints.select(1)
 	col.add_child(_paints)
 	col.add_child(_heading("Decor"))
+	col.add_child(_label("Drag along a surface: a run of the group,\nthe variants picked by the rules"))
 	_decor = _decor_grid()
 	col.add_child(_decor)
-	_random = _check("Random in group", true)
-	col.add_child(_random)
+	col.add_child(_label("Variants: any, or one to pin the brush to"))
+	_variants = _grid()
+	_variants.item_selected.connect(func(i: int) -> void:
+		_pin = _variant_names[i]
+		_say("variant: " + (_pin if _pin != "" else "any")))
+	col.add_child(_variants)
 	_mirror = _check("Mirror at random", true)
 	col.add_child(_mirror)
-	_free = _check("Free: click places, overlaps", false)
+	_free = _check("Free: click places the variant", false)
 	col.add_child(_free)
 	var arow := HBoxContainer.new()
 	col.add_child(arow)
@@ -120,6 +134,12 @@ func _ready() -> void:
 	col.add_child(_heading("Stamps"))
 	_stamps = _list(STAMPS, func(i: int) -> void: _choose("stamp", i))
 	col.add_child(_stamps)
+	col.add_child(_heading("Lights"))
+	col.add_child(_label("A click sets one; air painted over it takes it"))
+	for k in SceneBuilder.LIGHTS:
+		_lights_items.append([String(k).capitalize(), k])
+	_lights = _list(_lights_items, func(i: int) -> void: _choose("light", i))
+	col.add_child(_lights)
 	col.add_child(_heading("Level"))
 	_tools = _list(TOOLS, func(i: int) -> void: _choose("tool", i))
 	col.add_child(_tools)
@@ -165,8 +185,55 @@ func _ready() -> void:
 	col.add_child(_status)
 
 
-# The decor stamps as a grid of icons, a tooltip naming each.
+# The decor groups as a grid of icons (a group's first whole take), a
+# tooltip naming each.
 func _decor_grid() -> ItemList:
+	var l := _grid()
+	var stamps: Dictionary = SceneBuilder.png_stamps()
+	var names: Array = stamps.keys()
+	names.sort()
+	for name in names:
+		var group: String = SceneBuilder.stamp_group(name)
+		if not _groups.has(group):
+			_groups[group] = []
+			_group_names.append(group)
+		_groups[group].append(name)
+	for group in _group_names:
+		var i := l.add_item("", _icon(stamps[_face(group)].img))
+		l.set_item_tooltip(i, group)
+	l.item_selected.connect(func(i: int) -> void:
+		_choose("decor", i)
+		_group = _group_names[i]
+		_pin = ""
+		_fill_variants()
+		_say(_group + ": " + str(_groups[_group].size()) + " variants"))
+	return l
+
+
+# A group's face: its first whole take.
+func _face(group: String) -> String:
+	for n in _groups[group]:
+		if SceneBuilder.stamp_role(n) == "":
+			return n
+	return _groups[group][0]
+
+
+# The picked group's variants under the grid: "any" first, then every
+# take and piece, the tooltip naming each.
+func _fill_variants() -> void:
+	_variants.clear()
+	_variant_names = [""]
+	_variants.add_item("any")
+	_variants.set_item_tooltip(0, "any: the brush's rules pick")
+	var stamps: Dictionary = SceneBuilder.png_stamps()
+	for n in _groups.get(_group, []):
+		_variant_names.append(n)
+		var i := _variants.add_item("", _icon(stamps[n].img))
+		_variants.set_item_tooltip(i, n)
+	_variants.select(0)
+
+
+func _grid() -> ItemList:
 	var l := ItemList.new()
 	l.icon_mode = ItemList.ICON_MODE_TOP
 	l.max_columns = 5
@@ -177,20 +244,6 @@ func _decor_grid() -> ItemList:
 	l.allow_search = false
 	l.focus_mode = Control.FOCUS_NONE
 	l.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	var stamps: Dictionary = SceneBuilder.png_stamps()
-	_decor_names = stamps.keys()
-	_decor_names.sort()
-	for name in _decor_names:
-		var group: String = SceneBuilder.stamp_group(name)
-		if not _groups.has(group):
-			_groups[group] = []
-		_groups[group].append(name)
-		var i := l.add_item("", _icon(stamps[name].img))
-		l.set_item_tooltip(i, name)
-	l.item_selected.connect(func(i: int) -> void:
-		_choose("decor", i)
-		_decor_name = _decor_names[i]
-		_say(_decor_name))
 	return l
 
 
@@ -220,22 +273,37 @@ func _list(items: Array, on_pick: Callable) -> ItemList:
 func _choose(mode: String, pick: int) -> void:
 	_mode = mode
 	_pick = pick
-	var lists := {"paint": _paints, "decor": _decor, "stamp": _stamps, "tool": _tools}
+	var lists := {"paint": _paints, "decor": _decor, "stamp": _stamps, "light": _lights, "tool": _tools}
 	for m in lists:
 		if m != mode:
 			lists[m].deselect_all()
 
 
-# The stamp the brush sets next: the one picked, or any of its group.
-func _variant() -> String:
-	if _random.button_pressed:
-		var group: Array = _groups.get(SceneBuilder.stamp_group(_decor_name), [_decor_name])
-		return group[_rng.randi_range(0, group.size() - 1)]
-	return _decor_name
+# Whether the group picked is a carpet: one cut into ends and middles.
+func _carpet() -> bool:
+	for n in _groups.get(_group, []):
+		if SceneBuilder.stamp_role(n) == "l":
+			return true
+	return false
 
 
-func _flags() -> String:
-	return "h" if _mirror.button_pressed and _rng.randf() < 0.5 else ""
+# The stamp a free click places: the variant pinned, or a whole take of
+# the group at random.
+func _free_variant() -> String:
+	if _pin != "":
+		return _pin
+	var whole: Array = []
+	for n in _groups.get(_group, []):
+		if SceneBuilder.stamp_role(n) == "":
+			whole.append(n)
+	if whole.is_empty():
+		whole = _groups.get(_group, [])
+	return whole[_rng.randi_range(0, whole.size() - 1)]
+
+
+func _free_flags() -> String:
+	var f := "d" if _carpet() else ""
+	return f + ("h" if _mirror.button_pressed and _rng.randf() < 0.5 else "")
 
 
 func has_mouse(p: Vector2) -> bool:
@@ -287,17 +355,18 @@ func _process(_dt: float) -> void:
 	var rmb := Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not over
 	var down := lmb or rmb
 	var pressed := lmb and not _was_down
+	var world: Vector2 = _main.get_global_mouse_position()
 	if down and not _was_down:
 		_main.edit_begin()
 		if _name.has_focus():
 			_name.release_focus()
 	elif _was_down and not down:
+		_main.edit_brush_end(world)
 		_main.edit_end()
 		_refresh_title()
 	_was_down = down
 	if over:
 		return
-	var world: Vector2 = _main.get_global_mouse_position()
 	if rmb:
 		_main.edit_paint(world, _radius, 0)
 		return
@@ -306,17 +375,21 @@ func _process(_dt: float) -> void:
 			if lmb:
 				_main.edit_paint(world, _radius, _pick)
 		"decor":
-			if lmb and _decor_name != "":
-				var name := _variant()
+			if lmb and _group != "":
 				var anchor: String = ANCHORS[_anchor.selected]
 				if _free.button_pressed:
 					if pressed:
-						_main.edit_stamp(name, world, _radius, anchor, _flags())
-				elif _main.edit_can_place(name, world, anchor, _spacing.value):
-					_main.edit_stamp(name, world, _radius, anchor, _flags())
+						_main.edit_stamp(_free_variant(), world, _radius, anchor, _free_flags())
+				elif pressed:
+					_main.edit_brush_begin(_groups[_group], world, anchor, _spacing.value, _mirror.button_pressed, _pin)
+				else:
+					_main.edit_brush_drag(world)
 		"stamp":
 			if pressed:
 				_main.edit_stamp(String(STAMPS[_pick][1]), world, _radius)
+		"light":
+			if pressed:
+				_say(_main.edit_light(world, String(_lights_items[_pick][1])))
 		"tool":
 			var tool := String(TOOLS[_pick][1])
 			if tool == "spawn" and pressed:

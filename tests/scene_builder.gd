@@ -198,10 +198,13 @@ static func _apply(map: Node2D, op: Array) -> void:
 		"sand", "clay", "lava", "hard", "bedrock":
 			map.material_rect(_rect(op, 1), _kind(map, String(op[0])))
 		"decor":
-			# ["decor", name, x, y, "floor" | "ceiling", flags]: a stamp (a
-			# PNG in decor/stamps, or a DECOR table) set cell by cell on the
-			# first floor below (x, y), or hanging from the first ceiling
-			# above, only where there is air; flags "h" mirrors, "v" flips.
+			# ["decor", name, x, y, "floor" | "ceiling" | "wall_left" |
+			# "wall_right", flags]: a stamp (a PNG in decor/stamps, or a
+			# DECOR table) set cell by cell on the first floor below
+			# (x, y), hanging from the first ceiling above, or off the
+			# first wall to that side, only where there is air; flags
+			# "h" mirrors it along the surface, "v" turns it over, "d"
+			# drapes it over the ground.
 			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor", String(op[5]) if op.size() > 5 else "")
 		"moss":
 			# ["moss", x, y, w, h]: the rock faces inside the rect are coated.
@@ -261,14 +264,19 @@ static func _apply(map: Node2D, op: Array) -> void:
 
 
 # Decor stamps: cells relative to the base cell (the one on the surface
-# under the stamp's middle), x right, y up the stamp (toward the air),
-# each a cell kind. The glowshrooms are the first; parts drawn as small
+# under the stamp's middle), x along the surface, y up the stamp (off it,
+# into the air), each a cell kind; on a wall the stamp lies along y. The glowshrooms are the first; parts drawn as small
 # images with a palette of kinds can replace these tables.
 const DECOR := {
 	"shroom_s": [[0, 1, 9], [-1, 2, 9], [0, 2, 9], [1, 2, 9]],
 	"shroom_m": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9]],
 	"shroom_cluster": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9],
 			[4, 1, 9], [3, 2, 9], [4, 2, 9], [5, 2, 9], [-4, 1, 9], [-5, 2, 9], [-4, 2, 9], [-3, 2, 9]],
+	# Thorns (kind 13): a jagged bush of spikes, pale and bony, that
+	# throws the gecko off (gecko.gd _prick); on walls as well.
+	"thorn": [[-3, 1, 13], [-2, 1, 13], [-1, 1, 13], [0, 1, 13], [1, 1, 13], [2, 1, 13], [3, 1, 13],
+			[-3, 2, 13], [-3, 3, 13], [-3, 4, 13], [-1, 2, 13], [-1, 3, 13], [0, 2, 13], [1, 2, 13], [2, 2, 13], [2, 3, 13], [3, 2, 13], [3, 3, 13], [3, 4, 13], [3, 5, 13]],
+	"thorn_s": [[-1, 1, 13], [0, 1, 13], [1, 1, 13], [-1, 2, 13], [-1, 3, 13], [1, 2, 13]],
 }
 
 
@@ -346,6 +354,7 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 	var w := img.get_width()
 	var h := img.get_height()
 	var cells := PackedInt32Array()
+	var feet := PackedInt32Array()   # The columns whose art reaches the bottom row: what stands on the ground (decor_brush.gd)
 	var glows := stamp_group(name) in GLOW_GROUPS
 	var pal: Array[Color] = CaveMapScript.DECOR_PALETTE
 	for y in h:
@@ -363,21 +372,41 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 			cells.append(x)
 			cells.append(y)
 			cells.append(CaveMapScript.decor_kind(best, glows and best in GLOW_COLOURS))
-	return {"w": w, "h": h, "cells": cells, "img": img}
+			if y == h - 1:
+				feet.append(x)
+	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img}
 
 
 # A stamp's group: its name without the take number and the piece
-# (cluster_2_p1 is cluster), so the editor can pick among a group.
+# (cluster_2_p1 is cluster, moss_3_l is moss), so the editor can pick
+# among a group.
 static func stamp_group(name: String) -> String:
 	var t := name.split("_")
 	while t.size() > 1:
 		var last: String = t[t.size() - 1]
-		var piece := last.length() >= 2 and (last[0] == "p" or last[0] == "s") and last.substr(1).is_valid_int()
-		if last.is_valid_int() or piece:
+		if last.is_valid_int() or _is_piece(last):
 			t.remove_at(t.size() - 1)
 		else:
 			break
 	return "_".join(t)
+
+
+# A stamp's role in a run laid along a surface (tools/decor_split.py):
+# "l" the left end of a carpet, "m" a middle, "r" the right end, "p" a
+# part of a cluster, "" a whole take.
+static func stamp_role(name: String) -> String:
+	var last: String = name.split("_")[-1]
+	if last == "l" or last == "m" or last == "r":
+		return last
+	if _is_piece(last):
+		return "p"
+	return ""
+
+
+static func _is_piece(token: String) -> bool:
+	if token == "l" or token == "m" or token == "r":
+		return true
+	return token.length() >= 2 and (token[0] == "p" or token[0] == "s") and token.substr(1).is_valid_int()
 
 
 # For the editor: a stamp or a cone placed by hand. Returns the cells set.
@@ -389,18 +418,47 @@ static func cone(map: Node2D, at: Vector2, h: float, down: bool) -> void:
 	_cones(map, at.x - 2.0, at.x + 2.0, at.y, 1, int(at.x) + int(at.y), h, h, 1.0 if down else -1.0)
 
 
-# The world rect a stamp would cover at `at`, air or not: the editor's
-# brush keeps stamps apart by it.
-static func stamp_rect(map: Node2D, name: String, at: Vector2, where: String) -> Rect2:
+# The base cell of a stamp at `at` (on the surface under the stamp's
+# middle) and its axes in cells: along the surface, and up off it into
+# the air. Floors and ceilings have the stamp along x, walls along y.
+static func frame(map: Node2D, at: Vector2, where: String) -> Array:
 	var cell: float = map.CELL
-	var w := 0
-	var h := 0
+	match where:
+		"ceiling":
+			var c: Vector2 = map.ceiling_above(at)
+			return [Vector2i(int(floor(at.x / cell)), int(floor(c.y / cell)) - 1), Vector2i(1, 0), Vector2i(0, 1)]   # The last solid row of the ceiling
+		"wall_right":
+			var w: Vector2 = map.wall_beside(at, 1)
+			return [Vector2i(int(floor(w.x / cell)), int(floor(at.y / cell))), Vector2i(0, 1), Vector2i(-1, 0)]      # The first solid column to the right
+		"wall_left":
+			var w: Vector2 = map.wall_beside(at, -1)
+			return [Vector2i(int(floor(w.x / cell)) - 1, int(floor(at.y / cell))), Vector2i(0, 1), Vector2i(1, 0)]   # The last solid column to the left
+	var f: Vector2 = map.floor_below(at)
+	return [Vector2i(int(floor(at.x / cell)), int(floor(f.y / cell))), Vector2i(1, 0), Vector2i(0, -1)]            # The first solid row of the floor
+
+
+# The surface cell of the column `a` cells along from `near`, a base
+# cell on the surface: a solid cell with air over it, within `reach`
+# cells of near's row along `up`, the nearest first (a bump before a
+# dip). null when the column has none that near: a pit, or the inside
+# of a bump.
+static func surface_cell(map: Node2D, near: Vector2i, along: Vector2i, up: Vector2i, a: int, reach: int) -> Variant:
+	var c: Vector2i = near + along * a
+	for k in range(0, reach + 1):
+		for sgn in ([0] if k == 0 else [1, -1]):
+			var p: Vector2i = c + up * (k * sgn)
+			if map.is_solid(p.x, p.y) and not map.is_solid(p.x + up.x, p.y + up.y) and not map.is_water(p.x + up.x, p.y + up.y):
+				return p
+	return null
+
+
+# A stamp's size in cells: along the surface, and up off it.
+static func stamp_size(map: Node2D, name: String) -> Vector2i:
 	var png: Dictionary = png_stamps().get(name, {})
 	if not png.is_empty():
-		w = png.w
-		h = png.h
-	elif DECOR.has(name):
-		var s := maxi(int(round(4.0 / cell)), 1)
+		return Vector2i(png.w, png.h)
+	if DECOR.has(name):
+		var s := maxi(int(round(4.0 / map.CELL)), 1)
 		var x0 := 0
 		var x1 := 0
 		var y1 := 0
@@ -408,38 +466,45 @@ static func stamp_rect(map: Node2D, name: String, at: Vector2, where: String) ->
 			x0 = mini(x0, c[0])
 			x1 = maxi(x1, c[0])
 			y1 = maxi(y1, c[1])
-		w = (x1 - x0 + 1) * s
-		h = y1 * s
-	else:
+		return Vector2i((x1 - x0 + 1) * s, y1 * s)
+	return Vector2i.ZERO
+
+
+# The world rect a stamp would cover at `at`, air or not: the editor's
+# brush keeps stamps apart by it.
+static func stamp_rect(map: Node2D, name: String, at: Vector2, where: String) -> Rect2:
+	var cell: float = map.CELL
+	var size := stamp_size(map, name)
+	if size == Vector2i.ZERO:
 		return Rect2(at, Vector2.ZERO)
-	var cx := int(floor(at.x / cell)) - w / 2
-	var cy: int
-	if where == "ceiling":
-		cy = int(floor(map.ceiling_above(at).y / cell))
-	else:
-		cy = int(floor(map.floor_below(at).y / cell)) - h
-	return Rect2(cx * cell, cy * cell, w * cell, h * cell)
+	var fr := frame(map, at, where)
+	var base: Vector2i = fr[0]
+	var along: Vector2i = fr[1]
+	var up_v: Vector2i = fr[2]
+	var a: Vector2i = base + along * (-size.x / 2) + up_v * 1
+	var b: Vector2i = base + along * (size.x - 1 - size.x / 2) + up_v * size.y
+	var lo := Vector2i(mini(a.x, b.x), mini(a.y, b.y))
+	var hi := Vector2i(maxi(a.x, b.x), maxi(a.y, b.y))
+	return Rect2(lo.x * cell, lo.y * cell, (hi.x - lo.x + 1) * cell, (hi.y - lo.y + 1) * cell)
 
 
-# A stamp at `at`: a PNG stamp stands on the first floor below the point
-# (its bottom row on the floor) or hangs from the first ceiling above
-# (its top row under it), as drawn; flags "h" mirrors it, "v" turns it
-# upside down. A DECOR table is on the 4 px grid (each entry a block of s
-# by s cells on a finer one) and hangs upside down from a ceiling. Only
-# air cells are set. Returns the cells set, [x, y, kind] each.
+# A stamp at `at`: its bottom row (a PNG as drawn; a DECOR table's
+# first row) lies on the surface, so it stands on a floor, hangs upside
+# down from a ceiling and lies sideways off a wall. Flags "h" mirror a
+# PNG along the surface, "v" turn it over, "d" drape it: each column
+# sits on the surface under it, up to DRAPE cells off the base's, and
+# a column with no surface that near is left out. A DECOR table is on
+# the 4 px grid: each entry fills a block of s by s cells on a finer
+# one, so a stamp keeps its size in px. Only air cells are set. Returns
+# the cells set, [x, y, kind] each.
+const DRAPE := 3
 static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags := "") -> Array:
 	var out: Array = []
 	var cell: float = map.CELL
-	var cx := int(floor(at.x / cell))
-	var cy: int
-	var dir := -1
-	if where == "ceiling":
-		var c: Vector2 = map.ceiling_above(at)
-		cy = int(floor(c.y / cell)) - 1   # The last solid row of the ceiling
-		dir = 1
-	else:
-		var f: Vector2 = map.floor_below(at)
-		cy = int(floor(f.y / cell))       # The first solid row of the floor
+	var fr := frame(map, at, where)
+	var base: Vector2i = fr[0]
+	var along: Vector2i = fr[1]
+	var up_v: Vector2i = fr[2]
 	var png: Dictionary = png_stamps().get(name, {})
 	if not png.is_empty():
 		var w: int = png.w
@@ -447,6 +512,10 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags 
 		var cells: PackedInt32Array = png.cells
 		var mirror := flags.contains("h")
 		var flip := flags.contains("v")
+		var drape := flags.contains("d")
+		var bases: Array = []   # Each column's surface cell, or null
+		for a in w:
+			bases.append(surface_cell(map, base, along, up_v, a - w / 2, DRAPE) if drape else base + along * (a - w / 2))
 		for i in range(0, cells.size(), 3):
 			var px := cells[i]
 			var py := cells[i + 1]
@@ -454,11 +523,12 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags 
 				px = w - 1 - px
 			if flip:
 				py = h - 1 - py
-			var x := cx + px - w / 2
-			var y := cy - (h - py) if dir < 0 else cy + 1 + py
-			if not map.is_solid(x, y) and not map.is_water(x, y):
-				map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), cells[i + 2])
-				out.append([x, y, cells[i + 2]])
+			if bases[px] == null:
+				continue
+			var p: Vector2i = bases[px] + up_v * (h - py)
+			if not map.is_solid(p.x, p.y) and not map.is_water(p.x, p.y):
+				map.set_cell_world(Vector2((p.x + 0.5) * cell, (p.y + 0.5) * cell), cells[i + 2])
+				out.append([p.x, p.y, cells[i + 2]])
 		return out
 	if not DECOR.has(name):
 		push_error("unknown decor " + name)
@@ -467,11 +537,10 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags 
 	for c in DECOR[name]:
 		for j in s:
 			for i in s:
-				var x: int = cx + c[0] * s + i
-				var y: int = cy + dir * (c[1] * s + j)
-				if not map.is_solid(x, y) and not map.is_water(x, y):
-					map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
-					out.append([x, y, int(c[2])])
+				var p: Vector2i = base + along * (int(c[0]) * s + i) + up_v * (int(c[1]) * s + j)
+				if not map.is_solid(p.x, p.y) and not map.is_water(p.x, p.y):
+					map.set_cell_world(Vector2((p.x + 0.5) * cell, (p.y + 0.5) * cell), int(c[2]))
+					out.append([p.x, p.y, int(c[2])])
 	return out
 
 
@@ -496,6 +565,28 @@ static func _kind(map: Node2D, name: String) -> int:
 # clipped to the air there, so one bigger than its passage fills it.
 # The slugs' start points: ["slugs"] entries [x, y] put on the nearest
 # surface by slug.gd itself.
+# The lights a level can hold (the editor's Lights section, a scene's
+# "lights" list of [x, y, kind]): glow sources for the sim's light pass
+# (sim.gd set_glows), each a colour and the radius in px it is seeded
+# at, the spread carrying it on from there.
+const LIGHTS := {
+	"ember": [Color(1.0, 0.45, 0.2), 8.0],
+	"torch": [Color(1.0, 0.8, 0.5), 16.0],
+	"crystal": [Color(0.6, 0.85, 1.0), 14.0],
+	"glow": [Color(0.45, 0.9, 0.4), 12.0],
+	"moon": [Color(0.7, 0.8, 1.0), 26.0],
+}
+
+
+# A scene's lights as the light pass takes them, [position, colour, radius] each.
+static func light_points(scene: Dictionary) -> Array:
+	var out: Array = []
+	for l in scene.get("lights", []):
+		var k: Array = LIGHTS.get(String(l[2]), LIGHTS["torch"])
+		out.append([Vector2(float(l[0]), float(l[1])), k[0], float(k[1])])
+	return out
+
+
 static func slug_points(scene: Dictionary) -> Array:
 	var out: Array = []
 	for s in scene.get("slugs", []):

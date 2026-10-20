@@ -178,7 +178,7 @@ void main() {
         int rx = int(floor(px / psz)), ry = int(floor(py / psz));
         if (rx >= 0 && ry >= 0 && rx < int(rw) && ry < int(rh)) {
             uint ct = buf.d[O_CT + uint(ry) * rw + uint(rx)];
-            if (ct == 2u || ct == 5u || ct == 6u) {
+            if (ct == 2u || ct == 5u || ct == 6u || ct == 7u) {
                 px = ox;
                 py = oy;
                 vx = 0.0;
