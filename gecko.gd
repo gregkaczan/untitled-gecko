@@ -1282,11 +1282,16 @@ func _push_blobs() -> void:
 	_leg_blobs(list, -1.0, FAR_LEG_COLOR)
 	for i in chain.size():
 		list.append([chain.points[i], chain.radii[i], BODY_COLOR])
-		# Thin tail segments get a filler blob between them, so the tail
-		# renders as a line rather than a row of dots.
+		# Thin tail segments get filler blobs between them, so the tail
+		# renders as a line rather than a row of dots; the thinnest get
+		# two, so a stretched tail tip does not break into specks.
 		if i > 0 and chain.radii[i] < 4.5:
 			var r_mid: float = (chain.radii[i - 1] + chain.radii[i]) * 0.5
-			list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
+			if chain.radii[i] < 3.0:
+				list.append([chain.points[i - 1].lerp(chain.points[i], 1.0 / 3.0), r_mid, BODY_COLOR])
+				list.append([chain.points[i - 1].lerp(chain.points[i], 2.0 / 3.0), r_mid, BODY_COLOR])
+			else:
+				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
 	list.append([chain.head() + look * SNOUT, 5.0, BODY_COLOR])
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs(list)

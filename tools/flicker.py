@@ -28,6 +28,7 @@ FLICKER = 0.35            # share of the silhouette that changes in one frame, o
 TURN_GRACE = 20           # ticks after a facing flip where the body folds round by design
 SPAWN_GRACE = 12          # first ticks: the gecko settles onto its spawn
 LAND_GRACE = 12           # ticks after a landing: the feet re-seat and the chain catches up
+TURN_RATE = 0.12          # radians of up turn in a tick (about 7 degrees) that counts as the body rounding a corner
 FRAGMENT = 8              # px of silhouette not attached to its largest piece
 SHIFTS = range(-2, 3)     # px of extra alignment searched each way
 MIN_MASK = 150            # px: smaller masks (gecko off screen or hidden) are skipped
@@ -152,6 +153,7 @@ def turn_ticks(trace):
     out = set(range(0, SPAWN_GRACE + 1))
     last = None
     last_state = None
+    last_up = None
     with open(trace) as f:
         for line in f:
             if not (line.startswith("t") and line[1:2].isdigit()):
@@ -160,11 +162,15 @@ def turn_ticks(trace):
             tick = int(parts[0][1:])
             facing = None
             state = None
+            up = None
             for kv in parts[1:]:
                 if kv.startswith("facing="):
                     facing = kv[7:]
                 elif kv.startswith("state="):
                     state = kv[6:]
+                elif kv.startswith("up="):
+                    a, b = kv[3:].split(",")
+                    up = (float(a), float(b))
             if last is not None and facing != last:
                 out.update(range(tick, tick + TURN_GRACE))
             if state != "cling":
@@ -172,8 +178,16 @@ def turn_ticks(trace):
                 out.add(tick + 1)
             elif last_state is not None and last_state != "cling":
                 out.update(range(tick, tick + LAND_GRACE))
+            # The body rounding a corner at its set rate reshapes the whole
+            # silhouette in a frame; that is the turn, not a flicker.
+            if up is not None and last_up is not None:
+                import math
+                turn = abs(math.atan2(last_up[0] * up[1] - last_up[1] * up[0], last_up[0] * up[0] + last_up[1] * up[1]))
+                if turn > TURN_RATE:
+                    out.update(range(tick, tick + 3))
             last = facing
             last_state = state
+            last_up = up
     return out
 
 
