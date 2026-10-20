@@ -14,6 +14,7 @@ signal time_scale_changed(scale: float)
 signal paused(on: bool)
 signal step
 signal pixel_size_changed(size: float)
+signal sound_changed(on: bool)      # The master bus unmuted
 signal sense_changed(cell: float)   # The senses' grid: 2 px (the sim's cells) or 4 px (folded), particle world only
 signal crumb_changed(n: int)        # Crumbs of up to n cells are air to the senses and loosened by the body's touch; 0 for none
 signal overlay_changed(on: bool)
@@ -29,6 +30,7 @@ var _pause: CheckButton
 var _overlay: CheckButton
 var _pixel: OptionButton
 var _sense: OptionButton
+var _sound: CheckButton
 var _crumb: SpinBox
 var _status: Label
 
@@ -97,6 +99,11 @@ func _ready() -> void:
 	_pause.toggled.connect(func(on: bool) -> void: paused.emit(on))
 	clock.add_child(_pause)
 	clock.add_child(_button("Step one tick", func() -> void: step.emit()))
+	_sound = CheckButton.new()
+	_sound.text = "Sound"
+	_sound.focus_mode = Control.FOCUS_NONE
+	_sound.toggled.connect(func(on: bool) -> void: sound_changed.emit(on))
+	col.add_child(_sound)
 
 	col.add_child(HSeparator.new())
 	col.add_child(_heading("Gecko"))
@@ -178,6 +185,10 @@ func set_paused(on: bool) -> void:
 
 func set_pixel_size(v: float) -> void:
 	_pixel.select(_pixel.get_item_index(int(v)))
+
+
+func set_sound(on: bool) -> void:
+	_sound.set_pressed_no_signal(on)
 
 
 func set_sense(v: float) -> void:

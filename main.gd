@@ -26,7 +26,8 @@
 # same way and quits when the script ends; GECKO_SEED fixes the random
 # bites and steps so a run repeats exactly. GECKO_SENSE=4 puts the
 # gecko's senses on the 4 px fold and GECKO_CRUMB=n sets the crumb
-# threshold, both the debug panel's.
+# threshold, both the debug panel's. The sound is muted unless
+# GECKO_SOUND=1 or the panel's Sound is on.
 extends Node2D
 
 const CAMERA_ZOOM := 2.0
@@ -191,6 +192,7 @@ var _debug := false            # F1: the panel and the gecko's overlay
 var _step_ticks := 0           # Physics ticks left to run before pausing again (the panel's step)
 var _exit := Rect2()           # The level's exit, empty in a scene without one
 var _sound: Node2D              # sound.gd: the one-shots on the gecko's events, the drone and the hum
+var _sound_on := OS.get_environment("GECKO_SOUND") == "1"  # Muted unless asked: GECKO_SOUND=1, or the debug panel's Sound
 var _ambience: Node2D           # ambience.gd: drips, bite dust, bubbles
 var _vines := {}                # Chunk id -> {top, load}: the vines hanging in the level and how long the gecko has hung on each
 var _backdrop: Node2D           # backdrop.gd: the far wall and the near dripstone, particle world only
@@ -238,6 +240,7 @@ func _ready() -> void:
 	gecko.ticked.connect(_follow)
 	_sound = SoundBank.new()
 	add_child(_sound)
+	AudioServer.set_bus_mute(0, not _sound_on)
 	_sound.listen(gecko)
 	_ambience = Ambience.new()
 	add_child(_ambience)
@@ -290,6 +293,7 @@ func _ready() -> void:
 	if sim and OS.get_environment("GECKO_CRUMB") != "":
 		sim.crumb_cells = int(OS.get_environment("GECKO_CRUMB"))
 	_panel.set_sense(map.CELL)
+	_panel.set_sound(_sound_on)
 	_panel.set_crumb(sim.crumb_cells if sim else 0)
 	_panel.scene_picked.connect(_load_scene)
 	_panel.main_cave.connect(_main_cave)
@@ -314,6 +318,7 @@ func _ready() -> void:
 		if sim:
 			sim.crumb_cells = n)
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
+	_panel.sound_changed.connect(func(on: bool) -> void: AudioServer.set_bus_mute(0, not on))
 	_panel.light_changed.connect(func(on: bool) -> void:
 		if sim:
 			sim.set_light(on))
