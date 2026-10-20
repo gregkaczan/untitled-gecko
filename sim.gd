@@ -110,8 +110,10 @@ const CT_SOLID := 2                              # Cell class of static solid (r
 const CT_LOOSE := 4                              # Cell class of a loose grain (sand, clay, stone off a lump)
 const CT_SLICK := 5                              # Cell class of moss: rock in its top fraction band, solid but no hold for the feet
 const CT_CRUMBLE := 6                            # Cell class of crumbling rock: the band below, gives way under a hold
+const CT_THORN := 7                              # Cell class of thorns: the band between, no hold and a touch throws the body off
 const FRAC_MOSS := 0.097                         # Rock's fraction for moss (render_write.glsl reads the bands)
 const FRAC_CRUMBLE := 0.092
+const FRAC_THORN := 0.094                        # Rock's fraction for thorns, between the two
 const FRAC_MAX := 0.89                           # Random fractions stay under 0.089, below the bands
 const MODE_WAKE := -5.0                          # Capsule mode: nudges loose grains awake (pbd_delta.glsl)
 
@@ -787,6 +789,8 @@ static func frac_of(kind: int) -> float:
 			return FRAC_MOSS
 		CaveMap.CELL_CRUMBLE:
 			return FRAC_CRUMBLE
+		CaveMap.CELL_THORN:
+			return FRAC_THORN
 		_:
 			return -1.0
 

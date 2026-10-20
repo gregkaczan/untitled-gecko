@@ -13,11 +13,12 @@ const WIDTH := 190.0
 const PAINTS := [
 	["Air", 0], ["Rock", 1], ["Hard rock", 7], ["Bedrock", 8], ["Copper", 3],
 	["Sand", 4], ["Clay", 5], ["Water", 2], ["Lava", 6],
-	["Glowshroom", 9], ["Moss", 10], ["Crumble", 11], ["Gas", 12],
+	["Glowshroom", 9], ["Moss", 10], ["Crumble", 11], ["Gas", 12], ["Thorn", 13],
 ]
 const STAMPS := [
 	["Shroom small", "shroom_s"], ["Shroom", "shroom_m"], ["Shroom cluster", "shroom_cluster"],
 	["Stalactite", "stalactite"], ["Stalagmite", "stalagmite"], ["Vine", "vine"], ["Slug", "slug"],
+	["Thorn", "thorn"], ["Thorn small", "thorn_s"],
 ]
 const TOOLS := [["Spawn", "spawn"], ["Exit (drag)", "exit"]]
 const BRUSH_MIN := 4.0

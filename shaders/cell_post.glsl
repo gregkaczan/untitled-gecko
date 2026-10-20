@@ -23,7 +23,7 @@ const uint O_LN = 22291598u;  // the marked copy (sim.gd reads it back)
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
-bool matter(uint c) { return c == 2u || c == 4u || c == 5u || c == 6u || c >= 16u; }
+bool matter(uint c) { return c == 2u || c == 4u || c == 5u || c == 6u || c == 7u || c >= 16u; }
 
 void main() {
     uint id = gl_GlobalInvocationID.x;

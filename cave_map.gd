@@ -34,6 +34,7 @@ const LAVA := Color(0.80, 0.28, 0.05)     # A pool: neither solid nor water here
 const SHROOM := Color(0.42, 0.82, 0.46)  # Glowshroom flesh
 const MOSS := Color(0.20, 0.42, 0.20)    # Slippery moss
 const CRUMBLE := Color(0.46, 0.40, 0.33) # Crumbling rock, paler and dry
+const THORN := Color(0.80, 0.82, 0.78)   # Thorns, pale and bony
 const GAS := Color(0.05, 0.07, 0.04)     # A gas pocket: air with a tint
 const LAVA_TOP := Color(0.98, 0.62, 0.20)
 const HARD := Color(0.19, 0.19, 0.23)     # Hard rock: several bites to open
@@ -55,6 +56,7 @@ const CELL_SHROOM := 9         # Glowshroom: decor that is ground to the gecko a
 const CELL_MOSS := 10          # Slippery moss: a coat on rock, solid, but the feet cannot hold it off a floor; a bite takes it
 const CELL_CRUMBLE := 11       # Crumbling rock: gives way under a hold of a second (gecko.gd), to grains in the sim
 const CELL_GAS := 12           # A gas pocket: air that bursts when a bite opens it (main.gd)
+const CELL_THORN := 13         # Thorns: a sharp plant on a rock face, solid, but no foot holds it and a touch throws the body off (gecko.gd); a bite takes it
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
@@ -162,7 +164,7 @@ func is_solid(x: int, y: int) -> bool:
 		return true
 	var v := solid[y * W + x]
 	return v == CELL_ROCK or v == CELL_COPPER or v == CELL_SAND or v == CELL_CLAY or v == CELL_HARD or v == CELL_BEDROCK \
-			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE
+			or v == CELL_SHROOM or v == CELL_MOSS or v == CELL_CRUMBLE or v == CELL_THORN
 
 
 # Loose grains live in the particle world only (sim_map.gd): here a bed
@@ -195,6 +197,10 @@ func slick_world(p: Vector2) -> bool:
 
 func crumble_world(p: Vector2) -> bool:
 	return _kind_world(p) == CELL_CRUMBLE
+
+
+func thorn_world(p: Vector2) -> bool:
+	return _kind_world(p) == CELL_THORN
 
 
 func _kind_world(p: Vector2) -> int:
@@ -486,6 +492,16 @@ func floor_below(p: Vector2) -> Vector2:
 	return Vector2(p.x, cy * CELL)
 
 
+# The near edge of the first solid cell to the right (dir 1) or the
+# left (dir -1) of p on p's row, or the world's edge.
+func wall_beside(p: Vector2, dir: int) -> Vector2:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	while cx >= 0 and cx < W and not is_solid(cx, cy):
+		cx += dir
+	return Vector2((cx + (1 if dir < 0 else 0)) * CELL, p.y)
+
+
 # All rock, no repaint: the test scenes carve their rooms out of this.
 func blank() -> void:
 	if solid.size() != W * H:
@@ -707,6 +723,8 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 						col = MOSS.lightened(0.1) if rim else MOSS
 					CELL_CRUMBLE:
 						col = CRUMBLE.lightened(0.12) if rim else CRUMBLE + ROCK_VAR * grain
+					CELL_THORN:
+						col = THORN.lightened(0.1) if rim else THORN - ROCK_VAR * grain
 					_:
 						col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)

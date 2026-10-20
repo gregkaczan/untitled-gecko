@@ -475,6 +475,15 @@ left open: a failure model (lava, falls), a full gut (a meter), a
 general grip model (dry moss that holds better, steep wet rock that
 slides) and how much is laid by hand against grown by rule.
 
+- Thorns: a sharp plant on a rock face, pale and bony (cell kind 13;
+  in the sim rock in a fraction band of its own, cell class 7). Solid
+  to everything, but no foot holds it and a touch, by a foot or by the
+  body stopped against it in any state, throws the body back at 140
+  px/s with 0.35 s of no cling, so a patch is neither stood on nor
+  climbed past; a bite takes it. The `thorn` and `thorn_s` stamps go on
+  floors, ceilings and walls (`["decor", "thorn", x, y, "wall_right"]`;
+  the editor picks the nearest surface). Scenes: `thorn_wall` (the
+  climb ends below the patch), `thorn_floor` (the walk never passes).
 - Slippery moss: a coat of cells on rock faces (cell kind 10; in the
   sim rock in its top fraction band, cell class 5). Solid to everything,
   but off a floor (the body's up more than 45 degrees from straight up)

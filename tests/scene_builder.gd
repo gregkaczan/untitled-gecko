@@ -196,9 +196,10 @@ static func _apply(map: Node2D, op: Array) -> void:
 		"sand", "clay", "lava", "hard", "bedrock":
 			map.material_rect(_rect(op, 1), _kind(map, String(op[0])))
 		"decor":
-			# ["decor", name, x, y, "floor" | "ceiling"]: a stamp from DECOR
-			# set cell by cell on the first floor below (x, y), or hanging
-			# from the first ceiling above, only where there is air.
+			# ["decor", name, x, y, "floor" | "ceiling" | "wall_left" |
+			# "wall_right"]: a stamp from DECOR set cell by cell on the
+			# first floor below (x, y), hanging from the first ceiling
+			# above, or off the first wall to that side, only on air.
 			_stamp(map, String(op[1]), Vector2(op[2], op[3]), String(op[4]) if op.size() > 4 else "floor")
 		"moss":
 			# ["moss", x, y, w, h]: the rock faces inside the rect are coated.
@@ -258,14 +259,19 @@ static func _apply(map: Node2D, op: Array) -> void:
 
 
 # Decor stamps: cells relative to the base cell (the one on the surface
-# under the stamp's middle), x right, y up the stamp (toward the air),
-# each a cell kind. The glowshrooms are the first; parts drawn as small
+# under the stamp's middle), x along the surface, y up the stamp (off it,
+# into the air), each a cell kind; on a wall the stamp lies along y. The glowshrooms are the first; parts drawn as small
 # images with a palette of kinds can replace these tables.
 const DECOR := {
 	"shroom_s": [[0, 1, 9], [-1, 2, 9], [0, 2, 9], [1, 2, 9]],
 	"shroom_m": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9]],
 	"shroom_cluster": [[0, 1, 9], [0, 2, 9], [-2, 3, 9], [-1, 3, 9], [0, 3, 9], [1, 3, 9], [2, 3, 9], [-1, 4, 9], [0, 4, 9], [1, 4, 9],
 			[4, 1, 9], [3, 2, 9], [4, 2, 9], [5, 2, 9], [-4, 1, 9], [-5, 2, 9], [-4, 2, 9], [-3, 2, 9]],
+	# Thorns (kind 13): a jagged bush of spikes, pale and bony, that
+	# throws the gecko off (gecko.gd _prick); on walls as well.
+	"thorn": [[-3, 1, 13], [-2, 1, 13], [-1, 1, 13], [0, 1, 13], [1, 1, 13], [2, 1, 13], [3, 1, 13],
+			[-3, 2, 13], [-3, 3, 13], [-3, 4, 13], [-1, 2, 13], [-1, 3, 13], [0, 2, 13], [1, 2, 13], [2, 2, 13], [2, 3, 13], [3, 2, 13], [3, 3, 13], [3, 4, 13], [3, 5, 13]],
+	"thorn_s": [[-1, 1, 13], [0, 1, 13], [1, 1, 13], [-1, 2, 13], [-1, 3, 13], [1, 2, 13]],
 }
 
 
@@ -317,26 +323,39 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String) -> voi
 		push_error("unknown decor " + name)
 		return
 	var cell: float = map.CELL
-	var cx := int(floor(at.x / cell))
-	var cy: int
-	var dir := -1
-	if where == "ceiling":
-		var c: Vector2 = map.ceiling_above(at)
-		cy = int(floor(c.y / cell)) - 1   # The last solid row of the ceiling
-		dir = 1
-	else:
-		var f: Vector2 = map.floor_below(at)
-		cy = int(floor(f.y / cell))       # The first solid row of the floor
+	# The base cell (on the surface under the stamp's middle) and the
+	# stamp's axes in cells: along the surface, and up off it into the
+	# air. Floors and ceilings have the stamp along x, walls along y.
+	var base: Vector2i
+	var along := Vector2i(1, 0)
+	var up_v := Vector2i(0, -1)
+	match where:
+		"ceiling":
+			var c: Vector2 = map.ceiling_above(at)
+			base = Vector2i(int(floor(at.x / cell)), int(floor(c.y / cell)) - 1)   # The last solid row of the ceiling
+			up_v = Vector2i(0, 1)
+		"wall_right":
+			var w: Vector2 = map.wall_beside(at, 1)
+			base = Vector2i(int(floor(w.x / cell)), int(floor(at.y / cell)))        # The first solid column to the right
+			along = Vector2i(0, 1)
+			up_v = Vector2i(-1, 0)
+		"wall_left":
+			var w: Vector2 = map.wall_beside(at, -1)
+			base = Vector2i(int(floor(w.x / cell)) - 1, int(floor(at.y / cell)))    # The last solid column to the left
+			along = Vector2i(0, 1)
+			up_v = Vector2i(1, 0)
+		_:
+			var f: Vector2 = map.floor_below(at)
+			base = Vector2i(int(floor(at.x / cell)), int(floor(f.y / cell)))        # The first solid row of the floor
 	# The tables are on the 4 px grid: each entry fills a block of s by s
 	# cells on a finer one, so a stamp keeps its size in px.
 	var s := maxi(int(round(4.0 / cell)), 1)
 	for c in DECOR[name]:
 		for j in s:
 			for i in s:
-				var x: int = cx + c[0] * s + i
-				var y: int = cy + dir * (c[1] * s + j)
-				if not map.is_solid(x, y) and not map.is_water(x, y):
-					map.set_cell_world(Vector2((x + 0.5) * cell, (y + 0.5) * cell), int(c[2]))
+				var p: Vector2i = base + along * (int(c[0]) * s + i) + up_v * (int(c[1]) * s + j)
+				if not map.is_solid(p.x, p.y) and not map.is_water(p.x, p.y):
+					map.set_cell_world(Vector2((p.x + 0.5) * cell, (p.y + 0.5) * cell), int(c[2]))
 
 
 static func _kind(map: Node2D, name: String) -> int:

@@ -113,11 +113,13 @@ void main() {
             float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 8.0;   // 12, the glowshroom, is static
             cls = (chunk != 0u) ? 16u + chunk : ((yield_s >= 5.0) ? 2u : 4u);
             // Rock in its fraction bands (sim.gd frac_of): moss, a slick
-            // coat the feet cannot hold (5), and rock that crumbles under
-            // a hold (6). Both static solid to everything else.
+            // coat the feet cannot hold (5), thorns that throw the body
+            // off (7), and rock that crumbles under a hold (6). All
+            // static solid to everything else.
             if (mat == 3u && chunk == 0u) {
                 float f = fract(mat_f);
-                if (f >= 0.0945) cls = 5u;
+                if (f >= 0.0965) cls = 5u;
+                else if (f >= 0.0935) cls = 7u;
                 else if (f >= 0.090) cls = 6u;
             }
         }
@@ -255,11 +257,13 @@ void main() {
         cb = rf(O_M + mat * 12u + 8u);
         // A vine: clay spawned with its fraction in the top band
         // (sim.gd spawn_vine), green-brown instead of clay. Rock in its
-        // bands: moss (a dark wet green) and crumbling rock (paler, dry).
+        // bands: moss (a dark wet green), thorns (pale, bony) and
+        // crumbling rock (paler, dry).
         if (mat == 2u && fract(mat_f) >= 0.0945) { cr = 0.30; cg = 0.52; cb = 0.22; }
         if (mat == 3u) {
             float f = fract(mat_f);
-            if (f >= 0.0945) { cr = 0.20; cg = 0.42; cb = 0.20; }
+            if (f >= 0.0965) { cr = 0.20; cg = 0.42; cb = 0.20; }
+            else if (f >= 0.0935) { cr = 0.80; cg = 0.82; cb = 0.78; }
             else if (f >= 0.090) { cr = 0.46; cg = 0.40; cb = 0.33; }
         }
 

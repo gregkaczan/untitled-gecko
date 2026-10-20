@@ -1,7 +1,7 @@
 // Cell fold: the marked cell classes (cell_post.glsl) folded 2x2 onto
 // the 4 px grid, for the gecko's coarse senses (the debug panel's
 // "Senses 4 px"; sim_map.gd reads this back while it is on). Of the
-// four cells the weightiest wins: static solid, a chunk's cell, then
+// four cells the weightiest wins: static solid, thorns, a chunk's cell, then
 // crumbling rock, moss, a loose grain, lava, water, air. A crumb counts
 // as air, so a speck vanishes from the coarse senses altogether.
 #[compute]
@@ -17,7 +17,8 @@ const uint O_C4 = 22809998u;  // the folded grid, (rw / 2) by (rh / 2)
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
 uint weight(uint v) {
-    if (v == 2u) return 8u;
+    if (v == 2u) return 9u;
+    if (v == 7u) return 8u;
     if (v >= 16u) return 7u;
     if (v == 6u) return 6u;
     if (v == 5u) return 5u;

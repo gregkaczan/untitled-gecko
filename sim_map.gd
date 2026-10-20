@@ -81,7 +81,7 @@ func is_solid(x: int, y: int) -> bool:
 		return not ignore_chunks
 	if c == sim.CT_LOOSE:
 		return not ignore_loose
-	return c == sim.CT_SOLID or c == sim.CT_SLICK or c == sim.CT_CRUMBLE
+	return c == sim.CT_SOLID or c == sim.CT_SLICK or c == sim.CT_CRUMBLE or c == sim.CT_THORN
 
 
 # A loose grain's cell (sand, clay, the stone of a broken lump).
@@ -103,6 +103,10 @@ func slick_world(p: Vector2) -> bool:
 
 func crumble_world(p: Vector2) -> bool:
 	return _cls(int(floor(p.x / CELL)), int(floor(p.y / CELL))) == sim.CT_CRUMBLE
+
+
+func thorn_world(p: Vector2) -> bool:
+	return _cls(int(floor(p.x / CELL)), int(floor(p.y / CELL))) == sim.CT_THORN
 
 
 func lava_near(p: Vector2, n: int) -> bool:

@@ -625,9 +625,13 @@ func edit_stamp(name: String, p: Vector2, r: float) -> void:
 			if sim:
 				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down)
 		_:
-			var fl: Vector2 = map.floor_below(p)
-			var ce: Vector2 = map.ceiling_above(p)
-			var where := "floor" if (fl.y - p.y) <= (p.y - ce.y) else "ceiling"
+			# The nearest surface: under, over, or beside the cursor.
+			var d := {"floor": map.floor_below(p).y - p.y, "ceiling": p.y - map.ceiling_above(p).y,
+					"wall_right": map.wall_beside(p, 1).x - p.x, "wall_left": p.x - map.wall_beside(p, -1).x}
+			var where := "floor"
+			for k in d:
+				if d[k] < d[where]:
+					where = k
 			SceneBuilder.stamp(_author, name, p, where)
 			if sim:
 				_stamp_live(name, p, where)
