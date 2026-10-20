@@ -64,6 +64,7 @@ const MAT_WATER := 1
 const MAT_CLAY := 2
 const MAT_ROCK := 3
 const MAT_STONE := 4                             # The shooter's wood slot: loose stone, the stuff of boulders
+const MAT_COPPER := 6                            # A vein: rock that glows, from the map's copper cells
 
 # Capsule slots: 0 to 3 melt (chew and brush, in turn), then the pull
 # (the tongue's drag, the walk's shove), and one-shot events (eat, break).
@@ -105,7 +106,7 @@ var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
-	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl and render_clear.glsl")
+	assert(O_CT == 2073870, "O_CT must match the literal in render_write.glsl, render_clear.glsl and pbd_finalize.glsl")
 	assert(O_BD == 2203470, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
@@ -487,7 +488,9 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 	# stands out from the ground it lies on.
 	var wood :=   [3.0, 1.2, 0.02,  0.0, 0.5, 0.0, 0.60, 0.58, 0.54, 0.0, 0.0, 0.0]
 	var iron :=   [3.8, 1.5, 0.00,  0.6, 0.5, 2.0, 0.30, 0.55, 0.90, 0.0, 0.0, 0.0]
-	var copper := [3.5, 1.3, 0.00,  0.5, 0.4, 1.5, 0.95, 0.50, 0.10, 0.0, 0.0, 0.0]
+	# Copper: a yield of 5 or more holds a particle in place as rock is
+	# held (pbd_predict.glsl), so a vein stays in its wall.
+	var copper := [3.5, 1.3, 0.00,  0.5, 0.4, 8.0, 0.95, 0.50, 0.10, 0.0, 0.0, 0.0]
 	var gold :=   [4.5, 1.8, 0.00,  0.7, 0.6, 2.5, 1.00, 0.88, 0.08, 0.0, 0.0, 0.0]
 	var mats := [sand, water, clay, rock, wood, iron, copper, gold]
 	for mi in mats.size():
@@ -509,7 +512,11 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 			else:
 				var x := clampf(xi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_W - 1.0)
 				var y := clampf(yi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_H - 1.0)
-				var mat := MAT_WATER if kind == CaveMap.CELL_WATER else MAT_ROCK
+				var mat := MAT_ROCK
+				if kind == CaveMap.CELL_WATER:
+					mat = MAT_WATER
+				elif kind == CaveMap.CELL_COPPER:
+					mat = MAT_COPPER
 				_wf(data, b + 0, x)
 				_wf(data, b + 1, y)
 				_wf(data, b + 4, x)

@@ -137,3 +137,7 @@ func fill_circle(p: Vector2, radius: float) -> void:
 
 func fill_rect(r: Rect2) -> void:
 	sim.fill_rect(r)
+
+
+func copper_rect(r: Rect2) -> void:
+	sim.fill_rect(r, sim.MAT_COPPER)

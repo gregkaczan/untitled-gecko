@@ -222,21 +222,93 @@ at its closing phase. The face has its own random generator, seeded
 from `GECKO_SEED`, so the suite's seeded bites and steps are untouched
 and a seeded run repeats.
 
+## The first cave
+
+`levels/clutch.json` (written by `tools/gen_clutch.py`) is the cave the
+game opens on: one world, the sim's whole 1920x1080 buffer, played from
+a sealed pocket at the bottom left to a crack of light at the top, in
+an S: the bottom band runs right, the middle band left, the top band
+right. It is a scene in the suite's format (a base of terrain ops, a
+spawn, scripts) with two fields of its own: `lumps`, the loose stones,
+clay and sand spawned after the terrain in the particle world (the
+bitmap world has none), and `exit`, the rect the body centre enters to
+finish, on which the camera lets go of the gecko and pulls back over
+the whole cave; R starts it again. Every station can be chewed past,
+as the design document's openness rule wants (the rock is all one
+kind so far, so a straight chew up is the fast route; a harder layer
+is the fix the document names), and each is laid out so one verb is
+the plain way through:
+
+- The hatch pocket: sealed, two clay eggs beside the gecko, a 16 px
+  wall between it and the hall. The only way out is a bite.
+- The hall: a dome and a 32 px shelf to step over, pebbles stepped
+  over, a stone small enough to swallow, a clump of clay to drag and
+  tear, a copper vein glowing along the ceiling, a 28 px shaft up the
+  right wall.
+- The roll: a 52 px corridor with a boulder of up to 48 px in it, no
+  room over it. Walked into, it is shoved along to the pit at the
+  corridor's end and drops in, and the walk goes on over it. The pit
+  is 60 px wide: walked down and up, into a 32 px passage.
+- The cork: a stone of about 40 cells 40 px into the 32 px passage
+  out of the pit, too big to pass and too big to swallow. From the
+  corridor across the pit the tongue drags it out and it falls in;
+  walked into from the pit it is shoved along the passage, drops into
+  a dip 24 px deep and is walked over there. A strike only dents it:
+  the bonds within 10 px of the hit break, but the loose stone stays
+  packed where it lies. A boulder filling a pocket was tried first and
+  does not work either: a confined lump stays packed when struck, and
+  the piece the tongue holds is traced through cells, so the drag sees
+  the whole lump and strains. A sealed pocket of sand sits in the rock
+  over the dip, so a bite up there pours sand into it. At the foot of
+  the pit's far wall a left press stops; up climbs it.
+- The pinch: 16 px tall and 120 px long, a squeeze into the turning
+  chamber, whose left wall is the 288 px climb to the top corridor.
+- The trough: 260 px of water with a stone 120 px out whose top is at
+  the bank. Walked into, the bottom is walked under water, the stone
+  climbed over, and the far basin's wall climbed out of with an up
+  press (a right press at its foot stops there); or a running jump
+  lands on the stone and a second clears the last 60 px, and a short
+  one swims. A copper vein glows under the water.
+- A dead end up off the corridor's ceiling, with a vein at its end.
+- The gulf: 140 px tall. A held left button on the ceiling beside the
+  crack reels the gecko up to it; the far wall and the ceiling are
+  the slow way. The crack is a 16 px slot: a press up into the ceiling
+  under it enters it nose first, and the squeeze ends in the pocket
+  of light. Not a bite: a bite into the ceiling one hangs from takes
+  the handhold away, and in the particle world (whose bite reaches a
+  few pixels further than the bitmap's) the nearest rock passes the
+  26 px that count as nothing to hold, and the gecko drops.
+
+Copper is a cell class of its own (`CELL_COPPER`): rock to walk on and
+chew that the bitmap draws bright and the sim builds as copper, held
+in place as rock is (a yield of 5 or more in the material table).
+Eating it does nothing yet.
+
+The stations are scenes on the level's base with a spawn, a script and
+a reach region, so `tools/suite.sh clutch` checks each one's intended
+route headless. The two that need lumps (`sim_only`: the roll and the
+plug) are left out of the headless list and recorded in the particle
+world with `tools/record.sh scene:script`, which writes frames and a
+trace under `frames/` as the suite's `FRAMES=1` does.
+`GECKO_DUMP_MAP=file.png` writes the bitmap world's cells as a PNG and
+quits, for a look at the layout.
+
 ## Controls
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots
 the tongue: a tap strikes, a hold grapples, and with the right button
 held as well it sticks and drags. Right mouse chews at the cursor. Ctrl+right erases, middle
 fills, wheel sizes the brush; B, C and N drop a boulder, a clump of
-clay or a heap of sand at the cursor, half the brush's size. R makes a
-new chamber, 1 and 2
+clay or a heap of sand at the cursor, half the brush's size. R starts
+the cave again (a fresh chamber when in a generated one), 1 and 2
 pick the gecko's pixel grid.
 Tab loads the next scene from the movement suite (built in whichever
 world is running, the keys driving the gecko) and Shift+Tab goes back
-to the generated cave. F1 is debug mode: the gecko's overlay (up
+to the first cave. F1 is debug mode: the gecko's overlay (up
 vector, probe reach, feet, bite) and a panel down the right of the
 screen with the scene list to click into, main cave and reload, the
-cave seed, the brush radius, the time scale, pause and a single-tick
+cave seed and New cave for a generated chamber, the brush radius, the
+time scale, pause and a single-tick
 step, the pixel grid and the overlay toggle, and the gecko's state.
 The world's mouse actions ignore the mouse while it is over the panel.
 

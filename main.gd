@@ -1,11 +1,17 @@
-# Scene driver for the gecko movement spike: one chamber (the particle
-# sim, or the bitmap stand-in with GECKO_WORLD=bitmap), one gecko, a
+# Scene driver for the gecko game: the first cave (levels/clutch.json,
+# the scene named LEVEL, built in the particle sim, or in the bitmap
+# stand-in with GECKO_WORLD=bitmap) with its loose lumps and its exit,
+# which pulls the camera back over the whole cave when the gecko gets
+# there; one gecko; a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
-# R for a fresh chamber, F1 for debug mode (the gecko's overlay and a
+# R to start the cave again (a fresh chamber when in a generated one),
+# F1 for debug mode (the gecko's overlay and a
 # panel down the right: scenes, seed, brush, clock, pixel grid), 1 and 2
 # for the gecko's pixel grid (4 px like the rock, or 2 px), Tab for the next test scene
-# from tests/scenes.json and Shift+Tab back to the generated cave (the
-# keys drive the gecko in a scene loaded this way). The mouse buttons are
+# from tests/scenes.json and Shift+Tab back to the first cave (the
+# keys drive the gecko in a scene loaded this way); the panel's New cave
+# builds a generated chamber from its seed. GECKO_DUMP_MAP=file.png
+# writes the bitmap world's cells as a PNG and quits. The mouse buttons are
 # the gecko's: a left press shoots the tongue, which strikes what it
 # hits on a tap, grapples on a hold, and sticks and drags it in when the
 # right button is held too; right alone chews toward the cursor, and
@@ -30,6 +36,10 @@ const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
+const LEVEL := "clutch"        # The first cave: the scene the game opens on and Shift+Tab returns to
+const WIN_ZOOM := 0.85         # The camera's zoom once the gecko is out, the whole cave in view
+const WIN_PULL := 0.6          # How fast it pulls back (per second)
+const CAM_LIMIT := 1000000     # No camera limit, while the pull-back shows the rock round the cave
 const LAB_FLOOR := 800.0       # The tongue demos' flat room: its floor line
 const LAB_CEIL := 680.0        # and its ceiling, within the tongue's reach of the floor
 
@@ -156,6 +166,8 @@ var _hint := ""                # Label text while the hint timer runs; empty for
 var _panel: DebugPanel
 var _debug := false            # F1: the panel and the gecko's overlay
 var _step_ticks := 0           # Physics ticks left to run before pausing again (the panel's step)
+var _exit := Rect2()           # The level's exit, empty in a scene without one
+var _won := false              # The gecko reached the exit: the camera pulls back
 
 
 func _ready() -> void:
@@ -235,7 +247,15 @@ func _ready() -> void:
 		get_tree().paused = false)
 	_panel.pixel_size_changed.connect(func(v: float) -> void: blobs.set_pixel_size(v))
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
+	if picked.is_empty() and _demo_name == "":
+		_pick_level()
 	_reset()
+	var dump := OS.get_environment("GECKO_DUMP_MAP")
+	if dump != "":
+		if not sim:
+			map.save_png(dump)
+		get_tree().quit()
+		return
 	if not picked.is_empty():
 		_demo = picked.steps
 		_demo_step = 0
@@ -259,11 +279,16 @@ func _reset() -> void:
 			gen.free()
 		else:
 			SceneBuilder.build(map, _scene, _scene_bases)
+		SceneBuilder.spawn_lumps(map, _scene)
+		_exit = SceneBuilder.exit_rect(_scene)
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
 		_cam = gecko.pos
 		_camera.position = gecko.pos
+		_camera_home()
 		return
+	_exit = Rect2()
+	_camera_home()
 	if sim and _demo_name in ["pull", "strike", "tongue"]:
 		_lab()
 		return
@@ -374,13 +399,23 @@ func _physics_process(dt: float) -> void:
 			_panel.set_paused(true)
 	if sim:
 		sim.tick()
-	# The camera eases after the drawn body and sits on whole pixels of
-	# the 2 px grid: a camera at a fraction of a pixel shifts every edge
-	# on the screen as it moves, which reads as flicker when the gecko
-	# is still, and the body centre itself rocks half a pixel on
-	# jiggling particle ground while the drawn body does not.
-	_cam = _cam.lerp(gecko.draw_pos(), 1.0 - exp(-CAMERA_EASE * dt))
-	_camera.position = (_cam * 0.5).round() * 2.0
+	if not _won and _exit.has_area() and _exit.has_point(gecko.pos):
+		_win()
+	if _won:
+		# Out: the camera lets go of the gecko and pulls back over the
+		# whole cave, the rock round it in view.
+		var k := 1.0 - exp(-WIN_PULL * dt)
+		_cam = _cam.lerp(Vector2(CaveMap.W * CaveMap.CELL, CaveMap.H * CaveMap.CELL) * 0.5, k)
+		_camera.position = _cam
+		_camera.zoom = _camera.zoom.lerp(Vector2(WIN_ZOOM, WIN_ZOOM), k)
+	else:
+		# The camera eases after the drawn body and sits on whole pixels of
+		# the 2 px grid: a camera at a fraction of a pixel shifts every edge
+		# on the screen as it moves, which reads as flicker when the gecko
+		# is still, and the body centre itself rocks half a pixel on
+		# jiggling particle ground while the drawn body does not.
+		_cam = _cam.lerp(gecko.draw_pos(), 1.0 - exp(-CAMERA_EASE * dt))
+		_camera.position = (_cam * 0.5).round() * 2.0
 	if _demo_step >= 0:
 		_run_demo(dt)
 	# The state readout only with the debug overlay; the controls hint for
@@ -390,9 +425,51 @@ func _physics_process(dt: float) -> void:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0:
-		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand   R new cave   Tab test scene   F1 debug"
+		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand   R again   Tab test scene   F1 debug"
 	else:
 		_label.text = ""
+
+
+# The gecko is out of the cave. Input stays with the player; the camera
+# pulls back (see _physics_process) and R starts the cave again.
+func _win() -> void:
+	_won = true
+	_camera.limit_left = -CAM_LIMIT
+	_camera.limit_top = -CAM_LIMIT
+	_camera.limit_right = CAM_LIMIT
+	_camera.limit_bottom = CAM_LIMIT
+	_hint = "out, into the light.   R hatches again"
+	_hint_t = 0.0
+
+
+# The camera back on the gecko at the game's zoom, held to the world.
+func _camera_home() -> void:
+	_won = false
+	_camera.zoom = Vector2(CAMERA_ZOOM, CAMERA_ZOOM)
+	_camera.limit_left = 0
+	_camera.limit_top = 0
+	_camera.limit_right = int(CaveMap.W * CaveMap.CELL)
+	_camera.limit_bottom = int(CaveMap.H * CaveMap.CELL)
+
+
+# The first cave as the scene to build: its index in the scene list, so
+# Tab goes on from it.
+func _pick_level() -> void:
+	_ensure_scenes()
+	var scenes: Dictionary = _scene_all.get("scenes", {})
+	if not scenes.has(LEVEL):
+		push_error("no level named " + LEVEL)
+		_scene = {}
+		_scene_i = -1
+		return
+	_scene = scenes[LEVEL]
+	_scene_bases = _scene_all.get("bases", {})
+	_scene_i = scenes.keys().find(LEVEL)
+	_panel.select_scene(_scene_i)
+
+
+func _in_level() -> bool:
+	return not _scene.is_empty() and _scene_i >= 0 and _scene_all.get("scenes", {}).keys()[_scene_i] == LEVEL
 
 
 func _ensure_scenes() -> void:
@@ -428,13 +505,15 @@ func _load_scene(i: int) -> void:
 	_hint_t = 5.0
 
 
-# Shift+Tab: back to the generated cave.
+# Shift+Tab: back to the first cave.
 func _main_cave() -> void:
-	_scene = {}
-	_scene_i = -1
-	_panel.select_scene(-1)
+	_pick_level()
+	_demo_step = -1
+	gecko.input_override = null
+	gecko.chew_override = false
+	gecko.lmb_override = false
 	_reset()
-	_hint = "main cave"
+	_hint = "the clutch"
 	_hint_t = 7.0
 
 
@@ -488,12 +567,15 @@ func _process(_dt: float) -> void:
 	if not over_panel and Input.is_action_just_pressed("drop_sand"):
 		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
 	if Input.is_action_just_pressed("regenerate"):
-		seed_value += 1
-		_scene = {}
-		_scene_i = -1
-		_panel.select_scene(-1)
-		_panel.set_seed(seed_value)
-		_reset()
+		if _in_level():
+			_reset()
+		else:
+			seed_value += 1
+			_scene = {}
+			_scene_i = -1
+			_panel.select_scene(-1)
+			_panel.set_seed(seed_value)
+			_reset()
 	# Exact matches, so Tab with Shift held is only the one action.
 	if Input.is_action_just_pressed("scene_next", true):
 		_next_scene()

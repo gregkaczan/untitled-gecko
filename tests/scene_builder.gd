@@ -15,20 +15,39 @@
 # Spawns: ["floor", x, y] on the first rock below (x, y), ["ceiling",
 # x, y] under the first rock above, ["wall_left", x, y] on the first
 # rock to the left, ["wall_right", x, y], ["at", x, y] exactly.
+# ["copper", x, y, w, h] makes a vein. A scene may also carry "lumps",
+# loose lumps spawned after the terrain in the particle world (["boulder"
+# | "clay", x, y, r] resting on the first floor below (x, y), ["sand", x,
+# y, r] a heap about it), and "exit", a rect [x, y, w, h] the body
+# centre enters to finish the level (main.gd). The levels (levels/*.json,
+# written by tools/gen_clutch.py) are in the same format and are merged
+# into the suite's scenes.
 class_name SceneBuilder
 extends RefCounted
 
 const PATH := "res://tests/scenes.json"
+const LEVELS := ["res://levels/clutch.json"]
 
 
 static func load_all() -> Dictionary:
-	var f := FileAccess.open(PATH, FileAccess.READ)
+	var data: Dictionary = _load(PATH)
+	for path in LEVELS:
+		var level: Dictionary = _load(path)
+		for key in ["bases", "scripts", "scenes"]:
+			if not data.has(key):
+				data[key] = {}
+			data[key].merge(level.get(key, {}), true)
+	return data
+
+
+static func _load(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
-		push_error("no scenes file at " + PATH)
+		push_error("no scenes file at " + path)
 		return {}
 	var data = JSON.parse_string(f.get_as_text())
 	if data == null:
-		push_error("scenes file is not valid JSON")
+		push_error("scenes file is not valid JSON: " + path)
 		return {}
 	return data
 
@@ -137,6 +156,8 @@ static func _apply(map: Node2D, op: Array) -> void:
 			map.set_cell_world(Vector2(op[1], op[2]), int(op[3]))
 		"water":
 			map.water_rect(_rect(op, 1))
+		"copper":
+			map.copper_rect(_rect(op, 1))
 		"tunnel":
 			var a := Vector2(op[1], op[2])
 			var b := Vector2(op[3], op[4])
@@ -165,6 +186,35 @@ static func _apply(map: Node2D, op: Array) -> void:
 				map.erase_rect(Rect2(float(op[1]) - w * 0.5, float(op[2]) + i * 4.0, w, 4.0))
 		_:
 			push_error("unknown terrain op " + String(op[0]))
+
+
+# The scene's loose lumps, on the world as built (the bitmap world's
+# spawns do nothing). A lump rests on the first floor below its point,
+# clipped to the air there, so one bigger than its passage fills it.
+static func spawn_lumps(map: Node2D, scene: Dictionary) -> void:
+	for lump in scene.get("lumps", []):
+		var p := Vector2(lump[1], lump[2])
+		var r := float(lump[3])
+		match String(lump[0]):
+			"sand":
+				map.spawn_sand(p, r)
+			"clay", "boulder":
+				var fl: Vector2 = map.floor_below(p)
+				var at := Vector2(p.x, fl.y - r - 2.0)
+				if lump[0] == "clay":
+					map.spawn_clay(at, r)
+				else:
+					map.spawn_boulder(at, r)
+			_:
+				push_error("unknown lump " + String(lump[0]))
+
+
+# The rect the body centre enters to finish, empty for a scene without one.
+static func exit_rect(scene: Dictionary) -> Rect2:
+	var e: Array = scene.get("exit", [])
+	if e.size() < 4:
+		return Rect2()
+	return Rect2(float(e[0]), float(e[1]), float(e[2]), float(e[3]))
 
 
 # Body centre and up vector for the scene's spawn.

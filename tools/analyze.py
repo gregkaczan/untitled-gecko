@@ -13,6 +13,7 @@ the scene's expected outcome holds. Thresholds are at the top; they are
 calibrated so the flat floor produces nothing.
 """
 import argparse
+import glob
 import json
 import math
 import os
@@ -298,12 +299,23 @@ def outcome(ticks, scene):
 
 def load_scenes():
     with open(SCENES) as f:
-        return json.load(f)
+        data = json.load(f)
+    # The levels (levels/*.json, tools/gen_clutch.py) are scenes too.
+    for path in sorted(glob.glob(os.path.join(ROOT, "levels", "*.json"))):
+        with open(path) as f:
+            level = json.load(f)
+        for key in ("bases", "scripts", "scenes"):
+            data.setdefault(key, {}).update(level.get(key, {}))
+    return data
 
 
-def specs(data):
+def specs(data, headless=False):
+    # A station that needs the particle world's lumps (sim_only) is not
+    # in the headless suite's list; tools/record.sh runs it.
     out = []
     for name, sc in data["scenes"].items():
+        if headless and sc.get("sim_only"):
+            continue
         if "script" in sc:
             out.append("%s:inline" % name)
         for s in sc.get("scripts", []):
@@ -414,7 +426,7 @@ def main():
     ap.add_argument("--baseline")
     args = ap.parse_args()
     if args.list:
-        for s in specs(load_scenes()):
+        for s in specs(load_scenes(), headless=True):
             print(s)
         return
     analyze(args.runs, args.baseline)

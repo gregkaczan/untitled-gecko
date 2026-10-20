@@ -8,6 +8,7 @@ const uint GW = 160u, GH = 90u, MPC = 32u, PC = 129600u;
 const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 14536u, O_PT = 475336u, O_RN = 1512136u;
 const uint O_NF = 2030536u;
 const uint O_NP = 2059336u;
+const uint O_CT = 2073870u;   // cell class per render pixel, last tick's (render_write.glsl): 2 is static solid
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); }
@@ -162,6 +163,27 @@ void main() {
         }
     }
 
+    // Rock is a wall to loose matter: a particle that is not itself held
+    // in place (yield under 5) and whose new position lands in a cell of
+    // static solid stays where it was and stops. Without this the
+    // density constraint alone lets water, sand and a lump's particles
+    // seep through the rock lattice (rock's rest density is above its
+    // lattice's, so it pulls neighbours in), and sealed sand and deep
+    // water spread through the walls. A chunk's cells (16 and up) are
+    // not static: lumps still meet each other through the solver.
+    if (yield_s < 5.0 && mat != 8u && mat != 9u) {
+        float psz = rf(O_P + 18u);
+        uint rw = uint(rf(O_P + 16u)), rh = uint(rf(O_P + 17u));
+        int rx = int(floor(px / psz)), ry = int(floor(py / psz));
+        if (rx >= 0 && ry >= 0 && rx < int(rw) && ry < int(rh)) {
+            if (buf.d[O_CT + uint(ry) * rw + uint(rx)] == 2u) {
+                px = ox;
+                py = oy;
+                vx = 0.0;
+                vy = 0.0;
+            }
+        }
+    }
     float maxv = rf(O_P + 28u) > 0.0 ? 1500.0 : 300.0;
     // Also raise cap if deferred bullet explosion is active
     if (rf(O_P + 37u) > 0.0) maxv = 1500.0;

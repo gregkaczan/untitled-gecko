@@ -18,12 +18,14 @@ const RIM := Color(0.33, 0.28, 0.23)
 const CAVE := Color(0.045, 0.04, 0.06)
 const WATER := Color(0.07, 0.15, 0.30)
 const WATER_TOP := Color(0.18, 0.32, 0.48)
+const COPPER := Color(0.85, 0.47, 0.14)   # A vein's cells, drawn bright so they read as glowing
 const WATER_Y := 222           # Cells: empty cells below this row inside the basin are water
 
 # Cell values
 const CELL_AIR := 0
 const CELL_ROCK := 1
 const CELL_WATER := 2
+const CELL_COPPER := 3         # Rock to walk on and chew, drawn as a glowing vein; the sim makes it copper
 
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
@@ -128,7 +130,8 @@ func _carve_blob(centre: Vector2, radius: float, value: int) -> void:
 func is_solid(x: int, y: int) -> bool:
 	if x < 0 or y < 0 or x >= W or y >= H:
 		return true
-	return solid[y * W + x] == CELL_ROCK
+	var v := solid[y * W + x]
+	return v == CELL_ROCK or v == CELL_COPPER
 
 
 func is_water(x: int, y: int) -> bool:
@@ -321,6 +324,17 @@ func water_rect(r: Rect2) -> void:
 	_repaint(x0 - 1, y0 - 1, x1 + 1, y1 + 1)
 
 
+# Turns a world-space rectangle into copper: a vein in the rock.
+func copper_rect(r: Rect2) -> void:
+	_set_rect(r, CELL_COPPER)
+
+
+# The map as a PNG, one pixel per cell (GECKO_DUMP_MAP).
+func save_png(path: String) -> void:
+	if _img:
+		_img.save_png(path)
+
+
 # Rock under the line from a to b (world px), from the line down to the
 # bottom of the map, between the two x's: a slope of any angle.
 func fill_below_line(a: Vector2, b: Vector2) -> void:
@@ -432,6 +446,8 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 			var col := CAVE
 			if is_water(x, y):
 				col = WATER_TOP if not is_water(x, y - 1) and not is_solid(x, y - 1) else WATER
+			elif solid[y * W + x] == CELL_COPPER:
+				col = COPPER
 			elif is_solid(x, y):
 				var rim := not (is_solid(x - 1, y) and is_solid(x + 1, y) and is_solid(x, y - 1) and is_solid(x, y + 1))
 				if rim:
