@@ -381,7 +381,11 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 		f.pos = chain.points[f.hip]
 
 
+var tick_us := 0               # The last tick's time in microseconds, for GECKO_TIMING (main.gd)
+
+
 func _physics_process(dt: float) -> void:
+	var _tick_t0 := Time.get_ticks_usec()
 	var inp := _read_input()
 	var jump := _read_jump()
 	_blocked = false
@@ -466,6 +470,7 @@ func _physics_process(dt: float) -> void:
 	queue_redraw()
 	_under.queue_redraw()
 	_debug_layer.queue_redraw()
+	tick_us = Time.get_ticks_usec() - _tick_t0
 	ticked.emit()
 
 

@@ -172,6 +172,10 @@ var _demo: Array = []
 var _hint_t := 0.0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _demo_name := OS.get_environment("GECKO_DEMO")
+var _timing := OS.get_environment("GECKO_TIMING") != ""  # T lines every 60 ticks: the sim tick, the gecko's tick and the render readback in ms, mean and max
+var _t_sim: Array[int] = []
+var _t_gecko: Array[int] = []
+var _t_render: Array[int] = []
 var _demo_step := -1
 var _demo_t := 0.0
 var _scene: Dictionary = {}    # The test scene being run, empty outside the suite
@@ -501,7 +505,13 @@ func _physics_process(dt: float) -> void:
 		for s in _slugs:
 			glows.append(s.glow())
 		sim.set_glows(glows)
+		var t0 := Time.get_ticks_usec()
 		sim.tick()
+		if _timing:
+			_t_sim.append(Time.get_ticks_usec() - t0)
+			_t_gecko.append(gecko.tick_us)
+			if _t_sim.size() >= 60:
+				_print_timing()
 		_update_vines(dt)
 	if not _won and _exit.has_area() and _exit.has_point(gecko.pos):
 		_win()
@@ -1008,7 +1018,10 @@ func _run_demo(dt: float) -> void:
 
 func _process(_dt: float) -> void:
 	if sim:
+		var t0 := Time.get_ticks_usec()
 		sim.read_render()
+		if _timing:
+			_t_render.append(Time.get_ticks_usec() - t0)
 	if _trace:
 		# One line per drawn frame, for tools/analyze.py's camera metrics
 		# and the sheet tools: the body centre's screen position in the
@@ -1080,3 +1093,38 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			brush_r = maxf(brush_r - 4.0, 8.0)
 		_panel.set_brush(brush_r)
+
+
+func _print_timing() -> void:
+	var line := "T"
+	for pair in [["sim", _t_sim], ["gecko", _t_gecko], ["render", _t_render]]:
+		var a: Array = pair[1]
+		var total := 0
+		var mx := 0
+		for v in a:
+			total += v
+			mx = maxi(mx, v)
+		var mean := float(total) / maxf(a.size(), 1.0) / 1000.0
+		line += " %s %.2f/%.2f" % [pair[0], mean, mx / 1000.0]
+		a.clear()
+	line += " physics %.2f process %.2f fps %d" % [
+		Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+		Engine.get_frames_per_second()]
+	print(line)
+	if sim and OS.get_environment("GECKO_HIST") != "":
+		var hist := {}
+		var c: PackedByteArray = sim.cells
+		for i in range(0, c.size(), 4):
+			var k := mini(c.decode_u32(i), 16)
+			hist[k] = hist.get(k, 0) + 1
+		print("H ", hist, " kinds in author ", _author_hist())
+
+
+func _author_hist() -> Dictionary:
+	var h := {}
+	if _author == null:
+		return h
+	for v in _author.solid:
+		h[v] = h.get(v, 0) + 1
+	return h
