@@ -6,8 +6,10 @@
 # of pixel_sz world units: 2 px by default, twice as fine as the
 # terrain's, or 4 px to share the rock's grid (keys 1 and 2 in main.gd).
 #
-# Usage per frame: set_blobs([[pos, radius, color], ...]).
-# set_pixel_size(sz) switches the grid at runtime.
+# Usage per frame: set_blobs([[pos, radius, color], ...]), and
+# set_marks([[pos, size, color], ...]) for flat squares (an eye) drawn
+# over the composite on the same pixel grid, so they come out as crisp
+# as the body does. set_pixel_size(sz) switches the grid at runtime.
 extends Node2D
 
 const WORLD_W := 1920
@@ -24,6 +26,8 @@ var _color_canvas: Node2D
 var _screen: Sprite2D
 var _splat_tex: ImageTexture
 var _blobs: Array = []
+var _marks: Array = []
+var _marks_canvas: Node2D
 var pixel_sz := PIXEL_SZ_FINE
 
 
@@ -56,12 +60,29 @@ func _ready() -> void:
 	mat.set_shader_parameter("color_tex", _color_vp.get_texture())
 	_screen.material = mat
 	add_child(_screen)
+	# Marks are drawn by a child of the screen sprite, in its pixel
+	# units, so they share its transform exactly.
+	_marks_canvas = Node2D.new()
+	_marks_canvas.draw.connect(_draw_marks)
+	_screen.add_child(_marks_canvas)
 
 
 func set_blobs(blobs: Array) -> void:
 	_blobs = blobs
 	_density_canvas.queue_redraw()
 	_color_canvas.queue_redraw()
+
+
+func set_marks(marks: Array) -> void:
+	_marks = marks
+	_marks_canvas.queue_redraw()
+
+
+func _draw_marks() -> void:
+	for m in _marks:
+		var p: Vector2 = (m[0] / pixel_sz).floor()
+		var n: float = maxf(roundf(m[1] / pixel_sz), 1.0)
+		_marks_canvas.draw_rect(Rect2(p, Vector2(n, n)), m[2])
 
 
 # Switch the blob grid: both viewports resize and the screen sprite

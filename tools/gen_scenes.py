@@ -49,6 +49,8 @@ SCRIPTS = {
     "jump_up": [step(0.5, Z), step(0.5, Z, jump=True), step(2.0, Z)],
     "cliff_jump": [step(1.3, R), step(0.3, R, jump=True), step(3.0, R)],
     "shaft": [step(3.0, D), step(3.0, U)],
+    # Over the slot, down into it nose first, back up it and on.
+    "slot_dive": [step(1.0, R), step(3.0, D), step(2.5, U), step(2.0, R)],
     "swim_across": [step(6.0, R), step(2.5, U), step(1.5, R)],
     "dig_45": [step(0.4, Z), step(3.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
     "dig_shaft": [step(0.4, Z), step(3.0, Z, chew=True, aim=[0, 140]), step(1.0, Z)],
@@ -208,6 +210,27 @@ add("dig_45", [], ["floor", 700, 700], ["dig_45"], note="45 degrees down-right f
 add("dig_shaft", [], ["floor", 700, 700], ["dig_shaft"], note="straight down from the floor", reach=[0, 900, 1920, 1080])
 add("dig_level_wall", [["fill", 900, 300, 1020, 500]], ["floor", 700, 700], ["dig_level"], note="level into a wall", reach=[1000, 0, 1920, 1080])
 add("dig_turns", [], ["floor", 600, 700], ["dig_turns"], note="down-right, up-right, down, back left")
+
+# 16. Squeezes: passages narrower than the body
+for h in (12, 16):
+    # A slab from the ceiling to h above the floor, 100 px thick: the only
+    # way on is the passage h tall under it.
+    add("squeeze_low_%d" % h, [["fill", 1000, C, 100, F - C - h]], ["floor", 800, 700], ["traverse"], state="cling",
+        reach=[1140, 0, 1920, 1080], note="a passage %d px tall under a slab, squeezed through and back" % h)
+for w in (12, 16):
+    # A slot w wide through 60 px of floor into a 60 px shaft below it,
+    # flush on the left, with a floor: a down press over the slot enters
+    # it nose first, up climbs back out through it.
+    add("squeeze_slot_%d" % w, [["erase", 1000, F, w, 60], ["erase", 1000, F + 60, 60, 60]], ["floor", 890, 700], ["slot_dive"],
+        state="cling", reach=[1000, F + 90, 1060, F + 120], end=[1020, F - 60, 1400, F],
+        note="a %d px slot in the floor entered with a down press, to the shaft floor below, and back out" % w)
+
+# A chewed passage: bites of 5.5 to 8.5 px radius along a line, so the
+# air is 11 to 20 px tall and its walls ragged, like one the player
+# erased with the smallest brush. Squeezed through and back.
+add("squeeze_ragged", [["ragged", 500, 600, 660, 600, 8, 5], ["room", 300, 540, 200, 68], ["room", 660, 540, 300, 68]],
+    ["floor", 400, 600], ["traverse"], base="solid", state="cling", reach=[690, 0, 1920, 1080],
+    note="a ragged chewed passage 11 to 20 px tall at floor level between two rooms, 160 px long")
 
 out = {"bases": BASES, "scripts": SCRIPTS, "scenes": scenes}
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

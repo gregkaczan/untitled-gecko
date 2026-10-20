@@ -94,7 +94,8 @@ def parse(path):
                 "facing": int(d["facing"]), "inp": vec(d["inp"]), "s": float(d["s"]),
                 "blk": d["blk"] == "1", "grab": d["grab"] == "1", "bridge": d["bridge"] == "1",
                 "sq": d["sq"] == "1", "chew": d["chew"] == "1", "jump": d["jump"] == "1",
-                "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1", "feet": feet,
+                "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1",
+                "sqz": d.get("sqz", "0") == "1", "ps": d.get("ps", "0") == "1", "feet": feet,
             })
     return ticks
 
@@ -240,7 +241,11 @@ def metrics(ticks):
         # all (no block is recorded), and does nothing by design.
         rest = range(i - IDLE_TAIL + 1, i + 1)
         into_surface = all(dot(inp, ticks[j]["up"]) < -0.5 for j in rest)
-        idle_ok = into_surface or all(abs(dot(inp, tangent(ticks[j]["up"]))) < 0.3 and abs(tangent(ticks[j]["up"])[1]) <= 0.5 for j in rest)
+        # A press stopped at a bump the surface curls over (the way chosen
+        # for it turned against it) stays stopped until the press changes,
+        # by design: the alternative is reversing in a loop.
+        press_stop = all(ticks[j]["ps"] for j in rest)
+        idle_ok = into_surface or press_stop or all(abs(dot(inp, tangent(ticks[j]["up"]))) < 0.3 and abs(tangent(ticks[j]["up"])[1]) <= 0.5 for j in rest)
         if into_rock > STALL_WIN // 2:
             if i - last_stuck >= STALL_WIN:
                 ev["stuck"].append((ticks[i]["tick"], round(prog, 1)))
@@ -262,7 +267,8 @@ def metrics(ticks):
     for i in range(n):
         tk = ticks[i]
         cling = tk["state"] == "cling" and i not in spawn and i not in land
-        run_sink = run_sink + 1 if cling and tk["dist"] < SINK_D else 0
+        # In a squeeze the body rides closer to rock by design.
+        run_sink = run_sink + 1 if cling and not tk["sqz"] and tk["dist"] < SINK_D else 0
         run_float = run_float + 1 if cling and not tk["bridge"] and tk["dist"] > FLOAT_D else 0
         if run_sink == SINK_TICKS:
             ev["sink"].append((tk["tick"], tk["dist"]))

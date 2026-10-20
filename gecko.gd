@@ -16,6 +16,7 @@ extends Node2D
 
 const Chain = preload("res://chain.gd")
 
+const CELL := 4.0              # The map's cell size (CaveMap.CELL)
 const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
 const RIDE_H := 16.0           # Body centre height above the nearest solid
@@ -74,10 +75,26 @@ const FOOT_SETTLE := 360.0     # Speed an unplanted foot closes on its rest spot
 const KNEE_OUT := 5.0          # Knee lift away from the surface
 const KNEE_BACK := 3.0         # Knee set back against the leg's end (front legs bend back)
 const LEG_R := 3.4             # Upper leg blob radius; the lower leg tapers from it
+const FOOT_LIFT := 4.5         # Drawn foot height over its anchor (a cell centre, 2 px inside the rock): the sole rests on the surface
+const BODY_LIFT := 2.0         # The drawn body rides this much higher than the body centre, so the belly clears the ground
 const REACH := 24.0            # How far past the body clearance a wall beside the gecko can be grabbed
 const GRAB_PULL := 90.0        # Speed the body closes on a wall it is turning onto (px/s)
 const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees from up (no flips)
 const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
+const SQUEEZE_MIN := 11.0      # Narrowest passage the body squeezes through (px between its walls; cells are 4)
+const SQUEEZE_MAX := 19.0      # Widest passage that is a squeeze; from 20 px the body walks at its full clearance
+const SQUEEZE_RECOVER := 0.5   # Px a tick the clearance grows back after a squeeze, so the body eases out, never pops
+const SQUEEZE_LOOK := 28.0     # How far across the walking line the passage scan looks
+const SQUEEZE_DEPTH := 16.0    # A passage must run at least this far to be entered (a dent is not a passage)
+const SQUEEZE_SLOW := 0.4      # Walking speed in a squeeze, as a fraction of the walk
+const SQUEEZE_RELEASE := 6     # Ticks the passage must read wide, with the body inside it, before the squeeze ends
+const SQUEEZE_GIVEUP := 40     # Ticks a squeeze may wait at a mouth without the body getting in
+const SLOT_SCAN := 20.0        # How far along the surface a press into it looks for a slot to enter
+const SLOT_CENTRE := 2.5       # Px a tick the body is centred over a slot it is entering (about the walk)
+const THIN_SMOOTH := 0.15      # Per-tick blend of a drawn body point's radius toward the passage it is in
+const THIN_STEP := 0.25        # Most a drawn body point moves toward a passage's middle in one tick
+const THIN_DEAD := 0.5         # A point this close to the middle stays put (the spans are whole pixels)
+const THIN_MARGIN := 2.0       # Px between a thinned point's drawn edge and the passage wall: a pixel of air, so the edge never sits on a pixel boundary and flickers
 const NORMAL_SMOOTH := 0.35    # Per-tick blend of the surface normal target (jagged ground flickers)
 const NORMAL_SMOOTH_FINE := 0.08  # The blend for small changes: rough walls and edges wobble the normal every tick
 const NORMAL_FINE_DOT := 0.9   # A change under ~25 degrees counts as small
@@ -106,6 +123,7 @@ const BODY_COLOR := Color(0.56, 0.63, 0.40)
 const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const SPIT_COLOR := Color(0.85, 0.95, 0.45)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
+const EYE_COLOR := Color(0.08, 0.07, 0.06)
 
 
 class Foot:
@@ -170,6 +188,7 @@ var _jumped := false           # This tick began a jump (trace)
 var _lift_ticks := 0           # Ticks spent lifting over the same low obstacle
 var _s_dead := false           # The input scalar is in its dead band (hysteresis, so it does not flicker)
 var _away_s := 0.0             # The away rule's choice of direction, held while the input holds
+var _away_w := Vector2.ZERO    # That choice as a world direction, to tell a bulge from a corner turned
 var _last_inp := Vector2.ZERO  # Last tick's input, to tell a held press from a new one
 var _press_stop := false       # The held press ran against itself on a bulge: stopped until it changes
 var _step_climb := false       # Pressing into a short step: the press means up its face and over
@@ -184,6 +203,17 @@ var _n_raw := Vector2.ZERO     # Last tick's raw surface normal
 var _n_streak := 0             # Ticks the raw normal has kept turning the same way
 var _n_sign := 0.0
 var _dig_aim := Vector2.ZERO   # Unit dig direction while chewing after the cursor, zero otherwise
+var _squeeze := false          # In a passage narrower than the body: less clearance, slow, the body thinned
+var _sq_r := BODY_R            # The clearance while squeezing
+var _sq_in := false            # The body centre has been inside the passage
+var _sq_wide := 0              # Ticks in a row the passage has read wide
+var _sq_wait := 0              # Ticks at the mouth without getting in
+var _sq_enter := false         # Turning nose first into a slot below: no wall pull, the body centred over the slot
+var _sq_target := Vector2.ZERO # World point the body is centred on while entering a slot
+var _sq_n := Vector2.ZERO      # The slot's wall normal the entry committed to
+var _sq_up := Vector2.UP       # The squeeze's frame: up snapped to a world axis, held through the passage
+var _draw_r := PackedFloat32Array()  # Drawn radius per chain point: thinned where the point is in a narrow passage
+var _thin_on := PackedByteArray()    # Per chain point: between two walls closer than its body (hysteresis)
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _inp := Vector2.ZERO       # This tick's input vector (trace)
@@ -192,6 +222,9 @@ var _inp := Vector2.ZERO       # This tick's input vector (trace)
 func _ready() -> void:
 	z_index = 6
 	chain = Chain.new(Vector2.ZERO, RADII, LINK, MAX_BEND)
+	_draw_r = PackedFloat32Array(RADII)
+	_thin_on.resize(RADII.size())
+	_thin_on.fill(0)
 	for end in [1.0, -1.0]:
 		for side in [1.0, -1.0]:
 			var f := Foot.new()
@@ -229,6 +262,8 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	spits.clear()
 	_n_target = up_dir
 	_grab_n = Vector2.ZERO
+	_end_squeeze()
+	_sq_r = BODY_R
 	var fwd := _tangent()
 	look = fwd
 	chain.reset(pos + fwd * HEAD_LEAD, fwd)
@@ -250,6 +285,8 @@ func _physics_process(dt: float) -> void:
 	_jumped = false
 	no_cling = maxf(no_cling - dt, 0.0)
 	_dig_aim = Vector2.ZERO
+	if not _squeeze:
+		_sq_r = move_toward(_sq_r, BODY_R, SQUEEZE_RECOVER)
 	if chewing:
 		var aim := _aim_dir()
 		if aim == Vector2.ZERO:
@@ -311,12 +348,15 @@ func _print_trace() -> void:
 	var fs := ""
 	for f in feet:
 		fs += "%.1f,%.1f,%d,%d;" % [f.pos.x, f.pos.y, 1 if f.planted else 0, 1 if f.stepping else 0]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d feet=%s" % [
+	var cp := ""
+	for i in chain.size():
+		cp += "%.1f/%.1f;" % [(chain.points[i] - pos).dot(up), _draw_r[i]]
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
-		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, fs])
+		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0, cp, fs])
 
 
 func _read_jump() -> bool:
@@ -454,6 +494,16 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			# surface is still steep and faced away from, so a leaning wall
 			# that wobbles the projection cannot argue with it.
 			s = _away_s
+		elif _away_s != 0.0 and held and (tangent * raw).dot(_away_w) < -0.5:
+			# The surface curled over (a bump on the wall): the press, read
+			# on it now, leads back the way the away rule sent the body.
+			# Stop, as at a wall, rather than reverse and loop between the
+			# two readings; a new press decides afresh. A corner turned
+			# onto a new surface (up a wall, then left along the floor
+			# above) is across that way, not against it, and walks on.
+			s = 0.0
+			_away_s = 0.0
+			_press_stop = true
 		else:
 			_away_s = 0.0
 			s = raw
@@ -479,6 +529,7 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 				else:
 					s = _away_dir(tangent)
 				_away_s = s
+				_away_w = tangent * s
 		if _away_s != 0.0 and (tangent * s).dot(inp) < -0.5:
 			# The way chosen for this press now runs against it: the surface
 			# curled back (a bulge). Stop here, as at a wall, and do not
@@ -493,23 +544,33 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	if absf(s) > 0.3:
 		facing = signf(s)
 	_s = s
-	speed_along = move_toward(speed_along, s * WALK_SPEED, WALK_ACCEL * dt)
+	var top := WALK_SPEED * (SQUEEZE_SLOW if _squeeze else 1.0)
+	speed_along = move_toward(speed_along, s * top, WALK_ACCEL * dt)
 	var blocked := not _step(tangent * speed_along * dt)
 	_blocked = blocked
 	if blocked:
 		speed_along = 0.0
+		# Stopped by the lip of a passage narrower than the body, the way
+		# the press points: squeeze into it. The clearance drops to fit
+		# and the nudge below brings the body down (or up) to its middle.
+		if not _squeeze and not chewing and s != 0.0:
+			_passage_ahead()
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
 	# A body centre inside rock (a spawn in a wall, a brush fill, a bite
 	# that missed) is pushed out along the probe normal before anything
 	# else is decided, squeezed or not.
-	if p.found and p.dist < BODY_R - 1.0:
-		var out_dir: Vector2 = p.normal if p.normal != Vector2.ZERO else up
-		pos += out_dir * (BODY_R - p.dist) * 0.5
+	if p.found and p.dist < _clear_r() - 1.0:
+		# Rock all round (a passage) cancels the probe normal: then away
+		# from the nearest cell, never blindly along up into the far wall.
+		var out_dir: Vector2 = p.normal
+		if out_dir == Vector2.ZERO:
+			out_dir = (pos - p.nearest).normalized() if p.dist > 0.01 else up
+		pos += out_dir * (_clear_r() - p.dist) * 0.5
 	# A hole the gecko is chewing after the cursor is the way, not a gap.
 	# Bridging ends only after the gap test has failed a few ticks in a
 	# row: at the gap's edge the front ray hits and misses by turns.
-	var gap := _gap_ahead() and _dig_aim == Vector2.ZERO
+	var gap := _gap_ahead() and _dig_aim == Vector2.ZERO and not _squeeze and not _sq_enter
 	# A bridge that has carried the body away from any rock was wrong.
 	if _bridging and p.found and p.dist > RIDE_H + 8.0:
 		gap = false
@@ -539,16 +600,28 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# under it and slides along its tangent, so it sits still or backs out.
 	var squeezed := _squeezed()
 	_squeezed_f = squeezed
+	# A press straight into the surface over a slot in it (a crack in the
+	# floor, narrower than the body is long) enters the slot nose first.
+	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO \
+			and s == 0.0 and inp.length() > 0.2 and inp.dot(up) < -0.5:
+		_try_slot_entry(tangent)
 	var n: Vector2
 	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
 		_grab_n = Vector2.ZERO
+		_sq_enter = false
 		_hold_ticks = HOLD_AFTER_GRAB
 	_hold_ticks = maxi(_hold_ticks - 1, 0)
 	if _grab_n != Vector2.ZERO:
 		n = _grab_n
 		speed_along = 0.0
-		_move(-_grab_n * GRAB_PULL * dt)
+		if _sq_enter:
+			# Nose first into a slot: there is no wall to pull to yet, so
+			# the body is centred over the slot's mouth instead.
+			var off := (_sq_target - pos).dot(_sq_n)
+			_move(_sq_n * clampf(off, -SLOT_CENTRE, SLOT_CENTRE))
+		else:
+			_move(-_grab_n * GRAB_PULL * dt)
 	elif dig_n != Vector2.ZERO:
 		# Chewing off the surface line into rock: up turns so the walking
 		# line follows the bite, and the gecko climbs into the hole it
@@ -558,11 +631,11 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 			_grab_n = n
 	elif blocked and chewing:
 		n = Vector2.ZERO
-	elif blocked:
+	elif blocked and not _squeeze:
 		n = _obstacle_normal(inp)
 		_grab_n = n
 	else:
-		n = _reach_for_wall(inp) if (not chewing and not squeezed and inp.length() > 0.2) else Vector2.ZERO
+		n = _reach_for_wall(inp) if (not chewing and not squeezed and not _squeeze and inp.length() > 0.2) else Vector2.ZERO
 		if n != Vector2.ZERO:
 			_grab_n = n
 			speed_along = 0.0
@@ -607,7 +680,13 @@ func _update_clinging(inp: Vector2, jump: bool, dt: float) -> void:
 	# edge, where no surface is under it, it pulls toward the nearest
 	# rock instead, which is what wraps it round the corner.
 	# Not while a lift or a grab pull is already moving the body across.
-	if not squeezed and not _bridging and not _lifting and _grab_n == Vector2.ZERO:
+	# In a squeeze the body keeps to the middle of the passage instead,
+	# and the squeeze ends once the passage has opened out round it.
+	if _squeeze:
+		if _grab_n == Vector2.ZERO:
+			_squeeze_nudge()
+		_update_squeeze()
+	elif not squeezed and not _bridging and not _lifting and _grab_n == Vector2.ZERO:
 		var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
@@ -846,6 +925,7 @@ func _land(n: Vector2) -> void:
 	up = n
 	_n_target = n
 	_grab_n = Vector2.ZERO
+	_end_squeeze()
 	# Feet re-seat under the body at once; their airborne positions were
 	# relative to the old up and would stick out until the first step.
 	var t := _tangent()
@@ -863,6 +943,7 @@ func _land(n: Vector2) -> void:
 func _drop() -> void:
 	clinging = false
 	_grab_n = Vector2.ZERO
+	_end_squeeze()
 	vel = _tangent() * speed_along
 	speed_along = 0.0
 	no_cling = NO_CLING_TIME
@@ -872,6 +953,7 @@ func _drop() -> void:
 func _jump() -> void:
 	clinging = false
 	_grab_n = Vector2.ZERO
+	_end_squeeze()
 	vel = up * JUMP_SPEED + _tangent() * speed_along
 	speed_along = 0.0
 	no_cling = NO_CLING_TIME
@@ -898,7 +980,7 @@ func _step(delta: Vector2) -> bool:
 	pos = start
 	if delta.length() < 0.01:
 		return false
-	var cell = map.blocking_cell(pos, pos + delta, BODY_R)
+	var cell = map.blocking_cell(pos, pos + delta, _clear_r())
 	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 	if cell == null or floor_pt == null or _lift_ticks >= LIFT_TICKS:
 		return false
@@ -921,14 +1003,16 @@ func _step(delta: Vector2) -> bool:
 
 
 # Moves pos by delta in 1 px sub-steps and stops at the first step that
-# would bring the body centre within BODY_R of rock. Stuck beats
-# tunnelling: the gecko never passes through ground. A body already
-# inside rock (buried by the brush) is let move so it can be pushed out.
+# would bring the body centre within the clearance (BODY_R, less in a
+# squeeze) of rock. Stuck beats tunnelling: the gecko never passes
+# through ground. A body already inside rock (buried by the brush) is
+# let move so it can be pushed out.
 func _move(delta: Vector2) -> bool:
 	var length := delta.length()
 	if length < 0.001:
 		return true
-	if map.solid_within(pos, BODY_R):
+	var r := _clear_r()
+	if map.solid_within(pos, r):
 		pos += delta
 		return true
 	var dir := delta / length
@@ -936,8 +1020,8 @@ func _move(delta: Vector2) -> bool:
 	while moved < length:
 		var step := minf(1.0, length - moved)
 		var next: Vector2 = pos + dir * step
-		if map.solid_within(next, BODY_R):
-			var cell = map.blocking_cell(pos, next, BODY_R)
+		if map.solid_within(next, r):
+			var cell = map.blocking_cell(pos, next, r)
 			_block_normal = (next - cell).normalized() if cell != null else -dir
 			return false
 		pos = next
@@ -993,6 +1077,214 @@ func _short_wall_ahead() -> bool:
 	return false
 
 
+# The clearance the body centre keeps from rock: BODY_R, less in a
+# squeeze, where the passage is narrower than that allows, and growing
+# back at SQUEEZE_RECOVER after one.
+func _clear_r() -> float:
+	return _sq_r
+
+
+# Distance along dir from p to the first rock, in 1 px steps, or INF.
+func _free_span(p: Vector2, dir: Vector2, max_len: float) -> float:
+	var n := int(max_len)
+	for i in range(n + 1):
+		if map.is_solid_world(p + dir * i):
+			return float(i)
+	return INF
+
+
+# The run of air along up through at: the one containing at, or the
+# nearest to it within SQUEEZE_LOOK either way. h is its length in px,
+# mid its middle as an offset along up from at; open means it reaches
+# the end of the scan (not a passage but the open cave).
+func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
+	var at := at_raw.round()
+	var n := int(SQUEEZE_LOOK)
+	var best := {"air": false, "h": 0.0, "mid": 0.0, "open": false}
+	var best_d := INF
+	var k := -n
+	while k <= n:
+		if map.is_solid_world(at + u * k):
+			k += 1
+			continue
+		var k0 := k
+		while k <= n and not map.is_solid_world(at + u * k):
+			k += 1
+		var k1 := k - 1
+		var d := 0.0 if (k0 <= 0 and 0 <= k1) else minf(absf(float(k0)), absf(float(k1)))
+		if d < best_d:
+			best_d = d
+			best = {"air": true, "h": float(k1 - k0 + 1), "mid": (k0 + k1) * 0.5, "open": k0 == -n or k1 == n}
+	return best
+
+
+# The world axis nearest v. Passages in the cell world run along the
+# axes, and a body tilted by a corner it is approaching must not scan
+# them askew.
+static func _axis(v: Vector2) -> Vector2:
+	if absf(v.x) >= absf(v.y):
+		return Vector2(signf(v.x), 0.0)
+	return Vector2(0.0, signf(v.y))
+
+
+func _squeeze_r(h: float) -> float:
+	# The passage's walls are cells whose centres sit CELL / 2 outside
+	# its air; the centre of the passage is (h + CELL) / 2 from each, and
+	# the clearance leaves a pixel and a half of play, since the body is
+	# centred from whole-pixel scans. Never less than the narrowest
+	# passage allows: a crevice closing further is not squeezed into.
+	return clampf((maxf(h, SQUEEZE_MIN) + CELL) * 0.5 - 1.5, 0.0, BODY_R)
+
+
+func _begin_squeeze(h: float, u: Vector2) -> void:
+	_squeeze = true
+	_sq_up = u
+	_sq_in = false
+	_sq_wide = 0
+	_sq_wait = 0
+	_sq_r = _squeeze_r(h)
+
+
+func _end_squeeze() -> void:
+	_squeeze = false
+	_sq_enter = false
+	_sq_in = false
+	_sq_wide = 0
+	_sq_wait = 0
+
+
+# A passage ahead along the walk, narrower than the body's clearance
+# allows but wide enough to squeeze through, running on at least
+# SQUEEZE_DEPTH: the squeeze begins. Called when the walk was blocked.
+func _passage_ahead() -> bool:
+	var u := _axis(up)
+	var fwd := Vector2(-u.y, u.x) * facing
+	var at := pos + fwd * (BODY_R + 2.0)
+	var r := _narrow_run(at, u)
+	if not r.air or r.open or r.h < SQUEEZE_MIN or r.h > SQUEEZE_MAX:
+		return false
+	if absf(r.mid) > RIDE_H + 8.0:
+		return false
+	var mouth: Vector2 = at + u * r.mid
+	if _free_span(mouth, fwd, SQUEEZE_DEPTH) < SQUEEZE_DEPTH:
+		return false
+	# Still a passage further in, not a crevice closing to nothing: the
+	# gecko is not wedged deeper and deeper into a V.
+	var deeper := _narrow_run(at + fwd * SQUEEZE_DEPTH, u)
+	if not deeper.air or deeper.open or deeper.h < SQUEEZE_MIN or deeper.h > SQUEEZE_MAX + 4.0:
+		return false
+	_begin_squeeze(r.h, u)
+	return true
+
+
+# A press into the surface over a slot in it: columns along the surface
+# either side of the body are sounded along -up; a run of deep ones
+# between shallow ones, at least SQUEEZE_MIN wide and narrower than a
+# bridged gap, is a slot. The body turns nose first into it, as a wall
+# grab onto its side, centred over its mouth, squeezing if it is narrow.
+func _try_slot_entry(tangent: Vector2) -> void:
+	var n := int(SLOT_SCAN)
+	var deep: Array[bool] = []
+	for k in range(-n, n + 1):
+		deep.append(_free_span(pos + tangent * k, -up, RIDE_H + 24.0) > RIDE_H + 20.0)
+	var best_k0 := 0
+	var best_k1 := -1
+	var best_d := INF
+	var i := 0
+	while i < deep.size():
+		if not deep[i]:
+			i += 1
+			continue
+		var i0 := i
+		while i < deep.size() and deep[i]:
+			i += 1
+		var k0 := i0 - n
+		var k1 := i - 1 - n
+		if k0 == -n or k1 == n:
+			continue
+		var d := 0.0 if (k0 <= 0 and 0 <= k1) else minf(absf(float(k0)), absf(float(k1)))
+		if d < best_d:
+			best_d = d
+			best_k0 = k0
+			best_k1 = k1
+	if best_k1 < best_k0:
+		return
+	var w := float(best_k1 - best_k0 + 1)
+	if w < SQUEEZE_MIN or w >= BRIDGE:
+		return
+	_sq_enter = true
+	_sq_target = pos + tangent * ((best_k0 + best_k1) * 0.5)
+	_sq_n = _axis(tangent * facing)
+	_grab_n = _sq_n
+	_bridging = false
+	speed_along = 0.0
+	if w <= SQUEEZE_MAX:
+		_begin_squeeze(w, _sq_n)
+
+
+# In a squeeze the body keeps to the middle of the passage: the one it
+# is in, or at the mouth, the one ahead.
+func _squeeze_nudge() -> void:
+	# Not while up is still turning (a corner's pull being undone): the
+	# nudge is across the passage, and across a turning frame it reads
+	# as a step back along the walk.
+	if _up_rate > LIFT_TURN_MAX:
+		return
+	# The middle averaged over the columns here and a body length ahead
+	# (those that read as the passage), so a ragged wall does not bob
+	# the body from cell to cell, and at the mouth the body lines up
+	# with the first columns, not one further in.
+	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
+	var mid := 0.0
+	var n := 0
+	for k in [0.0, 4.0, 8.0, 12.0]:
+		var a := _narrow_run(pos + fwd * k, _sq_up)
+		if a.air and not a.open and a.h <= SQUEEZE_MAX + 4.0:
+			mid += a.mid
+			n += 1
+	# A dead band above the scan's half-pixel steps, or the body rocks a
+	# fraction of a pixel each tick chasing a middle that is not there.
+	if n == 0 or absf(mid / n) < 0.75:
+		return
+	_move(_sq_up * clampf(mid / n * 0.5, -NUDGE_MAX, NUDGE_MAX))
+
+
+# The squeeze ends once the passage round the body has read wide for
+# SQUEEZE_RELEASE ticks, or when the body never got in.
+func _update_squeeze() -> void:
+	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
+	var r := _narrow_run(pos, _sq_up)
+	var here: bool = r.air and not r.open and r.h <= SQUEEZE_MAX + 2.0
+	if here and r.h < SQUEEZE_MIN - 1.0:
+		# Pinched: the passage has closed past what the body can squeeze
+		# through. The clearance grows back and pushes it out.
+		_end_squeeze()
+		return
+	# The clearance fits the narrowest column of the passage over the
+	# next body length (and here, once inside), so a narrowing step, or
+	# one cell of a ragged wall standing proud, is passed rather than
+	# stopped at, at the mouth as much as inside.
+	var h: float = r.h if here else INF
+	for k in [4.0, 8.0, 12.0]:
+		var ahead := _narrow_run(pos + fwd * k, _sq_up)
+		if ahead.air and not ahead.open and ahead.h >= SQUEEZE_MIN - 1.0 and ahead.h <= SQUEEZE_MAX + 2.0:
+			h = minf(h, ahead.h)
+	if h < INF:
+		_sq_r = _squeeze_r(h)
+	if here:
+		_sq_in = true
+		_sq_wide = 0
+		_sq_wait = 0
+	elif _sq_in:
+		_sq_wide += 1
+		if _sq_wide >= SQUEEZE_RELEASE:
+			_end_squeeze()
+	else:
+		_sq_wait += 1
+		if _sq_wait >= SQUEEZE_GIVEUP:
+			_end_squeeze()
+
+
 func _squeezed() -> bool:
 	var t := _tangent()
 	var a = map.ray_hit(pos, t, SQUEEZE_D)
@@ -1008,6 +1300,12 @@ func _squeezed() -> bool:
 func _reach_for_wall(inp: Vector2) -> Vector2:
 	var t := _tangent()
 	for side in [1.0, -1.0]:
+		# Never a wall the input points away from: walking off a slab's
+		# foot, its corner tilts the probe normal enough for the press
+		# to read as along the face, and the gecko would grab the wall
+		# behind it.
+		if inp.dot(t * side) < -0.2:
+			continue
 		var hit = map.ray_hit(pos, t * side, BODY_R + REACH)
 		if hit == null:
 			continue
@@ -1033,6 +1331,10 @@ func _reach_for_wall(inp: Vector2) -> Vector2:
 func _surface_normal(p: Dictionary) -> Vector2:
 	if _bridging:
 		return up
+	if _squeeze:
+		# The passage's own frame: a corner's pull on the way in tilted
+		# the body, and the squeeze straightens it.
+		return _sq_up
 	var t := _tangent()
 	var sa := pos + t * RAY_HALF
 	var sb := pos - t * RAY_HALF
@@ -1042,6 +1344,14 @@ func _surface_normal(p: Dictionary) -> Vector2:
 		a = null
 	if b != null and b.distance_to(sb) < 1.0:
 		b = null
+	# A ray down a slot narrower than the body (a crack in the floor) is
+	# not an edge: the surface goes on beyond it at the same level, and
+	# the body is read on that, not tilted into the crack by the
+	# centroid of the rock about it.
+	if a == null and b != null:
+		a = _past_gap(sa, t, b)
+	elif b == null and a != null:
+		b = _past_gap(sb, -t, a)
 	if a != null and b != null:
 		var along: Vector2 = a - b
 		if along.length() > 1.0:
@@ -1050,6 +1360,18 @@ func _surface_normal(p: Dictionary) -> Vector2:
 				n = -n
 			return n
 	return p.normal
+
+
+# The surface beyond a narrow gap under a ray that missed: the first of
+# a few rays cast further along dir that hits at about the level of the
+# other ray's hit, or null when the ground does not come back (an edge).
+func _past_gap(from: Vector2, dir: Vector2, other: Vector2):
+	for k in [6.0, 12.0, 18.0]:
+		var q: Vector2 = from + dir * k
+		var hit = map.ray_hit(q, -up, RAY_LEN)
+		if hit != null and absf((hit - other).dot(up)) <= 6.0:
+			return hit
+	return null
 
 
 # A gap shorter than the body: no ground under the front ray, ground
@@ -1098,10 +1420,11 @@ func _update_chain(dt: float) -> void:
 		# forward again at HEAD_RECOVER, not in one go.
 		var back := maxf(_head_back - HEAD_RECOVER * dt, 0.0)
 		var back_max := minf(HEAD_LEAD - 4.0, _head_back + HEAD_RETRACT * dt)
-		target = _pos_s + t * facing * (HEAD_LEAD - back)
+		var base := _pos_s + up * BODY_LIFT
+		target = base + t * facing * (HEAD_LEAD - back)
 		while back < back_max and map.solid_within(target, chain.radii[0] + BODY_GAP):
 			back = minf(back + 2.0, back_max)
-			target = _pos_s + t * facing * (HEAD_LEAD - back)
+			target = base + t * facing * (HEAD_LEAD - back)
 		_head_back = back
 	else:
 		_pos_s = pos
@@ -1117,8 +1440,11 @@ func _update_chain(dt: float) -> void:
 		dir = to.normalized()
 		# The snout drawing back from a wall moves against the facing; that
 		# is not a turn, and laying the body behind a backward heading
-		# folds it up the wall. The body stays laid the way it faces.
-		if clinging and dir.dot(_tangent() * facing) < -0.3:
+		# folds it up the wall. The body stays laid the way it faces. In a
+		# passage the head is held between the walls and its travel reads
+		# as mostly across, which would lay the body at a slant: there the
+		# heading is the passage's own.
+		if clinging and (_squeeze or dir.dot(_tangent() * facing) < -0.3):
 			dir = _tangent() * facing
 	elif clinging:
 		dir = _tangent() * facing
@@ -1148,6 +1474,7 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 	if q0.found and q0.dist < chain.radii[0] + BODY_GAP:
 		var away0: Vector2 = (new_head - q0.nearest).normalized() if q0.dist > 0.01 else up
 		new_head += away0 * (chain.radii[0] + BODY_GAP - q0.dist)
+	new_head = _thin_point(0, new_head, q0)
 	chain.points[0] = new_head
 	var prev_dir := -chain.heading
 	for i in range(1, chain.size()):
@@ -1162,14 +1489,62 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 		var q: Dictionary = map.probe(p, r + BODY_HUG)
 		if q.found:
 			var away: Vector2 = (p - q.nearest).normalized() if q.dist > 0.01 else up
-			var want := r + BODY_GAP
-			if q.dist < want:
+			# Laid higher than its clearance, like the head, by BODY_LIFT
+			# for the body and a pixel for the tail's tip, which drags
+			# along the ground behind the lifted body.
+			var want := r + BODY_GAP + lerpf(1.0, BODY_LIFT, clampf((r - 2.0) / 5.0, 0.0, 1.0))
+			p = _thin_point(i, p, q)
+			if _thin_on[i]:
+				pass
+			elif q.dist < want:
 				p += away * (want - q.dist)
 			else:
 				p += away * (want - q.dist) * HUG_K
 			p = anchor + (p - anchor).normalized() * LINK
+		else:
+			_thin_point(i, p, q)
 		chain.points[i] = p
 		prev_dir = (p - anchor).normalized()
+
+
+# A chain point with rock on both sides closer than its radius allows (a
+# passage narrower than the body) is centred between the two walls and
+# its drawn radius thinned to the passage, instead of being pushed off
+# one wall into the other every tick. Elsewhere the drawn radius
+# recovers. Returns the point, moved only when it is in such a passage.
+func _thin_point(i: int, p: Vector2, q: Dictionary) -> Vector2:
+	var r: float = chain.radii[i]
+	var want := r + BODY_GAP
+	var target := r
+	var out := p
+	var narrow := false
+	if q.found and q.dist < want + 2.0:
+		var away: Vector2 = (p - q.nearest).normalized() if q.dist > 0.01 else up
+		# Spans from the point's whole pixel, so the middle they give is
+		# a fixed line the point settles on, not one that shifts half a
+		# pixel with the point's own fraction and keeps it rocking.
+		var base := p.round()
+		var d_near := _free_span(base, -away, want)
+		var d_far := _free_span(base, away, want * 2.0)
+		if d_near < INF and d_far < INF:
+			# Narrow when both walls would be within the point's clearance
+			# of its centred position, so the push-out off one wall could
+			# not settle and would rock it between the two. With
+			# hysteresis, so a passage about that width does not read
+			# narrow and wide by turns.
+			var span := d_near + d_far
+			narrow = span < (2.0 * want + 4.0 if _thin_on[i] else 2.0 * want + 1.0)
+			if narrow:
+				# Toward the middle, settling within THIN_DEAD of it: the
+				# spans are whole pixels, so chasing the exact middle
+				# would rock the point a pixel each tick.
+				var off := (base + away * (d_far - d_near) * 0.5 - p).dot(away)
+				if absf(off) > THIN_DEAD:
+					out = p + away * signf(off) * minf(absf(off) - THIN_DEAD, THIN_STEP)
+				target = minf(r, maxf(span * 0.5 - THIN_MARGIN, 2.0))
+	_thin_on[i] = 1 if narrow else 0
+	_draw_r[i] = lerpf(_draw_r[i], target, THIN_SMOOTH)
+	return out
 
 
 # The head looks at the mouse, within LOOK_LIMIT of the body line, so the
@@ -1214,7 +1589,10 @@ func _update_feet(dt: float) -> void:
 				f.anchor = f.step_to
 				f.pos = f.anchor
 			else:
-				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * STEP_HEIGHT * sin(PI * f.step_t)
+				# The step's arc, no higher than the leg's drop: flat in a passage.
+				var drop := (hip - f.step_to).dot(up) - FOOT_LIFT
+				var arc := minf(STEP_HEIGHT * _leg_scale(f), maxf(drop, 1.0))
+				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * arc * sin(PI * f.step_t)
 			continue
 		if f.planted:
 			if map.solid_near(f.anchor, 1) and f.anchor.distance_to(hip) < MAX_LEG:
@@ -1246,6 +1624,12 @@ func _update_feet(dt: float) -> void:
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
 		var rest := hip + tangent * (f.end * facing * FOOT_SPREAD + lead) - up * RIDE_H
+		# In a passage the hip rides close to the floor and the rest spot
+		# falls inside it: the foot wants the surface, not a cell deep in.
+		var back := 0.0
+		while back < RIDE_H - 4.0 and map.is_solid_world(rest + up * back):
+			back += 2.0
+		rest += up * back
 		var q: Dictionary = map.probe(rest, LEG_REACH)
 		if q.found and q.nearest.distance_to(hip) > MAX_LEG:
 			q.found = false
@@ -1256,9 +1640,12 @@ func _update_feet(dt: float) -> void:
 		var threshold := STEP_LEN * (0.5 if _diagonal(f).stepping else 1.0)
 		if f.planted and f.anchor.distance_to(q.nearest) <= threshold:
 			continue
-		if _partner(f).stepping:
-			continue
-		if f.planted and stepping >= 2:
+		if _partner(f).stepping or (f.planted and stepping >= 2):
+			# This foot waits its turn in the trot. One that is not planted
+			# does not hang where it was left (a cliff top the body has
+			# gone over, 50 px behind) but closes on its rest spot meanwhile.
+			if not f.planted:
+				f.pos = f.pos.move_toward(rest, FOOT_SETTLE * dt)
 			continue
 		f.stepping = true
 		f.planted = false
@@ -1268,10 +1655,28 @@ func _update_feet(dt: float) -> void:
 		stepping += 1
 
 
+# How much the body is thinned at a foot's hip, 1 at full size: in a
+# passage the legs flatten with the body, so the knees and the step's
+# arc do not poke up through the thinned back.
+func _leg_scale(f: Foot) -> float:
+	return clampf(_draw_r[f.hip] / chain.radii[f.hip], 0.3, 1.0)
+
+
 func _knee(f: Foot) -> Vector2:
 	var hip: Vector2 = chain.points[f.hip]
-	var foot := f.pos + (up * 1.5 if f.planted else Vector2.ZERO)
-	return (hip + foot) * 0.5 + up * KNEE_OUT - _tangent() * f.end * facing * KNEE_BACK
+	var foot := _foot_draw(f)
+	var k := _leg_scale(f)
+	# The knee rises at most half the leg's drop, so a leg folded flat
+	# in a passage keeps its knee level with the hip, inside the body.
+	var lift := minf(KNEE_OUT * k, maxf((hip - foot).dot(up), 0.0) * 0.5)
+	return (hip + foot) * 0.5 + up * lift - _tangent() * f.end * facing * KNEE_BACK * k
+
+
+# Where a foot is drawn. On a surface its position is a rock cell's
+# centre (planted) or at that level (settling, or the end of a step), 2
+# px inside the rock: the drawn foot is lifted onto the surface.
+func _foot_draw(f: Foot) -> Vector2:
+	return f.pos + (up * FOOT_LIFT if clinging else Vector2.ZERO)
 
 
 # Far legs first, then the body, then the near legs: the colour layer
@@ -1281,20 +1686,32 @@ func _push_blobs() -> void:
 	var list: Array = []
 	_leg_blobs(list, -1.0, FAR_LEG_COLOR)
 	for i in chain.size():
-		list.append([chain.points[i], chain.radii[i], BODY_COLOR])
-		# Thin tail segments get filler blobs between them, so the tail
-		# renders as a line rather than a row of dots; the thinnest get
-		# two, so a stretched tail tip does not break into specks.
-		if i > 0 and chain.radii[i] < 4.5:
-			var r_mid: float = (chain.radii[i - 1] + chain.radii[i]) * 0.5
-			if chain.radii[i] < 3.0:
-				list.append([chain.points[i - 1].lerp(chain.points[i], 1.0 / 3.0), r_mid, BODY_COLOR])
-				list.append([chain.points[i - 1].lerp(chain.points[i], 2.0 / 3.0), r_mid, BODY_COLOR])
+		list.append([chain.points[i], _draw_r[i], BODY_COLOR])
+		if i == 0:
+			continue
+		if _thin_on[i] or _thin_on[i - 1]:
+			# A segment thinned to a passage is drawn as a tube: blobs
+			# every 2 px, so its edge is straight rather than scalloped,
+			# and does not flicker pixel by pixel as the body creeps along.
+			for k in range(1, 4):
+				var t := k / 4.0
+				list.append([chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), BODY_COLOR])
+		elif _draw_r[i] < 4.5:
+			# Thin tail segments get filler blobs between them, so the tail
+			# renders as a line rather than a row of dots; the thinnest get
+			# two, so a stretched tail tip does not break into specks.
+			var r_mid: float = (_draw_r[i - 1] + _draw_r[i]) * 0.5
+			if _draw_r[i] < 3.0:
+				for k in range(1, 4):
+					list.append([chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, BODY_COLOR])
 			else:
 				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
 	list.append([chain.head() + look * SNOUT, 5.0, BODY_COLOR])
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs(list)
+	# The eye: one 4 px square on the blob layer's grid, drawn over the
+	# body by the layer itself, so it is as crisp as the body's pixels.
+	blobs.set_marks([[chain.points[0] + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0), 4.0, EYE_COLOR]])
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:
@@ -1303,25 +1720,21 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 			continue
 		var hip: Vector2 = chain.points[f.hip]
 		var knee := _knee(f)
-		var foot := f.pos + (up * 1.5 if f.planted else Vector2.ZERO)
+		var foot := _foot_draw(f)
+		var leg_r := LEG_R * _leg_scale(f)
 		# Blobs close enough along each segment that a stretched leg still
 		# renders as one limb, not a row of specks.
 		var n1 := clampi(ceili(hip.distance_to(knee) / LEG_BLOB_GAP), 3, 8)
 		for k in range(1, n1 + 1):
 			var t := float(k) / n1
-			list.append([hip.lerp(knee, t), LEG_R, color])
+			list.append([hip.lerp(knee, t), leg_r, color])
 		var n2 := clampi(ceili(knee.distance_to(foot) / LEG_BLOB_GAP), 3, 8)
 		for k in range(1, n2 + 1):
 			var t := float(k) / n2
-			list.append([knee.lerp(foot, t), lerpf(LEG_R, LEG_R * 0.85, t), color])
+			list.append([knee.lerp(foot, t), lerpf(leg_r, leg_r * 0.85, t), color])
 
 
 func _draw() -> void:
-	# The eye is one 4 px dot on the gecko's pixel grid, snapped to it.
-	var head: Vector2 = chain.points[0]
-	var grid := Vector2(blobs.pixel_sz, blobs.pixel_sz)
-	var eye := (head + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0)).snapped(grid)
-	draw_rect(Rect2(eye, Vector2(4.0, 4.0)), Color(0.08, 0.07, 0.06))
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
 	for sp in spits:

@@ -727,6 +727,48 @@
     false
    ]
   ],
+  "slot_dive": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
   "swim_across": [
    [
     6.0,
@@ -3520,6 +3562,188 @@
     "dig_turns"
    ],
    "note": "down-right, up-right, down, back left"
+  },
+  "squeeze_low_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     100,
+     628
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1140,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a passage 12 px tall under a slab, squeezed through and back"
+  },
+  "squeeze_low_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     100,
+     624
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1140,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a passage 16 px tall under a slab, squeezed through and back"
+  },
+  "squeeze_slot_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     12,
+     60
+    ],
+    [
+     "erase",
+     1000,
+     860,
+     60,
+     60
+    ]
+   ],
+   "spawn": [
+    "floor",
+    890,
+    700
+   ],
+   "scripts": [
+    "slot_dive"
+   ],
+   "end": [
+    1020,
+    740,
+    1400,
+    800
+   ],
+   "reach": [
+    1000,
+    890,
+    1060,
+    920
+   ],
+   "state": "cling",
+   "note": "a 12 px slot in the floor entered with a down press, to the shaft floor below, and back out"
+  },
+  "squeeze_slot_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     16,
+     60
+    ],
+    [
+     "erase",
+     1000,
+     860,
+     60,
+     60
+    ]
+   ],
+   "spawn": [
+    "floor",
+    890,
+    700
+   ],
+   "scripts": [
+    "slot_dive"
+   ],
+   "end": [
+    1020,
+    740,
+    1400,
+    800
+   ],
+   "reach": [
+    1000,
+    890,
+    1060,
+    920
+   ],
+   "state": "cling",
+   "note": "a 16 px slot in the floor entered with a down press, to the shaft floor below, and back out"
+  },
+  "squeeze_ragged": {
+   "base": "solid",
+   "terrain": [
+    [
+     "ragged",
+     500,
+     600,
+     660,
+     600,
+     8,
+     5
+    ],
+    [
+     "room",
+     300,
+     540,
+     200,
+     68
+    ],
+    [
+     "room",
+     660,
+     540,
+     300,
+     68
+    ]
+   ],
+   "spawn": [
+    "floor",
+    400,
+    600
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    690,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a ragged chewed passage 11 to 20 px tall at floor level between two rooms, 160 px long"
   }
  }
 }

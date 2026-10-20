@@ -99,12 +99,54 @@ exist headless, so sim runs need the window (movie mode is fine).
   press changes; it never reverses in a loop.
 - Turns are decided from the cell that actually blocked the step, never
   from the cell the body rests on.
+- A passage narrower than the body (11 to 19 px between its walls; 20
+  and up the body walks at its full clearance) is squeezed through.
+  Stopped at its lip, the gecko scans across the walk for the run of
+  air, and enters it if it goes on at least 16 px without closing: the
+  clearance drops to fit, the walk slows to 40 percent, the body is
+  nudged to the passage's middle, and its drawn points thin to the
+  passage where they are between its walls and spring back as they
+  leave it. A press straight into the surface over a slot in it (a
+  crack in the floor, a slot in the ceiling overhead) enters the slot
+  nose first, as a wall grab onto its side, centred over its mouth. The
+  squeeze keeps its own axis-aligned frame, ends once the passage has
+  opened out round the body, and never follows a crevice that closes
+  below 11 px. Afterwards the clearance grows back half a pixel a tick,
+  so the body eases out rather than pops.
+- The drawn body rides 2 px above the body centre's line, the tail's
+  tip 1 px, so the belly clears the ground and the tail drags on it. A
+  planted foot is drawn on the rock's surface rather than at its
+  anchor, which is a cell's centre 2 px inside it. A foot waiting its
+  turn in the trot that is not planted closes on its rest spot
+  meanwhile instead of hanging where the body left it. In a passage
+  the legs flatten with the body (knee lift and step arc no more than
+  the leg's drop) and the feet rest on the floor's surface, so nothing
+  pokes through the thinned back, and thinned segments are drawn as
+  tubes rather than rows of circles, so the back's edge is straight and
+  does not flicker pixel by pixel as the body creeps along.
+- The eye is drawn by the blob layer as a 4 px square on its own pixel
+  grid, over the body, so it is as crisp as the body and clipped by it.
+- A ray cast down a crack narrower than the body (a slot in the floor)
+  reads the surface beyond the crack at the same level rather than
+  missing, so the body is not tilted into the crack by the centroid of
+  the rock about it, and a press square to the floor there stays
+  square.
+- The away rule's choice for a press is remembered as a world
+  direction; when the surface curls over (a bump on a wall) and the
+  press, read on it, leads back against that direction, the gecko stops
+  as at a wall instead of reversing and looping between the two
+  readings. A corner turned onto a new surface runs across it, not
+  against, and walks on. The wall reach never grabs a wall the input
+  points away from (a slab's foot behind the gecko).
 
 ## Controls
 
 WASD or arrows move, Space jumps, E or Shift chews. Left mouse: tap to
 spit, hold for the tongue. Right mouse erases, middle fills, wheel sizes
-the brush. R makes a new chamber, F1 toggles the debug overlay.
+the brush. R makes a new chamber, F1 toggles the debug overlay, 1 and 2
+pick the gecko's pixel grid. Tab loads the next scene from the movement
+suite (built in whichever world is running, the keys driving the gecko)
+and Shift+Tab goes back to the generated cave.
 
 ## Checking it without a hand on the keys
 
@@ -132,7 +174,12 @@ The movement suite is the regression gate for any movement change:
   outcome. `BASELINE=tests/baseline.json` marks regressions against the
   committed baseline. A run passes with no events at all.
 - `FRAMES=1 tools/suite.sh [filter]` records 60 fps frames (one per
-  tick, needs a display) under `frames/`; `tools/flicker.py frames/`
+  tick, needs a display) under `frames/`. The project window is
+  1920x1000 with no canvas stretch, so it fits a 1080 px screen's work
+  area and both the screen and the recorded frames are one pixel per
+  pixel: a 1080 px window gets shortened by the compositor, and the
+  movie frame then holds the content at a half-pixel offset, which
+  blends every edge and reads as flicker; `tools/flicker.py frames/`
   measures the drawn silhouette's change between frames and any
   fragments it breaks into; `tools/sheet.sh scene:script tick` makes a
   contact sheet round a tick, and `tools/ticks.py` dumps a tick range of

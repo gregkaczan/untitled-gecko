@@ -356,8 +356,8 @@ func _set_rect(r: Rect2, value: int) -> void:
 func fill_rect(r: Rect2) -> void:
 	var x0 := int(floor(r.position.x / CELL))
 	var y0 := int(floor(r.position.y / CELL))
-	var x1 := int(ceil(r.end.x / CELL))
-	var y1 := int(ceil(r.end.y / CELL))
+	var x1 := int(ceil(r.end.x / CELL)) - 1
+	var y1 := int(ceil(r.end.y / CELL)) - 1
 	for y in range(maxi(y0, 0), mini(y1, H - 1) + 1):
 		for x in range(maxi(x0, 0), mini(x1, W - 1) + 1):
 			solid[y * W + x] = CELL_ROCK
