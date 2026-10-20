@@ -325,6 +325,9 @@ for thick in (12, 24):
             note="a hole %d px tall at the floor through a wall %d px thick, squeezed through and back" % (h, thick))
 # A hole 12 px tall through a 12 px wall with its sill 40 px up: climbed
 # to, entered with a press into the wall, left on the far side.
+add("squeeze_window_jagged", [["fill", 1000, C, 16, F - C], ["ragged", 988, F - 48, 1028, F - 48, 7, 13]], ["floor", 800, 700], ["window"],
+    state="cling", reach=[1052, 0, 1920, 1080],
+    note="a chewed hole 9 to 15 px tall through a 16 px wall, 48 px above the floor, its edges ragged: up the wall, a press into it enters the hole, out the far side")
 add("squeeze_window_12", [["fill", 1000, C, 12, F - C - 52], ["fill", 1000, F - 40, 12, 40]], ["floor", 800, 700], ["window"],
     state="cling", reach=[1052, 0, 1920, 1080],
     note="a 12 px hole through a 12 px wall, 40 px above the floor: up the wall, a press into it enters the hole, out the far side")

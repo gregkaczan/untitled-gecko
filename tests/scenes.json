@@ -5046,6 +5046,43 @@
    "state": "cling",
    "note": "a hole 16 px tall at the floor through a wall 24 px thick, squeezed through and back"
   },
+  "squeeze_window_jagged": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     16,
+     640
+    ],
+    [
+     "ragged",
+     988,
+     752,
+     1028,
+     752,
+     7,
+     13
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "window"
+   ],
+   "reach": [
+    1052,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a chewed hole 9 to 15 px tall through a 16 px wall, 48 px above the floor, its edges ragged: up the wall, a press into it enters the hole, out the far side"
+  },
   "squeeze_window_12": {
    "base": "room",
    "terrain": [

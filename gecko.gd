@@ -1733,11 +1733,18 @@ func _update_squeeze() -> void:
 	# body is kept on that corridor's middle.
 	var c := _corridor()
 	var line_mid: float = r.mid
+	# Wide: the straight corridor takes the body at its full clearance,
+	# so the squeeze has nothing left to do. A squeeze entered from a
+	# blocked walk reads a passage up to SQUEEZE_BLOCKED as here, and
+	# without this it would walk a 24 px passage to its end in the
+	# squeeze's posture, legs tucked and slow, swollen to the walls.
+	var wide := false
 	if c.ok:
 		_sq_r = _squeeze_r(c.hi - c.lo + 1.0)
+		wide = c.hi - c.lo + 1.0 > SQUEEZE_MAX + 2.0
 		if here:
 			line_mid = (c.lo + c.hi) * 0.5
-	if here:
+	if here and not wide:
 		_sq_in = true
 		_sq_wide = 0
 		_sq_wait = 0
@@ -2231,10 +2238,14 @@ func _push_blobs() -> void:
 		list.append([chain.points[i], r_i, BODY_COLOR])
 		if i == 0:
 			continue
-		if _thin_on[i] or _thin_on[i - 1]:
+		if (_thin_on[i] or _thin_on[i - 1]) and (_draw_r[i] < chain.radii[i] - 1.0 or _draw_r[i - 1] < chain.radii[i - 1] - 1.0):
 			# A segment thinned to a passage is drawn as a tube: blobs
 			# every 2 px, so its edge is straight rather than scalloped,
 			# and does not flicker pixel by pixel as the body creeps along.
+			# Only once the radius has really come down: the tube's summed
+			# splats render fatter than one blob of the same radius, and a
+			# body read as narrow but barely thinned (a passage of 20 px,
+			# squeezed into from a blocked walk) swelled past the walls.
 			for k in range(1, 4):
 				var t := k / 4.0
 				list.append([chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), BODY_COLOR])
