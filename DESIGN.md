@@ -102,17 +102,38 @@ exist headless, so sim runs need the window (movie mode is fine).
 - A passage narrower than the body (11 to 19 px between its walls; 20
   and up the body walks at its full clearance) is squeezed through.
   Stopped at its lip, the gecko scans across the walk for the run of
-  air, and enters it if it goes on at least 16 px without closing: the
-  clearance drops to fit, the walk slows to 40 percent, the body is
+  air, and enters it if it goes on at least 16 px without closing, or
+  opens straight into cave beyond (a hole through a thin wall, a door):
+  the clearance drops to fit, the walk slows to 40 percent, the body is
   nudged to the passage's middle, and its drawn points thin to the
   passage where they are between its walls and spring back as they
   leave it. A press straight into the surface over a slot in it (a
-  crack in the floor, a slot in the ceiling overhead) enters the slot
-  nose first, as a wall grab onto its side, centred over its mouth. The
-  squeeze keeps its own axis-aligned frame, ends once the passage has
-  opened out round the body, and never follows a crevice that closes
-  below 11 px. Afterwards the clearance grows back half a pixel a tick,
-  so the body eases out rather than pops.
+  crack in the floor, a slot in the ceiling overhead, a hole in the
+  wall being climbed) enters the slot nose first, as a wall grab onto
+  its side, centred over its mouth. The squeeze keeps its own
+  axis-aligned frame, ends once the passage has opened out round the
+  body, and never follows a crevice that closes below 11 px.
+  Afterwards the clearance grows back half a pixel a tick, so the body
+  eases out rather than pops.
+- In a passage the drawn body lies on the passage's middle line, not
+  its usual 2 px above the body centre: the lift eases between the two
+  at a pixel a tick from the moment the squeeze begins, so the head
+  heads for the passage rather than being shoved in off the lip. The
+  head keeps its full lead (the snout test uses the squeeze's own
+  clearance, or the walls beside it would draw it in the whole way
+  through) and, between two walls, is centred by the thinning like the
+  body's points instead of being pushed off whichever wall is nearer:
+  targeted at the lifted line it sat inside the wall's clearance and
+  the push off the nearest cell, with an along-passage part that swept
+  across each cell column and flipped at its edge, sawed it back and
+  forth 2 px every five ticks. The thinning looks for the two walls
+  along the passage's axis, its diagonals and the slant to the nearest
+  cell, and takes the narrowest: at a mouth a point sits between the
+  floor and the lip's corner, which are not opposite, and read along
+  the line to whichever is nearer by turns it was pushed off the floor
+  one tick and centred under the lip the next. A point whose drawn
+  radius is still growing back from a thinning is pushed off rock no
+  more than a pixel a tick.
 - The drawn body rides 2 px above the body centre's line, the tail's
   tip 1 px, so the belly clears the ground and the tail drags on it. A
   planted foot is drawn on the rock's surface rather than at its
@@ -124,8 +145,11 @@ exist headless, so sim runs need the window (movie mode is fine).
   pokes through the thinned back, and thinned segments are drawn as
   tubes rather than rows of circles, so the back's edge is straight and
   does not flicker pixel by pixel as the body creeps along.
-- The eye is drawn by the blob layer as a 4 px square on its own pixel
-  grid, over the body, so it is as crisp as the body and clipped by it.
+- The face is drawn by the blob layer as marks on its own pixel grid,
+  over the body, so they are as crisp as the body: the eye, a 4 px
+  square one cell below the head's rim (any higher and its top row
+  takes the rim's place and reads as a notch), and what the idle
+  animations add (below).
 - A ray cast down a crack narrower than the body (a slot in the floor)
   reads the surface beyond the crack at the same level rather than
   missing, so the body is not tilted into the crack by the centroid of
@@ -138,6 +162,23 @@ exist headless, so sim runs need the window (movie mode is fine).
   readings. A corner turned onto a new surface runs across it, not
   against, and walks on. The wall reach never grabs a wall the input
   points away from (a slab's foot behind the gecko).
+
+## Idle animations
+
+After two seconds of nothing happening (clinging, no keys, no buttons,
+the tongue in) the gecko blinks, licks its eye or yawns, one every 1.5
+to 3.5 seconds, drawn from a shuffled bag of two blinks, a lick and a
+yawn, so none repeats for long and all turn up. The head keeps
+following the cursor meanwhile. A blink shuts the eye to its lower row
+for a tenth of a second. A lick runs the tongue from the mouth round
+the snout's tip to the eye (shut while the tongue is on it) and back,
+as 2 px marks along a curve with a 4 px tip. A yawn lifts the snout,
+drops a jaw blob below it and opens the dark inside of the mouth
+between them, quick to open, held a quarter second, quick to close,
+the eye shut while it gapes. A key or a button interrupts any of them
+at its closing phase. The face has its own random generator, seeded
+from `GECKO_SEED`, so the suite's seeded bites and steps are untouched
+and a seeded run repeats.
 
 ## Controls
 
@@ -159,18 +200,23 @@ The world's mouse actions ignore the mouse while it is over the panel.
 the keyboard and mouse with a scripted run (see `main.gd`; climb builds
 a test pillar, crevice a funnel, dig chews after a scripted cursor).
 `GECKO_TRACE=1` prints the body state per physics tick (key=value: the
-body, the drawn body, the head, up, the feet, the decision flags) and
+body, the drawn body, the head, up, the feet, the decision flags, the
+idle animation, and `cp`, the chain head first as offset along the
+tangent, offset along up, drawn radius and thinned) and
 the gecko's screen position and tick per frame; `tools/strip.sh` turns
 movie-mode frames into a contact sheet cropped around the gecko.
 
 The movement suite is the regression gate for any movement change:
 
-- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 92 scenes
+- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 102 scenes
   built from terrain primitives on the bitmap map, each with a spawn and
   scripted input: flat floor, slopes, steps, bumps, corners, overhangs,
-  gaps, crevices, ceilings, tunnels, landings, water, generated caves
-  and cursor digs. `GECKO_SCENE=name[:script]` runs one and quits when
-  the script ends; `GECKO_SEED` fixes the random bites and steps.
+  gaps, crevices, ceilings, tunnels, landings, water, generated caves,
+  cursor digs, squeezes (low passages, slots, a chewed passage, holes
+  at the floor through walls 12 and 24 px thick, a hole 40 px up a wall
+  entered from the climb) and an idle stand on the flat for the idle
+  animations. `GECKO_SCENE=name[:script]` runs one and quits when the
+  script ends; `GECKO_SEED` fixes the random bites and steps.
 - `tools/suite.sh [filter]` runs every scene headless at fixed fps
   (about twelve seconds for the lot, `JOBS` in parallel) into `runs/`
   and scores them with `tools/analyze.py`: drawn body and head jumps,

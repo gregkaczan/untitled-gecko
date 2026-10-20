@@ -126,6 +126,17 @@ const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const SPIT_COLOR := Color(0.85, 0.95, 0.45)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
 const EYE_COLOR := Color(0.08, 0.07, 0.06)
+const MOUTH_COLOR := Color(0.24, 0.08, 0.10)
+const LIFT_EASE := 1.0         # Px a tick the drawn body's lift moves between its lifted line and a passage's middle
+const IDLE_AFTER := 2.0        # Seconds of nothing happening before the idle animations begin
+const IDLE_GAP_MIN := 1.5      # Seconds between one idle animation and the next
+const IDLE_GAP_MAX := 3.5
+const BLINK_TICKS := [2, 6, 2]   # Lid closing, shut, opening
+const LICK_TICKS := [6, 6, 6]    # Tongue out to the eye, on it, back
+const YAWN_TICKS := [5, 16, 4]   # Mouth opening, agape, closing
+const YAWN_GAPE := 6.0           # Px the jaw drops at the widest
+const LICK_SAMPLES := 20         # Marks along the tongue's curve at full stretch
+const THIN_RELEASE := 1.0        # Most a point whose drawn radius is still growing back from a thinning is pushed off rock in one tick
 
 
 class Foot:
@@ -216,8 +227,16 @@ var _sq_enter := false         # Turning nose first into a slot below: no wall p
 var _sq_target := Vector2.ZERO # World point the body is centred on while entering a slot
 var _sq_n := Vector2.ZERO      # The slot's wall normal the entry committed to
 var _sq_up := Vector2.UP       # The squeeze's frame: up snapped to a world axis, held through the passage
+var _sq_line := Vector2.ZERO   # A world point on the passage's middle line: the mouth's at first, then the body's own column
 var _draw_r := PackedFloat32Array()  # Drawn radius per chain point: thinned where the point is in a narrow passage
 var _thin_on := PackedByteArray()    # Per chain point: between two walls closer than its body (hysteresis)
+var _lift := BODY_LIFT         # The drawn body's lift off the body centre's line: BODY_LIFT, or in a passage the way to its middle
+var _idle_t := 0.0             # Seconds of nothing happening: clinging, no keys, no buttons
+var _anim := ""                # The idle animation playing: blink, lick, yawn; empty for none
+var _anim_tick := 0            # Ticks into it
+var _anim_gap := 0.0           # Seconds of idling left before the next one
+var _anim_bag: Array = []      # The animations still to play this round, shuffled
+var _rng := RandomNumberGenerator.new()  # The face's own generator, so the suite's seeded bites and steps are untouched
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _inp := Vector2.ZERO       # This tick's input vector (trace)
@@ -229,6 +248,11 @@ func _ready() -> void:
 	_draw_r = PackedFloat32Array(RADII)
 	_thin_on.resize(RADII.size())
 	_thin_on.fill(0)
+	var seed_env := OS.get_environment("GECKO_SEED")
+	if seed_env != "":
+		_rng.seed = int(seed_env)
+	else:
+		_rng.randomize()
 	for end in [1.0, -1.0]:
 		for side in [1.0, -1.0]:
 			var f := Foot.new()
@@ -268,6 +292,9 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
 	_sq_r = BODY_R
+	_lift = BODY_LIFT
+	_anim = ""
+	_idle_t = 0.0
 	var fwd := _tangent()
 	look = fwd
 	chain.reset(pos + fwd * HEAD_LEAD, fwd)
@@ -325,6 +352,7 @@ func _physics_process(dt: float) -> void:
 	_update_chain(dt)
 	_update_look(dt)
 	_update_feet(dt)
+	_update_idle(inp, dt)
 	_tick += 1
 	_inp = inp
 	if _trace:
@@ -349,7 +377,8 @@ func _read_input() -> Vector2:
 
 # One line per physics tick, key=value fields, for tools/analyze.py.
 # Feet are x,y,planted,stepping per foot, front near, front far, back
-# near, back far.
+# near, back far. cp is the chain, head first: offset along the
+# tangent, offset along up, drawn radius, thinned.
 func _print_trace() -> void:
 	var hd := chain.head()
 	var state := "cling" if clinging else ("swim" if swimming else "air")
@@ -360,13 +389,13 @@ func _print_trace() -> void:
 		fs += "%.1f,%.1f,%d,%d;" % [f.pos.x, f.pos.y, 1 if f.planted else 0, 1 if f.stepping else 0]
 	var cp := ""
 	for i in chain.size():
-		cp += "%.1f/%.1f;" % [(chain.points[i] - pos).dot(up), _draw_r[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d cp=%s feet=%s" % [
+		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
-		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0, cp, fs])
+		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0, _anim if _anim != "" else "-", cp, fs])
 
 
 func _read_jump() -> bool:
@@ -1127,12 +1156,14 @@ func _free_span(p: Vector2, dir: Vector2, max_len: float) -> float:
 
 # The run of air along up through at: the one containing at, or the
 # nearest to it within SQUEEZE_LOOK either way. h is its length in px,
-# mid its middle as an offset along up from at; open means it reaches
-# the end of the scan (not a passage but the open cave).
+# mid its middle as an offset along up from at, line a world point on
+# that middle (between the pixel centres of the run's two ends, since
+# the scan reads whole pixels); open means it reaches the end of the
+# scan (not a passage but the open cave).
 func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
 	var at := at_raw.round()
 	var n := int(SQUEEZE_LOOK)
-	var best := {"air": false, "h": 0.0, "mid": 0.0, "open": false}
+	var best := {"air": false, "h": 0.0, "mid": 0.0, "open": false, "line": Vector2.ZERO}
 	var best_d := INF
 	var k := -n
 	while k <= n:
@@ -1146,7 +1177,8 @@ func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
 		var d := 0.0 if (k0 <= 0 and 0 <= k1) else minf(absf(float(k0)), absf(float(k1)))
 		if d < best_d:
 			best_d = d
-			best = {"air": true, "h": float(k1 - k0 + 1), "mid": (k0 + k1) * 0.5, "open": k0 == -n or k1 == n}
+			best = {"air": true, "h": float(k1 - k0 + 1), "mid": (k0 + k1) * 0.5, "open": k0 == -n or k1 == n,
+				"line": at + u * ((k0 + k1) * 0.5) + Vector2(0.5, 0.5)}
 	return best
 
 
@@ -1168,9 +1200,10 @@ func _squeeze_r(h: float) -> float:
 	return clampf((maxf(h, SQUEEZE_MIN) + CELL) * 0.5 - 1.5, 0.0, BODY_R)
 
 
-func _begin_squeeze(h: float, u: Vector2) -> void:
+func _begin_squeeze(h: float, u: Vector2, line: Vector2) -> void:
 	_squeeze = true
 	_sq_up = u
+	_sq_line = line
 	_sq_in = false
 	_sq_wide = 0
 	_sq_wait = 0
@@ -1201,11 +1234,13 @@ func _passage_ahead() -> bool:
 	if _free_span(mouth, fwd, SQUEEZE_DEPTH) < SQUEEZE_DEPTH:
 		return false
 	# Still a passage further in, not a crevice closing to nothing: the
-	# gecko is not wedged deeper and deeper into a V.
+	# gecko is not wedged deeper and deeper into a V. Open cave there
+	# instead is a hole through a thin wall (a door), squeezed through
+	# all the same.
 	var deeper := _narrow_run(at + fwd * SQUEEZE_DEPTH, u)
-	if not deeper.air or deeper.open or deeper.h < SQUEEZE_MIN or deeper.h > SQUEEZE_MAX + 4.0:
+	if not deeper.air or (not deeper.open and (deeper.h < SQUEEZE_MIN or deeper.h > SQUEEZE_MAX + 4.0)):
 		return false
-	_begin_squeeze(r.h, u)
+	_begin_squeeze(r.h, u, r.line)
 	return true
 
 
@@ -1251,7 +1286,7 @@ func _try_slot_entry(tangent: Vector2) -> void:
 	_bridging = false
 	speed_along = 0.0
 	if w <= SQUEEZE_MAX:
-		_begin_squeeze(w, _sq_n)
+		_begin_squeeze(w, _sq_n, _sq_target)
 
 
 # In a squeeze the body keeps to the middle of the passage: the one it
@@ -1308,6 +1343,7 @@ func _update_squeeze() -> void:
 		_sq_in = true
 		_sq_wide = 0
 		_sq_wait = 0
+		_sq_line = r.line
 	elif _sq_in:
 		_sq_wide += 1
 		if _sq_wide >= SQUEEZE_RELEASE:
@@ -1453,9 +1489,30 @@ func _update_chain(dt: float) -> void:
 		# forward again at HEAD_RECOVER, not in one go.
 		var back := maxf(_head_back - HEAD_RECOVER * dt, 0.0)
 		var back_max := minf(HEAD_LEAD - 4.0, _head_back + HEAD_RETRACT * dt)
-		var base := _pos_s + up * BODY_LIFT
+		# The drawn body rides BODY_LIFT above the body centre's line, except
+		# in a passage, where it lies on the passage's middle at the head: the
+		# lift eases between the two, never jumps. A head targeted at the
+		# lifted line in a passage sat inside the wall's clearance and was
+		# pushed off the nearest wall cell every tick, with an along-passage
+		# component that swept across each cell column and flipped at its
+		# edge, so the head sawed back and forth as the body crept along.
+		var want_lift := BODY_LIFT
+		if _squeeze:
+			# The middle at the head's own column once the head is in; the
+			# squeeze's line (the mouth's, then the body's column) before,
+			# so the head heads for the passage from the moment the squeeze
+			# begins rather than being shoved in off the lip.
+			var run := _narrow_run(chain.head(), _sq_up)
+			var line: Vector2 = run.line if (run.air and not run.open and run.h <= SQUEEZE_MAX + 2.0) else _sq_line
+			want_lift = (line - _pos_s).dot(up)
+		_lift = move_toward(_lift, want_lift, LIFT_EASE)
+		var base := _pos_s + up * _lift
 		target = base + t * facing * (HEAD_LEAD - back)
-		while back < back_max and map.solid_within(target, chain.radii[0] + BODY_GAP):
+		# The snout stops at rock ahead. In a passage the walls beside it are
+		# always within the body's clearance, so the test there is the
+		# squeeze's own, or the head would draw in the whole way through.
+		var head_clear := _sq_r if _squeeze else chain.radii[0] + BODY_GAP
+		while back < back_max and map.solid_within(target, head_clear):
 			back = minf(back + 2.0, back_max)
 			target = base + t * facing * (HEAD_LEAD - back)
 		_head_back = back
@@ -1504,9 +1561,12 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 		chain.heading = dir.normalized()
 	var old := chain.points.duplicate()
 	var q0: Dictionary = map.probe(new_head, chain.radii[0] + BODY_GAP)
-	if q0.found and q0.dist < chain.radii[0] + BODY_GAP:
+	# Between two walls closer than its clearance (a passage) the head is
+	# centred by the thinning, like the body's points, not pushed off
+	# whichever wall is nearer.
+	if q0.found and q0.dist < chain.radii[0] + BODY_GAP and not _thin_on[0]:
 		var away0: Vector2 = (new_head - q0.nearest).normalized() if q0.dist > 0.01 else up
-		new_head += away0 * (chain.radii[0] + BODY_GAP - q0.dist)
+		new_head += away0 * _push_len(0, chain.radii[0] + BODY_GAP - q0.dist)
 	new_head = _thin_point(0, new_head, q0)
 	chain.points[0] = new_head
 	var prev_dir := -chain.heading
@@ -1530,7 +1590,7 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 			if _thin_on[i]:
 				pass
 			elif q.dist < want:
-				p += away * (want - q.dist)
+				p += away * _push_len(i, want - q.dist)
 			else:
 				p += away * (want - q.dist) * HUG_K
 			p = anchor + (p - anchor).normalized() * LINK
@@ -1540,11 +1600,28 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 		prev_dir = (p - anchor).normalized()
 
 
+# How far a point is pushed off rock within its clearance this tick: all
+# the way, unless its drawn radius is still growing back from a
+# thinning (leaving a passage), when the push is eased, so a point
+# coming out of a mouth, between the floor and the lip's corner, does
+# not pop from one to the other.
+func _push_len(i: int, overlap: float) -> float:
+	if _draw_r[i] < chain.radii[i] - 0.5:
+		return minf(overlap, THIN_RELEASE)
+	return overlap
+
+
 # A chain point with rock on both sides closer than its radius allows (a
 # passage narrower than the body) is centred between the two walls and
 # its drawn radius thinned to the passage, instead of being pushed off
 # one wall into the other every tick. Elsewhere the drawn radius
 # recovers. Returns the point, moved only when it is in such a passage.
+# The walls are looked for along the slant to the nearest cell, and in
+# a squeeze along the passage's axis and its diagonals too, the
+# narrowest line taken: at a mouth a point sits between the floor and
+# the lip's corner, which are not opposite each other, and read along
+# the line to whichever is nearer by turns it was pushed off the floor
+# one tick and centred under the lip the next.
 func _thin_point(i: int, p: Vector2, q: Dictionary) -> Vector2:
 	var r: float = chain.radii[i]
 	var want := r + BODY_GAP
@@ -1557,23 +1634,38 @@ func _thin_point(i: int, p: Vector2, q: Dictionary) -> Vector2:
 		# a fixed line the point settles on, not one that shifts half a
 		# pixel with the point's own fraction and keeps it rocking.
 		var base := p.round()
-		var d_near := _free_span(base, -away, want)
-		var d_far := _free_span(base, away, want * 2.0)
-		if d_near < INF and d_far < INF:
+		var dirs: Array[Vector2] = []
+		if _squeeze:
+			var ax: Vector2 = _sq_up * (signf(away.dot(_sq_up)) if absf(away.dot(_sq_up)) > 0.01 else 1.0)
+			var fwd := Vector2(-ax.y, ax.x)
+			dirs = [ax, (ax + fwd).normalized(), (ax - fwd).normalized()]
+		dirs.append(away)
+		var span := INF
+		var dir := away
+		var d_near := 0.0
+		var d_far := 0.0
+		for d in dirs:
+			var dn := _free_span(base, -d, want * 2.0)
+			var df := _free_span(base, d, want * 2.0)
+			if dn < INF and df < INF and dn + df < span:
+				span = dn + df
+				dir = d
+				d_near = dn
+				d_far = df
+		if span < INF:
 			# Narrow when both walls would be within the point's clearance
 			# of its centred position, so the push-out off one wall could
 			# not settle and would rock it between the two. With
 			# hysteresis, so a passage about that width does not read
 			# narrow and wide by turns.
-			var span := d_near + d_far
 			narrow = span < (2.0 * want + 4.0 if _thin_on[i] else 2.0 * want + 1.0)
 			if narrow:
 				# Toward the middle, settling within THIN_DEAD of it: the
 				# spans are whole pixels, so chasing the exact middle
 				# would rock the point a pixel each tick.
-				var off := (base + away * (d_far - d_near) * 0.5 - p).dot(away)
+				var off := (base + dir * (d_far - d_near) * 0.5 - p).dot(dir)
 				if absf(off) > THIN_DEAD:
-					out = p + away * signf(off) * minf(absf(off) - THIN_DEAD, THIN_STEP)
+					out = p + dir * signf(off) * minf(absf(off) - THIN_DEAD, THIN_STEP)
 				target = minf(r, maxf(span * 0.5 - THIN_MARGIN, 2.0))
 	_thin_on[i] = 1 if narrow else 0
 	_draw_r[i] = lerpf(_draw_r[i], target, THIN_SMOOTH)
@@ -1739,12 +1831,10 @@ func _push_blobs() -> void:
 					list.append([chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, BODY_COLOR])
 			else:
 				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
-	list.append([chain.head() + look * SNOUT, 5.0, BODY_COLOR])
+	var marks := _face(list)
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs(list)
-	# The eye: one 4 px square on the blob layer's grid, drawn over the
-	# body by the layer itself, so it is as crisp as the body's pixels.
-	blobs.set_marks([[chain.points[0] + look * 3.5 + up * 3.0 + Vector2(-2.0, -2.0), 4.0, EYE_COLOR]])
+	blobs.set_marks(marks)
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:
@@ -1767,6 +1857,144 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 		for k in range(1, n2 + 1):
 			var t := float(k) / n2
 			list.append([knee.lerp(foot, t), lerpf(leg_r, leg_r * 0.85, t), color])
+
+
+# The face: the snout blob, and marks on the blob layer's pixel grid,
+# drawn over the body by the layer itself so they are as crisp as its
+# pixels: the eye, a 4 px square a cell below the head's rim, and what
+# the idle animation adds. A blink or a lick shuts the eye to a 4 by 2
+# line on its lower side. A yawn lifts the snout, drops a jaw blob
+# (added to list) below it and opens the dark inside of the mouth
+# between them, the eye shut while it gapes. A lick runs the tongue
+# from the mouth round the snout's tip to the eye and back.
+func _face(list: Array) -> Array:
+	var marks: Array = []
+	var eye := chain.points[0] + look * 3.5 + up * 1.0
+	var ax := _axis(up)
+	var across := ax.abs()
+	var along := Vector2.ONE - across
+	var shut := false
+	var gape := 0.0
+	var lick := 0.0
+	var ph := _anim_phase()
+	var k := _anim_frac()
+	var swell := k if ph == 0 else (1.0 if ph == 1 else 1.0 - k)
+	match _anim:
+		"blink":
+			shut = ph == 1
+		"lick":
+			lick = swell
+			shut = ph == 1
+		"yawn":
+			gape = YAWN_GAPE * swell
+			shut = ph == 1
+	list.append([chain.head() + look * SNOUT + up * gape * 0.5, 5.0, BODY_COLOR])
+	if gape > 0.0:
+		# The mouth goes under the eye: at its widest its top row can
+		# share the eye's row on the pixel grid.
+		list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
+		var size := along * 6.0 + across * (gape + 1.0)
+		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
+	if shut:
+		marks.append([eye - ax - along * 2.0 - across, along * 4.0 + across * 2.0, EYE_COLOR])
+	else:
+		marks.append([eye + Vector2(-2.0, -2.0), 4.0, EYE_COLOR])
+	if lick > 0.0:
+		var m := _mouth()
+		var ctrl := chain.head() + look * (SNOUT + 8.0) + up * 3.0
+		var n := maxi(int(ceil(lick * LICK_SAMPLES)), 1)
+		for i in range(n + 1):
+			var s := minf(float(i) / LICK_SAMPLES, lick)
+			var pt := m.lerp(ctrl, s).lerp(ctrl.lerp(eye, s), s)
+			marks.append([pt - Vector2.ONE, 2.0, TONGUE_COLOR])
+		var tip := m.lerp(ctrl, lick).lerp(ctrl.lerp(eye, lick), lick)
+		marks.append([tip - Vector2(2.0, 2.0), 4.0, TONGUE_COLOR])
+	return marks
+
+
+func _anim_ticks() -> Array:
+	match _anim:
+		"blink":
+			return BLINK_TICKS
+		"lick":
+			return LICK_TICKS
+		"yawn":
+			return YAWN_TICKS
+	return []
+
+
+# Which of the animation's three phases (out, hold, back) the tick is in.
+func _anim_phase() -> int:
+	var t := _anim_tick
+	var ticks := _anim_ticks()
+	for i in ticks.size():
+		if t < ticks[i]:
+			return i
+		t -= ticks[i]
+	return ticks.size()
+
+
+# How far through its phase the tick is, 1.0 on the phase's last tick.
+func _anim_frac() -> float:
+	var t := _anim_tick
+	var ticks := _anim_ticks()
+	for i in ticks.size():
+		if t < ticks[i]:
+			return float(t + 1) / ticks[i]
+		t -= ticks[i]
+	return 1.0
+
+
+func _anim_total() -> int:
+	var n := 0
+	for v in _anim_ticks():
+		n += v
+	return n
+
+
+# Interrupted (a key, a button): straight to the closing phase, which
+# is quick, rather than a snap shut.
+func _anim_cancel() -> void:
+	var ticks := _anim_ticks()
+	if ticks.size() == 3:
+		_anim_tick = maxi(_anim_tick, ticks[0] + ticks[1])
+
+
+# Idle animations. After IDLE_AFTER seconds of nothing happening
+# (clinging, no keys, no buttons, the tongue in) the gecko blinks,
+# licks its eye or yawns, one every IDLE_GAP seconds, drawn from a
+# shuffled bag of two blinks, a lick and a yawn, so none repeats for
+# long and all turn up. The head keeps following the cursor meanwhile.
+func _update_idle(inp: Vector2, dt: float) -> void:
+	var idle := clinging and not swimming and not chewing and not tongue_out and _grab_n == Vector2.ZERO \
+			and inp.length() <= 0.2 and _mouse_held < 0.0 and absf(speed_along) < 1.0
+	if idle:
+		_idle_t += dt
+	else:
+		_idle_t = 0.0
+		if _anim != "":
+			_anim_cancel()
+	if _anim != "":
+		_anim_tick += 1
+		if _anim_tick >= _anim_total():
+			_anim = ""
+			_anim_gap = _rng.randf_range(IDLE_GAP_MIN, IDLE_GAP_MAX)
+	elif idle and _idle_t >= IDLE_AFTER:
+		_anim_gap -= dt
+		if _anim_gap <= 0.0:
+			_anim = _next_anim()
+			_anim_tick = 0
+
+
+func _next_anim() -> String:
+	if _anim_bag.is_empty():
+		_anim_bag = ["blink", "blink", "lick", "yawn"]
+		for i in range(_anim_bag.size() - 1, 0, -1):
+			var j := _rng.randi_range(0, i)
+			var t: String = _anim_bag[i]
+			_anim_bag[i] = _anim_bag[j]
+			_anim_bag[j] = t
+	return _anim_bag.pop_back()
 
 
 func _draw() -> void:

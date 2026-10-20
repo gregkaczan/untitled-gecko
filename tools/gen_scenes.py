@@ -51,6 +51,10 @@ SCRIPTS = {
     "shaft": [step(3.0, D), step(3.0, U)],
     # Over the slot, down into it nose first, back up it and on.
     "slot_dive": [step(1.0, R), step(3.0, D), step(2.5, U), step(2.0, R)],
+    # Up a wall to a hole in it, a press into the wall to enter the hole, out the far side.
+    "window": [step(2.0, R), step(0.35, U), step(3.5, R), step(1.0, Z)],
+    # Nothing at all: the idle animations play.
+    "idle": [step(13.0, Z)],
     "swim_across": [step(6.0, R), step(2.5, U), step(1.5, R)],
     "dig_45": [step(0.4, Z), step(3.0, Z, chew=True, aim=[120, 120]), step(1.0, Z)],
     "dig_shaft": [step(0.4, Z), step(3.0, Z, chew=True, aim=[0, 140]), step(1.0, Z)],
@@ -81,7 +85,7 @@ def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=N
 
 
 # 1. Flat floor
-add("flat", [], ["floor", 500, 700], ["traverse", "bounce"], end=[300, 700, 700, 900], state="cling")
+add("flat", [], ["floor", 500, 700], ["traverse", "bounce", "idle"], end=[300, 700, 700, 900], state="cling")
 
 # 2. Slopes, up from the floor and down from the plateau
 for ang in (10, 20, 30, 45, 60, 75):
@@ -224,6 +228,19 @@ for w in (12, 16):
     add("squeeze_slot_%d" % w, [["erase", 1000, F, w, 60], ["erase", 1000, F + 60, 60, 60]], ["floor", 890, 700], ["slot_dive"],
         state="cling", reach=[1000, F + 90, 1060, F + 120], end=[1020, F - 60, 1400, F],
         note="a %d px slot in the floor entered with a down press, to the shaft floor below, and back out" % w)
+
+# A hole at floor level through a wall 12 or 24 px thick: a door, not a
+# tunnel. The passage opens straight into the room beyond.
+for thick in (12, 24):
+    for h in (12, 16):
+        add("squeeze_door_%d_%d" % (thick, h), [["fill", 1000, C, thick, F - C - h]], ["floor", 800, 700], ["traverse"],
+            state="cling", reach=[1000 + thick + 40, 0, 1920, 1080],
+            note="a hole %d px tall at the floor through a wall %d px thick, squeezed through and back" % (h, thick))
+# A hole 12 px tall through a 12 px wall with its sill 40 px up: climbed
+# to, entered with a press into the wall, left on the far side.
+add("squeeze_window_12", [["fill", 1000, C, 12, F - C - 52], ["fill", 1000, F - 40, 12, 40]], ["floor", 800, 700], ["window"],
+    state="cling", reach=[1052, 0, 1920, 1080],
+    note="a 12 px hole through a 12 px wall, 40 px above the floor: up the wall, a press into it enters the hole, out the far side")
 
 # A chewed passage: bites of 5.5 to 8.5 px radius along a line, so the
 # air is 11 to 20 px tall and its walls ragged, like one the player
