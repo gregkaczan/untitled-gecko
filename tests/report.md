@@ -1,6 +1,6 @@
 # Movement suite report
 
-Runs: 100, passing: 100, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 106, passing: 106, failing: 0. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 Compared against baseline baseline.json.
 
@@ -32,6 +32,7 @@ Compared against baseline baseline.json.
 | dig_turns:dig_turns | pass |  |  (-4) |  |  |  |  |  |  |  |  (-2) |  |  |  |  | 996 | ok |
 | drop_funnel:cliff_jump | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 642 | ok |
 | flat:bounce | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 727 | ok |
+| flat:idle | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | ok |
 | flat:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1163 | ok |
 | funnel_40:funnel | pass |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 | 659 | ok |
 | funnel_60:funnel | pass |  |  |  |  |  (-3) |  |  |  |  |  |  |  |  | 4 | 677 | ok |
@@ -80,11 +81,16 @@ Compared against baseline baseline.json.
 | slot_28:slot | pass |  |  |  |  |  |  |  |  |  |  |  |  |  (-1) |  | 574 | ok |
 | slot_36:slot | pass |  |  |  |  |  |  |  |  |  |  (-3) |  |  | 1 |  | 576 | ok |
 | specks_floor:traverse | pass |  |  |  |  |  (-1) |  |  |  |  |  (-2) |  |  |  |  | 1175 | ok |
+| squeeze_door_12_12:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 1098 | ok |
+| squeeze_door_12_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1095 | ok |
+| squeeze_door_24_12:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 1062 | ok |
+| squeeze_door_24_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1059 | ok |
 | squeeze_low_12:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 832 | ok |
 | squeeze_low_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 830 | ok |
 | squeeze_ragged:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 652 | ok |
 | squeeze_slot_12:slot_dive | pass |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 2 | 682 | ok |
 | squeeze_slot_16:slot_dive | pass |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 | 676 | ok |
+| squeeze_window_12:window | pass |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 624 | ok |
 | step_down_12:traverse_left | pass |  (-1) |  |  |  |  |  |  |  |  |  (-2) |  |  |  (-1) |  | 1173 | ok |
 | step_down_16:traverse_left | pass |  |  |  |  |  |  |  |  |  |  (-1) |  |  |  (-2) |  | 1165 | ok |
 | step_down_24:traverse_left | pass |  (-2) |  |  |  |  |  |  |  |  |  (-4) |  |  |  (-5) |  | 1149 | ok |

@@ -769,6 +769,60 @@
     false
    ]
   ],
+  "window": [
+   [
+    2.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.35,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "idle": [
+   [
+    13.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
   "swim_across": [
    [
     6.0,
@@ -999,7 +1053,8 @@
    ],
    "scripts": [
     "traverse",
-    "bounce"
+    "bounce",
+    "idle"
    ],
    "end": [
     300,
@@ -3700,6 +3755,153 @@
    ],
    "state": "cling",
    "note": "a 16 px slot in the floor entered with a down press, to the shaft floor below, and back out"
+  },
+  "squeeze_door_12_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     12,
+     628
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1052,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a hole 12 px tall at the floor through a wall 12 px thick, squeezed through and back"
+  },
+  "squeeze_door_12_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     12,
+     624
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1052,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a hole 16 px tall at the floor through a wall 12 px thick, squeezed through and back"
+  },
+  "squeeze_door_24_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     24,
+     628
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1064,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a hole 12 px tall at the floor through a wall 24 px thick, squeezed through and back"
+  },
+  "squeeze_door_24_16": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     24,
+     624
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "traverse"
+   ],
+   "reach": [
+    1064,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a hole 16 px tall at the floor through a wall 24 px thick, squeezed through and back"
+  },
+  "squeeze_window_12": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     1000,
+     160,
+     12,
+     588
+    ],
+    [
+     "fill",
+     1000,
+     760,
+     12,
+     40
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "window"
+   ],
+   "reach": [
+    1052,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a 12 px hole through a 12 px wall, 40 px above the floor: up the wall, a press into it enters the hole, out the far side"
   },
   "squeeze_ragged": {
    "base": "solid",
