@@ -185,6 +185,10 @@ func set_overlay(on: bool) -> void:
 	_overlay.set_pressed_no_signal(on)
 
 
+func overlay_on() -> bool:
+	return _overlay.button_pressed
+
+
 func set_paused(on: bool) -> void:
 	_pause.set_pressed_no_signal(on)
 

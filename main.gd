@@ -5,8 +5,10 @@
 # camera back over the whole cave when the gecko gets there; one gecko; a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
 # R to start the cave again (a fresh chamber when in a generated one),
-# F1 for debug mode (the gecko's overlay and a
-# panel down the right: scenes, seed, brush, clock, pixel grid), 1 and 2
+# F1 for debug mode (the state readout and a
+# panel down the right: scenes, seed, brush, clock, pixel grid, and the
+# gecko's overlay behind the panel's Overlay check; a hand-played run
+# starts in debug mode, OPEN_DEBUG, with the overlay off, OPEN_OVERLAY), 1 and 2
 # for the gecko's pixel grid (2 px like the rock, or 1 px), Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the first cave (the
 # keys drive the gecko in a scene loaded this way); the panel's New cave
@@ -58,6 +60,8 @@ const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 const LEVEL := "clutch"        # The first cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0)
 const OPEN_SEED := 5           # The game opens in the generated cave with this seed; 0 opens on LEVEL instead
+const OPEN_DEBUG := true       # A hand-played run (no GECKO_SCENE or GECKO_DEMO) starts in debug mode, as after F1
+const OPEN_OVERLAY := false    # The panel's Overlay check at the start: the gecko's overlay (up, probe, feet, bite)
 const WIN_ZOOM := 0.85         # The camera's zoom once the gecko is out, the whole cave in view
 const WIN_PULL := 0.6          # How fast it pulls back (per second)
 const CAM_LIMIT := 1000000     # No camera limit, while the pull-back shows the rock round the cave
@@ -192,7 +196,7 @@ var _scene_all: Dictionary = {}  # tests/scenes.json, loaded on the first Tab
 var _scene_i := -1             # Index of the scene Tab loaded, -1 in the generated cave
 var _hint := ""                # Label text while the hint timer runs; empty for the controls hint
 var _panel: DebugPanel
-var _debug := false            # F1: the panel and the gecko's overlay
+var _debug := false            # F1: the panel and the state readout, with the gecko's overlay if the panel's check is on
 var _step_ticks := 0           # Physics ticks left to run before pausing again (the panel's step)
 var _exit := Rect2()           # The level's exit, empty in a scene without one
 var _sound: Node2D              # sound.gd: the one-shots on the gecko's events, the drone and the hum
@@ -341,8 +345,12 @@ func _ready() -> void:
 		if sim:
 			sim.set_light(on))
 	_panel.anim_requested.connect(play_anim)
-	if picked.is_empty() and _demo_name == "" and OPEN_SEED <= 0:
-		_pick_level()
+	_panel.set_overlay(OPEN_OVERLAY)
+	if picked.is_empty() and _demo_name == "":
+		if OPEN_SEED <= 0:
+			_pick_level()
+		if OPEN_DEBUG:
+			_set_debug(true)
 	_reset()
 	if OS.get_environment("GECKO_ANIM") != "":
 		play_anim(OS.get_environment("GECKO_ANIM"))   # A look at an animation without a hand on the panel
@@ -1393,6 +1401,15 @@ func _camera_home() -> void:
 	_camera.limit_bottom = int(CaveMap.H_FULL * CaveMap.CELL_FULL)
 
 
+# F1 and the start: the panel and the state readout, and the gecko's
+# overlay only while the panel's Overlay check is on (the check keeps
+# its state across F1).
+func _set_debug(on: bool) -> void:
+	_debug = on
+	_panel.visible = on
+	gecko.debug = on and _panel.overlay_on()
+
+
 # The first cave as the scene to build: its index in the scene list, so
 # Tab goes on from it.
 func _pick_level() -> void:
@@ -1545,10 +1562,7 @@ func _process(_dt: float) -> void:
 		else:
 			edit_home()
 	if Input.is_action_just_pressed("debug_toggle"):
-		_debug = not _debug
-		_panel.visible = _debug
-		gecko.debug = _debug
-		_panel.set_overlay(_debug)
+		_set_debug(not _debug)
 	if Input.is_action_just_pressed("render_coarse"):
 		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
 		_panel.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
