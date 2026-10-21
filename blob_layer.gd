@@ -7,12 +7,17 @@
 # terrain's, or 2 px to share the rock's grid (keys 1 and 2 in main.gd).
 #
 # Usage per frame: set_blobs([[pos, radius, color], ...]), a fourth
-# element true for a blob of a part lying over the rest of the same
-# body (the gecko's tail tucked along its flank, its head laid on its
-# body): a flat disc of its visible size goes into the density's blue
-# channel as well, and the shader darkens the pixel ring just outside
-# those discs inside the merged silhouette, the terminator the
-# metaballs would not show; and
+# element in 0 to 1 for a blob of a part lying over the rest of the
+# same body (the gecko's tail tucked along its flank): a flat disc of
+# its visible size goes into the density's blue channel at that value,
+# and the shader darkens the pixel ring just outside those discs
+# inside the merged silhouette by it, the terminator the metaballs
+# would not show, fading out where the value does (along the tail
+# toward its base). The discs are drawn over one another, the highest
+# value last. A fifth element true marks a blob of the trunk the shade
+# falls on: its splat goes into green as well, and the shader shades
+# no pixel outside the trunk's own silhouette (the head, a leg, a slug
+# stay clear); and
 # set_marks([[pos, size, color], ...]) for flat rectangles (an eye, a
 # mouth) drawn over the composite on the same pixel grid, so they come
 # out as crisp as the body does; size is a float for a square or a
@@ -35,13 +40,14 @@ const PIXEL_SZ_FINE := 1.0      # The gecko draws at 1 px pixels over 2 px rock
 const PIXEL_SZ_COARSE := 2.0    # The old look: the gecko shares the rock's grid
 const SPLAT_SCALE := 1.6     # Splat draw radius over the body radius
 const SPLAT_TEX_SIZE := 64
-const SPLAT := Color(1.0, 1.0, 0.0, 1.0)   # Every splat into red (the body's density; green is spare)
-const OVER := Color(0.0, 0.0, 1.0, 1.0)    # A part on top: a flat disc into blue as well
+const SPLAT := Color(1.0, 0.0, 0.0, 1.0)   # Every splat into red (the body's density)
+const SPLAT_TRUNK := Color(1.0, 1.0, 0.0, 1.0)   # A trunk blob's splat into green as well: the trunk's own silhouette, where a shade may fall
 const VISIBLE := 1.15        # A blob's visible radius over its body radius in a run of blobs (alone 1.06: the kernel at the threshold)
 
 var _density_vp: SubViewport
 var _color_vp: SubViewport
 var _density_canvas: Node2D
+var _over_canvas: Node2D      # The parts on top, drawn first and overwriting: blue holds the highest value there
 var _color_canvas: Node2D
 var _screen: Sprite2D
 var _splat_tex: ImageTexture
@@ -59,6 +65,9 @@ func _ready() -> void:
 	add_child(_density_vp)
 	add_child(_color_vp)
 
+	_over_canvas = Node2D.new()
+	_over_canvas.draw.connect(_draw_over)
+	_density_vp.add_child(_over_canvas)
 	_density_canvas = Node2D.new()
 	var add_mat := CanvasItemMaterial.new()
 	add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -90,6 +99,7 @@ func _ready() -> void:
 
 func set_blobs(blobs: Array) -> void:
 	_blobs = blobs
+	_over_canvas.queue_redraw()
 	_density_canvas.queue_redraw()
 	_color_canvas.queue_redraw()
 
@@ -108,6 +118,7 @@ func set_origin(o: Vector2) -> void:
 		return
 	origin = o
 	_screen.position = o
+	_over_canvas.queue_redraw()
 	_density_canvas.queue_redraw()
 	_color_canvas.queue_redraw()
 	_marks_canvas.queue_redraw()
@@ -135,6 +146,7 @@ func set_pixel_size(sz: float) -> void:
 	_density_vp.size = size
 	_color_vp.size = size
 	_screen.scale = Vector2(sz, sz)
+	_over_canvas.queue_redraw()
 	_density_canvas.queue_redraw()
 	_color_canvas.queue_redraw()
 
@@ -171,9 +183,24 @@ func _draw_density() -> void:
 		var pos: Vector2 = (blob[0] - origin) / pixel_sz
 		var r: float = blob[1] / pixel_sz * SPLAT_SCALE
 		var rect := Rect2(pos - Vector2(r, r), Vector2(r * 2.0, r * 2.0))
-		_density_canvas.draw_texture_rect(_splat_tex, rect, false, SPLAT)
-		if blob.size() > 3 and blob[3]:
-			_density_canvas.draw_circle(pos, blob[1] / pixel_sz * VISIBLE, OVER)
+		_density_canvas.draw_texture_rect(_splat_tex, rect, false, SPLAT_TRUNK if blob.size() > 4 and blob[4] else SPLAT)
+
+
+# The discs of the parts on top, lowest value first so the highest is
+# left where they overlap: the canvas blends normally, so a disc
+# overwrites what lies under it. Each disc sits on a pixel's centre:
+# a run of discs along a straight part then shares its edge rows, and
+# the shade beside them runs straight too, where discs at fractional
+# positions gave it a dotted edge.
+func _draw_over() -> void:
+	var over: Array = []
+	for blob in _blobs:
+		if blob.size() > 3 and float(blob[3]) > 0.0:
+			over.append(blob)
+	over.sort_custom(func(a, b): return float(a[3]) < float(b[3]))
+	for blob in over:
+		var pos: Vector2 = ((blob[0] - origin) / pixel_sz).floor() + Vector2(0.5, 0.5)
+		_over_canvas.draw_circle(pos, blob[1] / pixel_sz * VISIBLE, Color(0.0, 0.0, float(blob[3]), 1.0))
 
 
 func _draw_color() -> void:

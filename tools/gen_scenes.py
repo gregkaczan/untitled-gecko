@@ -47,6 +47,9 @@ SCRIPTS = {
     # over its edge, and the same back.
     "gap_cross": [step(3.2, R), step(2.0, U), step(1.5, R), step(3.2, L), step(2.0, U), step(1.5, L)],
     "boulder_big": [step(1.6, R), step(1.0, U), step(3.0, R), step(3.0, L), step(1.0, U), step(3.0, L)],
+    # From under a hanging ball up its right side to the ceiling, back
+    # under it and up its left side, and back once more.
+    "ball_round": [step(2.5, R), step(5.0, L), step(3.0, R)],
     "jump_up": [step(0.5, Z), step(0.5, Z, jump=True), step(2.0, Z)],
     "cliff_jump": [step(1.3, R), step(0.3, R, jump=True), step(3.0, R)],
     "shaft": [step(3.0, D), step(3.0, U)],
@@ -197,6 +200,12 @@ add("pillar_thin", [["fill", 1000, 560, 24, 240]], ["floor", 800, 700], ["climb_
 for r in (30, 70, 120):
     add("boulder_%d" % r, [["disc", 1000, F, r]], ["floor", 700, 700], ["traverse" if r < 120 else "boulder_big"], state="cling",
         reach=[1000 + r + 40, 0, 1920, 1080])
+# A ball hanging from the ceiling, walked round on its underside: all
+# convex, from the ceiling down one side, under it and up the other, and
+# back. Filmed 2026-10-21: the body bunched into a folded lump on the way
+# from the underside onto a side.
+add("ball_hang", [["disc", 1000, 215, 70]], ["ceiling", 1000, 320], ["ball_round", "bounce"], state="cling",
+    reach=[1060, 0, 1920, 240], note="a ball hanging from the ceiling, walked round from under it")
 add("shelf_lip", [["fill", 1000, 600, 920, 40]], ["floor", 1500, 500], ["traverse_left"], state="cling",
     note="walks off the shelf edge, round the lip onto the underside, and back")
 

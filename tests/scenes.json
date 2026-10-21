@@ -653,6 +653,38 @@
     false
    ]
   ],
+  "ball_round": [
+   [
+    2.5,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    5.0,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
   "jump_up": [
    [
     0.5,
@@ -21530,6 +21562,34 @@
     1080
    ],
    "state": "cling"
+  },
+  "ball_hang": {
+   "base": "room",
+   "terrain": [
+    [
+     "disc",
+     1000,
+     215,
+     70
+    ]
+   ],
+   "spawn": [
+    "ceiling",
+    1000,
+    320
+   ],
+   "scripts": [
+    "ball_round",
+    "bounce"
+   ],
+   "reach": [
+    1060,
+    0,
+    1920,
+    240
+   ],
+   "state": "cling",
+   "note": "a ball hanging from the ceiling, walked round from under it"
   },
   "shelf_lip": {
    "base": "room",

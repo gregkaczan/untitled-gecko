@@ -105,6 +105,7 @@ const PATH_LOOK := 3.0            # Px of the track's end its direction is read 
 const PATH_MIN_SEG := 0.5         # A base move shorter than this moves the track's end rather than adding a point to it
 const SAG_STEP := 2.0             # Px a tick a body point's offset off the track (its sag onto the surface, its push off rock) may change...
 const SAG_K := 0.2                # ...or this fraction of the offset left, if more: the body landing from the air settles onto its lay in a quarter second
+const LINK_SQUASH := 2.0           # Px a drawn link may shrink under LINK: the sag onto a sharp tip or into a corner gathered the points at the rock
 const LINK_SLACK := 1.5           # Px a drawn link may stretch past LINK: the sag toward the surface pulled the neck's first point 15 px from a reared head, and the head blob parted from the body
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
 const BODY_HUG := 20.0         # How far past its radius a chain point looks for the surface
@@ -188,7 +189,9 @@ const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
 const EYE_COLOR := Color.BLACK
 const MOUTH_COLOR := Color(0.24, 0.08, 0.10)
-const OVER_TOUCH := 0.9        # Two chain points at least three links apart whose discs reach into each other by this fraction of their radii: one lies over the other
+const OVER_TOUCH := 0.9        # A tail point whose disc reaches into a chain point's at least three links back by this fraction of their radii lies over it
+const OVER_FROM := 6           # The tail's shade where it lies over the body grows from nothing at this point to full at OVER_FULL: the end of the tail casts it, its base merges into the rump
+const OVER_FULL := 8
 const LIFT_EASE := 1.0         # Px a tick the drawn body's lift moves between its lifted line and a passage's middle
 const IDLE_AFTER := 2.0        # Seconds of nothing happening before the idle animations begin
 const IDLE_GAP_MIN := 1.5      # Seconds between one idle animation and the next
@@ -2416,9 +2419,14 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 		s[j] = s[j + 1] + _path[j].distance_to(_path[j + 1])
 	_fold_len = s[_fold_at] if _fold_at >= 0 else 0.0
 	var j := n - 1
+	var prev_on_track := false
 	for i in range(1, chain.size()):
 		var d := LINK * i
+		var on_track := d > neck_len
 		var p: Vector2
+		# The track's direction where the point lies (the neck's, a
+		# segment's, the line on behind a short track).
+		var tdir := neck_dir
 		# How much of the sag onto the surface a point takes: all of it
 		# on the track, none at the head, in between along the neck,
 		# which bridges from the body on the surface to a head held up
@@ -2435,11 +2443,14 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 				# Between path[j] (s[j] >= d) and path[j + 1] (s[j + 1] < d).
 				var seg := s[j] - s[j + 1]
 				p = _path[j + 1].lerp(_path[j], (d - s[j + 1]) / seg) if seg > 0.001 else _path[j]
+				if seg > 0.001:
+					tdir = (_path[j + 1] - _path[j]) / seg
 			else:
 				# A track shorter than the body (just landed): straight on
 				# behind its start.
 				var back: Vector2 = (_path[0] - _path[1]).normalized() if n > 1 and _path[0] != _path[1] else -chain.heading
 				p = _path[0] + back * (d - s[0])
+				tdir = back
 		var r: float = chain.radii[i]
 		# The point's offset off the track carries over from the last
 		# tick and is corrected from where it left the point: a probe
@@ -2474,14 +2485,36 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 		elif not q.found:
 			# Nothing within reach: the point eases back onto the track.
 			w_want = p
+		# On the track the offset is only ever across it: its part along
+		# the track eases out with the rest. The spacing along the track
+		# is the body's length, and an along part (from a landing or the
+		# spawn pose, the cap below, a push off a corner cell slanting
+		# along the way) never decayed, so a body bunched on a ball
+		# stayed bunched the whole way round (filmed 2026-10-21). The
+		# neck keeps its push as it was: taken off along the neck, it
+		# moved a resting point between two equally near cells of a
+		# tunnel's roof, and the point flipped 1.2 px every few ticks.
+		if on_track:
+			var off := w_want - p
+			w_want = p + off - tdir * off.dot(tdir)
 		w = w.move_toward(w_want, maxf(SAG_STEP, w.distance_to(w_want) * SAG_K))
 		# Never further from the point before it than a link and a little:
-		# the sag may bend the body, not break it.
+		# the sag may bend the body, not break it. Nor closer than a link
+		# less LINK_SQUASH: sagged onto a sharp tip or into a corner, the
+		# points of a body lying round it gathered at the rock and the
+		# body was drawn a third short, a lump with a head. Only between
+		# two points on the track: the neck shortens by design as the head
+		# draws back or swings round, and a turn-around shoved the point
+		# behind it 10 px in a tick.
 		var from_prev := w - chain.points[i - 1]
 		if from_prev.length() > LINK + LINK_SLACK:
 			w = chain.points[i - 1] + from_prev.normalized() * (LINK + LINK_SLACK)
+		elif on_track and prev_on_track and from_prev.length() < LINK - LINK_SQUASH:
+			var dir_prev := from_prev.normalized() if from_prev.length() > 0.01 else -tdir
+			w = chain.points[i - 1] + dir_prev * (LINK - LINK_SQUASH)
 		_sag[i] = w - p
 		chain.points[i] = w
+		prev_on_track = on_track
 
 
 # Keeps the base's track. The base going back along it (a facing flip)
@@ -2940,25 +2973,26 @@ func _push_blobs() -> void:
 	if _gulp > 0.0:
 		gulp_at = (1.0 - _gulp / GULP_TIME) * 4.0
 	_tube_full = 0
-	# Where the body lies over itself (the tail tucked along the flank in
-	# a curl, the head laid on the body) the part on top is drawn after
-	# the rest and flagged, so the blob layer darkens its own edge inside
-	# the body: the terminator between the two (metaball.gdshader).
-	var over := _over_points()
+	# Where the tail lies over the body (tucked along the flank in a
+	# curl) its end is drawn after the rest with a shade that grows
+	# toward the tip, so the blob layer darkens its edge on the trunk:
+	# the terminator between the two (metaball.gdshader). The head and
+	# the legs are not trunk: the layer never shades them.
+	var span := _over_span()
 	var under_list: Array = []
 	var over_list: Array = []
 	for i in chain.size():
 		var r_i: float = _draw_r[i]
 		if gulp_at >= 0.0:
 			r_i += 3.5 * maxf(0.0, 1.0 - absf(i - gulp_at))
-		var on_top: bool = over[i] == 1
-		var dst: Array = over_list if on_top else under_list
-		dst.append(_blob(chain.points[i], r_i, on_top))
+		var w_i := _over_w(i, span)
+		var dst: Array = over_list if w_i > 0.0 else under_list
+		dst.append([chain.points[i], r_i, BODY_COLOR] if i == 0 else _blob(chain.points[i], r_i, w_i))
 		if i == 0:
 			continue
-		if over[i - 1] == 1:
+		# A filler between two points carries the shade of its place.
+		if _over_w(i - 0.5, span) > 0.0:
 			dst = over_list
-			on_top = true
 		if (_thin_on[i] or _thin_on[i - 1]) and (_draw_r[i] < chain.radii[i] - 1.0 or _draw_r[i - 1] < chain.radii[i - 1] - 1.0):
 			# A segment thinned to a passage is drawn as a tube: blobs
 			# every 2 px, so its edge is straight rather than scalloped,
@@ -2971,7 +3005,7 @@ func _push_blobs() -> void:
 				_tube_full += 1
 			for k in range(1, 4):
 				var t := k / 4.0
-				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), on_top))
+				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), _over_w(i - 1 + t, span)))
 		elif _draw_r[i] < 4.5:
 			# Thin tail segments get filler blobs between them, so the tail
 			# renders as a line rather than a row of dots; the thinnest get
@@ -2979,39 +3013,53 @@ func _push_blobs() -> void:
 			var r_mid: float = (_draw_r[i - 1] + _draw_r[i]) * 0.5
 			if _draw_r[i] < 3.0:
 				for k in range(1, 4):
-					dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, on_top))
+					dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, _over_w(i - 1 + k / 4.0, span)))
 			else:
-				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, on_top))
+				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, _over_w(i - 0.5, span)))
 	list.append_array(under_list)
 	list.append_array(over_list)
-	var marks := _face(list, over[0] == 1)
+	var marks := _face(list)
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs([] if body_hidden else list)
 	blobs.set_marks([] if body_hidden else marks)
 
 
-func _blob(p: Vector2, r: float, on_top: bool) -> Array:
-	return [p, r, BODY_COLOR, true] if on_top else [p, r, BODY_COLOR]
+# A blob of the trunk, or of the tail's end lying over it with the
+# shade it casts.
+func _blob(p: Vector2, r: float, over: float) -> Array:
+	return [p, r, BODY_COLOR, over] if over > 0.0 else [p, r, BODY_COLOR, 0.0, true]
 
 
-# Which chain points lie over another part of the body: of two points
-# at least three links apart whose discs reach into each other, the one
-# farther from the body's middle (the tail, the head) is on top.
-func _over_points() -> PackedByteArray:
-	var n := chain.size()
-	var over := PackedByteArray()
-	over.resize(n)
-	over.fill(0)
-	for i in n:
-		for j in range(i + 3, n):
-			var pi: Vector2 = chain.points[i]
-			var pj: Vector2 = chain.points[j]
-			if pi.distance_to(pj) < (_draw_r[i] + _draw_r[j]) * OVER_TOUCH:
-				if absi(i - 2) >= absi(j - 2):
-					over[i] = 1
-				else:
-					over[j] = 1
-	return over
+# The run of tail points lying over the body, [first, last], or empty:
+# a tail point past OVER_FROM whose disc reaches into a chain point's
+# at least three links back lies over it, and so does every tail point
+# between two that do, so the shade does not break into rings. The
+# head is never on top: laid on the body in a curl it merges with it.
+func _over_span() -> Array:
+	var first := -1
+	var last := -1
+	for j in range(OVER_FROM + 1, chain.size()):
+		var pj: Vector2 = chain.points[j]
+		for i in range(0, j - 2):
+			if chain.points[i].distance_to(pj) < (_draw_r[i] + _draw_r[j]) * OVER_TOUCH:
+				if first < 0:
+					first = j
+				last = j
+				break
+	return [first, last] if first >= 0 else []
+
+
+# The shade the tail casts at s, a chain index, fractional between two
+# points, where it lies over the body: none off the span (the segment
+# leading into it included), none before OVER_FROM, growing as the
+# square of the way to OVER_FULL and full past it, so the shade fades
+# out toward the tail's base with no cap across the tail where it
+# starts.
+func _over_w(s: float, span: Array) -> float:
+	if span.is_empty() or s <= span[0] - 1 or s > span[1]:
+		return 0.0
+	var t := clampf((s - OVER_FROM) / float(OVER_FULL - OVER_FROM), 0.0, 1.0)
+	return t * t
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:
@@ -3044,7 +3092,7 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 # (added to list) below it and opens the dark inside of the mouth
 # between them, the eye shut while it gapes. A lick runs the tongue
 # from the mouth round the snout's tip to the eye and back.
-func _face(list: Array, head_over := false) -> Array:
+func _face(list: Array) -> Array:
 	var marks: Array = []
 	var eye := chain.points[0] + (_pose_eye if _pose_eye_on else look * 3.5 + up * 1.0)
 	var ax := _axis(up)
@@ -3073,12 +3121,12 @@ func _face(list: Array, head_over := false) -> Array:
 	# shutting, to CHEW_MOUTH at the widest.
 	var chew := _gape_chew and _gape >= gape
 	gape = maxf(gape, _gape)
-	list.append(_blob(chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, head_over))
+	list.append([chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, BODY_COLOR])
 	if gape > 0.0:
 		# The mouth goes under the eye: at its widest its top row can
 		# share the eye's row on the pixel grid.
 		if not chew:
-			list.append(_blob(chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, head_over))
+			list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
 		var h := minf(gape, CHEW_MOUTH) if chew else gape
 		var size := along * 6.0 + across * (h + 1.0)
 		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])

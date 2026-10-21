@@ -107,7 +107,23 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   then sags onto the surface under it, or is pushed off rock within its
   clearance, by an offset eased 2 px a tick (a fifth of what is left,
   if more), so a change of the nearest rock (an edge) is no jump
-  either; the neck takes only its share of the sag, none at the head,
+  either. The offset is only ever across the track: any part of it
+  along the track eases out the same way, since the spacing along the
+  track is the body's length. Before 2026-10-21 that part never
+  decayed (it came from the spawn pose, a landing, a push off a corner
+  cell slanting along the way), and a gecko walked round a ball hanging
+  from the ceiling stayed bunched into a lump half its length the whole
+  way round. Nor may a link between two points on the track shrink
+  under 6 px: sagged onto a sharp tip or into an inside corner, the
+  points of a body lying round it gathered at the rock and the body was
+  drawn a third short (the neck is exempt: it shortens by design as the
+  head draws back or swings round, and held to 6 px it shoved the point
+  behind it 10 px on a turn-around; it also keeps its push off rock
+  along it, which taken off made a resting point flip between two
+  equally near cells of a tunnel's roof). The suite's `chain_bunch`
+  scores the body from its first to its seventh point drawn shorter
+  than 70% of its length outside a fold: 3181 ticks in 36 runs before,
+  none after. The neck takes only its share of the sag, none at the head,
   so a head reared 15 px off the floor keeps its neck (sagged in full,
   the first link stretched to 15 px and the head blob parted from the
   body), and no drawn link may stretch more than 1.5 px past its
