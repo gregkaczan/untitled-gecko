@@ -1,13 +1,13 @@
 # Movement suite report
 
-Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 179, passing: 175, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 | run | result | draw | head | dance | upflip | uposc | state | stall | ftog | fslide | fjump | sink | float | cjerk | shake | tube | body* | stuck* | creep* | settle* | travel | outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | clutch_pit:cl_pit | FAIL | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  |  | 628 | ok |
 | crumble_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  |  |  | 853 | ok |
 | dig_45:dig_45 | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 186 | never reaches x 0..1920 y 900..1080 |
-| moss_wall:climb_wall | FAIL |  |  |  |  |  | 1 |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 593 | ok |
+| moss_wall:climb_wall | FAIL |  |  |  |  |  | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  | 593 | ok |
 | boulder_120:boulder_big | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1385 | ok |
 | boulder_30:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1148 | ok |
 | boulder_70:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1066 | ok |
@@ -18,6 +18,7 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 | cave_2:traverse_long | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 872 | ok |
 | cave_3:traverse_long | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 893 | ok |
 | cave_4:traverse_long | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 |  |  |  | 869 | ok |
+| cave_5:pool_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 636 | ok |
 | cave_5:traverse_long | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 14 | 1 |  | 1283 | ok |
 | cave_6:traverse_long | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  |  | 2012 | ok |
 | ceiling_specks:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1170 | ok |
@@ -148,7 +149,7 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 | switch_60:switch_up_hold | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | ok |
 | thorn_floor:walk_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 685 | ok |
 | thorn_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 926 | ok |
-| tongue_shaft_a:tap_shaft_a | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 220 | ok |
+| tongue_shaft_a:tap_shaft_a | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  | 1 | 220 | ok |
 | tongue_shaft_b:tap_shaft_b | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 237 | ok |
 | tongue_shaft_c:tap_shaft_c | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 253 | ok |
 | tongue_tunnel_fall:tap_dig_fall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 5 | 1 |  | 798 | ok |

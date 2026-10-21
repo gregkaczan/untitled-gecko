@@ -102,12 +102,14 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   of a pool, 2026-10-21). The suite's overlap scan (a scratch script:
   two drawn points three or more links apart closer than their radii)
   went from 909 knotted ticks in 126 runs to 16 in 10. Inside a
-  passage, or wedged between rock on both sides, the drawn body does
-  not follow a reversed walk round: it backs out tail first, the head
-  still pointing in, and the head swings round once the body is out
-  (the chain's own facing, cf in the trace). Swung round inside, it
-  folded into a loop over itself, or, with the gentler bend, rose
-  through the tunnel's wall.
+  squeeze the limit stays at 1.0 radian: a turn-around there has no
+  room for the wide U (laid wider, the body rose through the tunnel's
+  wall), so it folds double along the passage for a second, as it
+  always did. A link that would be laid into rock is bent another way
+  first, the nearest clear way, past the usual limit if nothing gentler
+  is clear. Backing out of a passage tail first was tried instead and
+  withdrawn the same day: the chain, laid forward from a head going
+  backward, bunched into waves, and the player read it as broken.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
@@ -365,6 +367,12 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   across one cell below the head's rim (any higher and its top row
   takes the rim's place and reads as a notch), and what the idle
   animations add (below).
+- At a pool the gecko is never knocked off its bank by the water's own
+  spray: the falling-drop rule is off while water lies within the
+  drop's reach of the body, and a slip's grace holds in the water too
+  (a gecko knocked off a bank re-landed from the water the next tick
+  and was knocked off again, cling and air by turns every tick: the
+  jitter the player filmed at the pool's edge in cave 5).
 - A ray cast down a crack narrower than the body (a slot in the floor)
   reads the surface beyond the crack at the same level rather than
   missing, so the body is not tilted into the crack by the centroid of

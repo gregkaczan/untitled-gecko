@@ -74,6 +74,11 @@ SCRIPTS = {
     # far bank, out onto it with an up-right press, then nothing; or back
     # down to the water's edge, then nothing.
     "swim_out": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(4.5, R), step(2.0, [1, -1]), step(0.5, R), step(3.0, Z)],
+    # Cave 5: five seconds for the particle world's water to settle, left
+    # from the spawn to the pool at the bottom left, a jump in, a swim,
+    # then out to the right onto the pool's right bank and a wait at the
+    # water's edge (the user's head jitter there, 2026-10-21).
+    "pool_right": [step(5.0, Z), step(1.8, L), step(0.3, L, jump=True), step(1.5, L), step(3.0, R), step(1.0, [1, -1]), step(6.0, Z)],
     "swim_out_edge": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(4.5, R), step(2.0, [1, -1]), step(0.5, R), step(1.2, L), step(3.0, Z)],
     # A dig straight down, into whatever is sealed under the floor.
     "dig_pocket": [step(0.4, Z), step(2.4, Z, chew=True, aim=[0, 140]), step(2.0, Z)],
@@ -313,7 +318,7 @@ add("gas_pocket", [["gas", 940, 840, 80, 40]], ["floor", 980, 700], ["dig_pocket
 
 # 14. Generated caves
 for sd in (1, 2, 3, 4, 5, 6):
-    add("cave_%d" % sd, [["cave", sd]], ["floor", 960, 540], ["traverse_long"], base="solid")
+    add("cave_%d" % sd, [["cave", sd]], ["floor", 960, 540], ["traverse_long"] + (["pool_right"] if sd == 5 else []), base="solid")
 
 # 15. Digging after the cursor
 add("dig_45", [], ["floor", 700, 700], ["dig_45"], note="45 degrees down-right from the floor", reach=[0, 900, 1920, 1080])

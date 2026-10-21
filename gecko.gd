@@ -98,6 +98,8 @@ const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may c
 const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick)
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
+const MAX_BEND_FOLD := 1.4        # The bend allowed when the only clear way is back along the passage: the body doubled over itself in a tunnel too narrow to turn in
+const MAX_BEND_SQUEEZE := 1.0     # The bend in a squeeze: a turn-around there folds the body double inside the passage (there is no room for the wide U, and laid wider it rose through the wall)
 const MAX_BEND := 0.6             # Most a drawn body link bends from the one before (radians): a U-turn this gentle has a radius of 13 px, wider than the body, so a turn-around lays the body in a U, not a loop over itself (at 1.0 every facing flip knotted it for a few ticks, a tunnel turn-around for forty)
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
 const BODY_HUG := 20.0         # How far past its radius a chain point looks for the surface
@@ -224,7 +226,7 @@ var pos := Vector2.ZERO
 var vel := Vector2.ZERO
 var up := Vector2.UP
 var facing := 1.0              # The way the walk goes along the tangent
-var _chain_facing := 1.0       # The way the drawn body is laid: facing, except in a squeeze, where a turn of the walk backs the body out tail first and the head swings round once there is room (_cling_step)
+var _chain_facing := 1.0       # The way the drawn body is laid: the walk's facing (kept apart in case a backing-out is wanted again: it was tried and withdrawn, _cling_step)
 var speed_along := 0.0
 var clinging := false
 var no_cling := 0.0
@@ -928,14 +930,13 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	var squeezed := _squeezed()
 	_pt("squeezed", _t_squeezed)
 	_squeezed_f = squeezed
-	# The drawn body follows the walk's facing only where there is room
-	# to turn: in a passage, or wedged between rock on both sides, a
-	# reversed walk backs the body out tail first, the head still
-	# pointing in, and the head swings round once the body is out. Swung
-	# round inside, the body folded into a loop over itself, or, with the
-	# gentler bend, up through the tunnel's wall.
-	if not _squeeze and not squeezed:
-		_chain_facing = facing
+	# The drawn body follows the walk's facing: a reversed walk swings the
+	# head round, in a passage too (backing out tail first was tried on
+	# 2026-10-21: the chain, laid forward from a head going backward,
+	# bunched into waves, and the player read it as broken). Inside a
+	# passage the body folds double along it, never through its wall
+	# (_resolve_body).
+	_chain_facing = facing
 	# A press straight into the surface over a slot in it (a crack in the
 	# floor, narrower than the body is long) enters the slot nose first.
 	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO \
@@ -1161,7 +1162,11 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
 	up = _turn_toward(up, Vector2.UP, 6.0 * dt)
-	if p.found and p.dist <= RIDE_H + 2.0 and inp.length() > 0.2:
+	# Not while a slip's grace runs: knocked off a pool's bank, the gecko
+	# re-landed from the water the next tick and was knocked off again,
+	# cling and air by turns every tick (the player's jitter at the
+	# water's edge, cave 5).
+	if p.found and p.dist <= RIDE_H + 2.0 and inp.length() > 0.2 and no_cling <= 0.0:
 		var n: Vector2 = (pos - p.nearest).normalized()
 		if inp.normalized().dot(-n) > 0.3:
 			swimming = false
@@ -1194,7 +1199,11 @@ func _surface_rules(dt: float) -> void:
 			crumb_at = f.pos
 		if up.y > SCREE_UP and map.loose_at_world(f.pos):
 			map.wake(f.pos, SCREE_R)
-	if off_floor and not swimming and map.drop_near(pos, _cells(DROP_REACH)):
+	# A falling drop knocks the gecko off a wall or ceiling, unless the
+	# body is at a pool (water within the drop's reach): the spray a
+	# pool throws up its bank reads as drops, and knocked the gecko off
+	# the bank it was climbing out on every tick.
+	if off_floor and not swimming and not map.water_near(pos, _cells(DROP_REACH)) and map.drop_near(pos, _cells(DROP_REACH)):
 		_drop(SLIP_NO_CLING)
 		slipped.emit()
 		return
@@ -2351,14 +2360,30 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 	new_head = _thin_point(0, new_head, q0)
 	chain.points[0] = new_head
 	var prev_dir := -chain.heading
+	var bend := MAX_BEND_SQUEEZE if _squeeze else MAX_BEND
 	for i in range(1, chain.size()):
 		var anchor: Vector2 = chain.points[i - 1]
 		var trail: Vector2 = old[i] - anchor
 		var desired: Vector2 = trail.normalized() if trail.length() > 0.001 else prev_dir
 		var ang := prev_dir.angle_to(desired)
-		if absf(ang) > MAX_BEND:
-			desired = prev_dir.rotated(signf(ang) * MAX_BEND)
+		if absf(ang) > bend:
+			desired = prev_dir.rotated(signf(ang) * bend)
 		var p: Vector2 = anchor + desired * LINK
+		# A link laid into rock (the head swung round in a passage, the
+		# old trail pointing through its wall) is bent another way, the
+		# nearest clear way first and past the usual limit if nothing
+		# gentler is clear, so the body folds double along the passage
+		# rather than rising through the wall. With no clear way at all it
+		# is laid as it was and pushed off the rock below.
+		if map.solid_within(p, 2.5):
+			var ang0 := prev_dir.angle_to(desired)
+			for a in [0.2, -0.2, 0.4, -0.4, 0.6, -0.6, 0.9, -0.9, 1.2, -1.2, 1.6, -1.6, 2.0, -2.0]:
+				var cand := prev_dir.rotated(clampf(ang0 + a, -MAX_BEND_FOLD, MAX_BEND_FOLD))
+				var pc: Vector2 = anchor + cand * LINK
+				if not map.solid_within(pc, 2.5):
+					desired = cand
+					p = pc
+					break
 		var r: float = chain.radii[i]
 		var _t_rbp := Time.get_ticks_usec()
 		var q: Dictionary = map.nearest_solid(p, r + BODY_HUG)
