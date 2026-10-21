@@ -1583,7 +1583,10 @@ func _check_gas() -> void:
 			continue
 		var c := r.get_center()
 		_gas.remove_at(i)
-		map.clear_gas(r)
+		if _author:
+			# The pocket is plain air in the authored cells (the bitmap
+			# world's map itself; the sim's shows air there already).
+			_author.clear_gas(r)
 		gecko.blast(c, BLAST_SPEED)
 		if sim:
 			sim.trigger_explosion_at(c, BLAST_R)
