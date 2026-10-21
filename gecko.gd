@@ -96,7 +96,14 @@ const MIN_FEET := 2
 const HEAD_LEAD := 15.0        # Head sits this far ahead of the body centre
 const BOB_SMOOTH := 0.15       # Per-tick blend of the drawn body's across-surface bounce
 const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may carry
-const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick)
+const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick); off the surface, on top of the body's own flight
+const AIR_PITCH := 0.6         # Most the airborne body's line tips from level toward its flight (radians, ~35 degrees): a falling gecko stays belly down, it does not dive
+const SWIM_PITCH := 1.2        # The same swimming while a key drives the kick: a kick down dives; let be, the body floats level
+const AIR_RIGHT := 6.0         # Radians a second the up vector turns back to the world's up in the air: off a wall the legs come round under the body
+const FREE_RELAX := 1.5        # Px a tick an airborne body point eases toward the straight line behind the head
+const SWIM_RELAX := 0.8        # The same in the water, where the body drifts into its float
+const SWAY_AMP := 3.0          # Px the tail's tip sways in the water, the rest of the body less toward the head
+const SWAY_PERIOD := 2.4       # Seconds per sway
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
 const MAX_BEND := 0.6             # Most a link of the airborne body bends from the one before (radians); clinging, the body lies along the head's path instead (_lay_body)
@@ -184,6 +191,7 @@ const SWIM_ACCEL := 700.0
 const SWIM_DRAG := 300.0
 const SWIM_PERIOD := 0.7       # One kick and glide
 const SWIM_KICK := 0.35        # Fraction of the period the legs push
+const FLOAT_RISE := 40.0       # Px/s the gecko rises in water with nothing pressed, up to the surface
 const BODY_COLOR := Color(0.56, 0.63, 0.40)
 const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
@@ -367,6 +375,10 @@ var _switched := false         # This tick the body switched surfaces (trace: a 
 var _switch_ticks := SWITCH_SETTLE   # Ticks since the last switch, up to SWITCH_SETTLE
 var _face_ticks := TURN_SETTLE       # Ticks since the facing changed, up to TURN_SETTLE
 var _facing_was := 1.0               # Last tick's facing
+var _tick_pos := Vector2.ZERO  # The body centre when this tick began: off the surface the drawn body is carried by what it moved (_update_chain)
+var _tick_free := false        # Off the surface (air, water, the tongue's pull) when this tick began
+var _swim_drive := false       # This tick a key drove the swim
+var _free_hx := 0.0            # The way the airborne body faces: the flight's, held while it goes straight up or down; 0 on the surface
 var _head_far := false               # This tick the drawn head was more than HEAD_FAR from its target
 var _path := PackedVector2Array()    # The drawn head's path while clinging, oldest first: the body lies along it, a link length a point (_lay_body)
 var _fold_at := -1                   # Index into _path of the point the head turned back at: from there the path doubles back over itself and the body folds
@@ -478,6 +490,8 @@ func _physics_process(dt: float) -> void:
 		return
 	var inp := _read_input()
 	var jump := _read_jump()
+	_tick_pos = pos
+	_tick_free = not clinging
 	_blocked = false
 	_lifting = false
 	_squeezed_f = false
@@ -1148,6 +1162,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 
 func _update_airborne(inp: Vector2, dt: float) -> void:
 	vel.y += GRAVITY * dt
+	up = _turn_toward(up, Vector2.UP, AIR_RIGHT * dt)
 	_pricked_t = maxf(_pricked_t - dt, 0.0)
 	if absf(inp.x) > 0.2 and _pricked_t <= 0.0:
 		vel.x = move_toward(vel.x, inp.x * AIR_MAX, AIR_ACCEL * dt)
@@ -1179,6 +1194,7 @@ func _update_airborne(inp: Vector2, dt: float) -> void:
 # through the surface; it leaves the water by pushing into rock and
 # clinging to it, or on the tongue.
 func _update_swimming(inp: Vector2, dt: float) -> void:
+	_swim_drive = inp.length() > 0.2
 	if inp.length() > 0.2:
 		_swim_phase = fmod(_swim_phase + dt / SWIM_PERIOD, 1.0)
 		if _swim_phase < SWIM_KICK:
@@ -1188,7 +1204,9 @@ func _update_swimming(inp: Vector2, dt: float) -> void:
 		if absf(inp.x) > 0.3:
 			facing = signf(inp.x)
 	else:
-		vel = vel.move_toward(Vector2.ZERO, SWIM_DRAG * dt)
+		# Let be, the gecko floats up to the surface: dived in from a
+		# height it went 90 px down and lay on the pool's floor.
+		vel = vel.move_toward(Vector2(0.0, -FLOAT_RISE), SWIM_DRAG * dt)
 		if _swim_phase > 0.0:
 			_swim_phase = minf(_swim_phase + dt / SWIM_PERIOD, 1.0)
 			if _swim_phase >= 1.0:
@@ -2266,6 +2284,18 @@ static func _turn_toward(a: Vector2, b: Vector2, max_angle: float) -> Vector2:
 func _update_chain(dt: float) -> void:
 	if _settled:
 		return
+	# Off the surface the drawn body is carried with the body centre, and
+	# only the head's swing about it is held to HEAD_SPEED. Held to it
+	# outright, a fall outran the drawn body (20 px a tick from 760 px up,
+	# against the head's 6): the gecko fell out of the camera's view,
+	# floated down after its own landing, and stood on its tail on the
+	# floor until the body had come down the neck (filmed 2026-10-21).
+	if _tick_free:
+		var moved := pos - _tick_pos
+		for i in chain.size():
+			chain.points[i] += moved
+	if clinging:
+		_free_hx = 0.0
 	# The drawn body hangs off a base that follows the body centre exactly
 	# along the surface but only slowly across it, so bumps in the ground
 	# do not bob the head: a chicken's head on its gyro.
@@ -2344,8 +2374,7 @@ func _update_chain(dt: float) -> void:
 		_head_back = back
 	else:
 		_pos_s = pos
-		var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
-		target = pos + dir * HEAD_LEAD
+		target = pos + _free_heading() * HEAD_LEAD
 	var head := chain.head()
 	var to := target - head
 	_head_far = to.length() > HEAD_FAR
@@ -2357,14 +2386,53 @@ func _update_chain(dt: float) -> void:
 		return
 	_path.clear()
 	_fold_at = -1
-	var dir := to.normalized() if to.length() > 2.0 else Vector2.ZERO
-	chain.set_head(new_head, dir)
+	# The bends are held from the body's line, not from the way the head
+	# last moved: carried with the body, the head's own motion is only its
+	# swing about it, and the body curled into a U off that.
+	var h := _free_heading()
+	chain.set_head(new_head, h)
+	# The body straightens out behind the head a pixel or so a tick, and
+	# in the water sways about that line: dragged behind the head alone,
+	# it kept whatever shape the head had last swung it into, and a
+	# gecko that had dived into a pool hung head down in it, still, for
+	# as long as it floated there.
+	if not tongue_anchored:
+		var side := Vector2(-h.y, h.x)
+		var relax := SWIM_RELAX if swimming else FREE_RELAX
+		var last := chain.size() - 1
+		for i in range(1, chain.size()):
+			var want := new_head - h * LINK * i
+			if swimming:
+				var k := float(i) / last
+				want += side * SWAY_AMP * k * sin(TAU * _tick / (60.0 * SWAY_PERIOD) - i * 0.5)
+			chain.points[i] = chain.points[i].move_toward(want, relax)
+		chain.set_head(new_head, h)
 	for i in chain.size():
 		var r: float = chain.radii[i]
 		var q: Dictionary = map.probe(chain.points[i], r + BODY_GAP)
 		if q.found and q.dist < r + BODY_GAP:
 			var away: Vector2 = (chain.points[i] - q.nearest).normalized() if q.dist > 0.01 else up
 			chain.points[i] += away * (r + BODY_GAP - q.dist)
+
+
+# The airborne or swimming body's line, head first: level the way it
+# flies, tipped toward its flight by at most AIR_PITCH (SWIM_PITCH in
+# the water). Along the flight itself, the line hung head down off any
+# drop and the body came down on the floor tail first. Reeled in on the
+# tongue it still points along the pull.
+func _free_heading() -> Vector2:
+	if absf(vel.x) > 20.0:
+		_free_hx = signf(vel.x)
+	elif _free_hx == 0.0:
+		var x := chain.head().x - chain.points[4].x
+		_free_hx = signf(x) if absf(x) > 0.5 else facing
+	if vel.length() <= 20.0 or (swimming and not _swim_drive):
+		return Vector2(_free_hx, 0.0)
+	if tongue_anchored:
+		return vel.normalized()
+	var most := SWIM_PITCH if swimming else AIR_PITCH
+	var a := clampf(atan2(vel.y, absf(vel.x)), -most, most)
+	return Vector2(_free_hx * cos(a), sin(a))
 
 
 # Lays the clinging body along the track of the drawn base (the body
@@ -2851,6 +2919,9 @@ func _update_feet(dt: float) -> void:
 			stepping += 1
 	for f in feet:
 		var hip: Vector2 = chain.points[f.hip]
+		# Carried with the body off the surface, like the chain.
+		if _tick_free and not f.planted and not f.stepping:
+			f.pos += pos - _tick_pos
 		if f.stepping:
 			f.step_t += dt / STEP_TIME
 			if f.step_t >= 1.0:
@@ -2894,7 +2965,9 @@ func _update_feet(dt: float) -> void:
 			continue
 		if not clinging:
 			f.planted = false
-			var hang := hip - up * 6.0 + tangent * f.end * _chain_facing * 4.0
+			# Spread under the drawn body's line, front feet forward of the hips.
+			var fwd := (chain.points[f.hip - 1] - chain.points[f.hip + 1]).normalized()
+			var hang := hip - up * 9.0 + fwd * f.end * 8.0
 			if f.pos.distance_to(hang) > 20.0:
 				f.pos = hang
 			else:

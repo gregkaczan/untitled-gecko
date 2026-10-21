@@ -145,6 +145,24 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   travelled it, and folded behind a head that swung up onto a ledge and
   walked on. The airborne body still trails the head freely, each link
   bent at most 0.6 radians from the one before.
+- Off the surface (a jump, a fall, the water) the drawn body is carried
+  with the body centre, and only the head's swing about it is held to
+  6 px a tick. Held to 6 px outright, a fall from 760 px (20 px a tick
+  at the end) left the drawn gecko 400 px up: it fell out of the
+  camera, floated down after its own landing and stood on its tail
+  until the body had come down the neck (the player's "gliding" and
+  "inverts it tail down"). The body's line is level the way it flies,
+  tipped toward its flight by at most 35 degrees, so a falling gecko
+  stays belly down with its legs spread under it, and lands on them; up
+  turns back to the world's up in the air. Each point eases toward the
+  straight line behind the head a pixel and a half a tick, and the
+  bends are held from that line, not from the head's own motion (off
+  which the carried body curled into a U). The suite's `free_lag` (the
+  drawn head over 30 px from the body centre in the air or the water)
+  counted 624 ticks in 16 runs before, none after. The `drop_*` scenes
+  jump off a block 64, 200, 440 and 760 px high onto a floor and into a
+  deep pool, steered on, let go, or steered back (the gecko catches the
+  block's face).
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
@@ -237,7 +255,13 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   dropped to the air state and back every other tick, and the gecko
   sank to the bottom. The `pool_drop` scene (a jump into deep water,
   then no input) guards it: the gecko floats in the top half, state
-  swim, headless on the bitmap and recorded on the sim's water.
+  swim, headless on the bitmap and recorded on the sim's water. Let be,
+  the swimmer rises at 40 px/s to the surface (a dive from height took
+  it 90 px down onto the pool's floor) and floats level, its tail
+  swaying 3 px at the tip over 2.4 s; it tips toward its swim only
+  while a key drives the kick. A gecko that had dived in used to hang
+  head down in the water, still, as long as it floated (the body was
+  dragged by the head alone and kept the dive's shape).
 - The head looks at the cursor, within about 100 degrees of the body line.
 - The drawn body rides on a base that follows the body centre exactly
   along the surface and only slowly across it, so bumps do not bob the

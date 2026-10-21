@@ -32,6 +32,7 @@ WALK_STEP = 130.0 / 60.0   # px per tick at walk speed
 DRAW_JUMP = 4.0            # drawn body centre, px per tick while clinging (walk is 2.2; a corner sweep reaches 3.5)
 BODY_JUMP = 3.5            # physics centre (informational)
 HEAD_JUMP = 6.5            # px per tick of the head in the drawn body frame: its set speed is 6, and the frame turning adds a little
+FREE_LAG = 30.0            # px: off the surface (air, water) the drawn head this far from the body centre has been left behind (HEAD_LEAD is 15): a fall outran the drawn body, which came down after its own landing (2026-10-21)
 CHAIN_BUNCH = 0.7          # the drawn body from point 1 to point 7, laid a link (8) apart, measured along its points: shorter than this share of its length (34 of 48 px), it has bunched into a lump (the walk round a ball, 2026-10-21); a fold doubles the body over by design and is skipped
 CHAIN_JUMP = 10.5          # px per tick of any drawn body point, in the world: the body lies along the base's track behind a straight neck, so a point moves at most as fast as the head (6) and the base (2.2) together, plus its sag easing (2); a snap was 65 to 130
 UP_FLIP = 0.35             # rad in one tick outside a committed grab
@@ -62,7 +63,7 @@ CAM_STEADY = 0.6           # world px: the body's step may change this much and 
 SHAKE_MIN = 1.0            # screen px: a reversal of the drawn body's screen motion smaller than this is nothing
 CREEP_WIN = 12             # frames the body has been still before a moving camera counts as creeping
 
-SCORED = ["draw_jump", "head_jump", "chain_jump", "chain_bunch", "dance", "up_flip", "up_osc", "state_flicker", "stall",
+SCORED = ["draw_jump", "head_jump", "chain_jump", "chain_bunch", "free_lag", "dance", "up_flip", "up_osc", "state_flicker", "stall",
           "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake", "tube_full"]
 INFO = ["body_jump", "stuck", "cam_creep", "settle"]
 
@@ -243,6 +244,10 @@ def metrics(ticks, frames=()):
         a, b = ticks[i - 1], ticks[i]
         t = b["tick"]
         both_cling = a["state"] == "cling" and b["state"] == "cling"
+        if b["state"] in ("air", "swim"):
+            lag = dist(b["head"], b["pos"])
+            if lag > FREE_LAG:
+                ev["free_lag"].append((t, round(lag, 1)))
         skip = i in land or i in jumped or i in spawn
         if both_cling and not skip:
             d = dist(a["pos"], b["pos"])
@@ -500,7 +505,7 @@ def analyze(runs_dir, baseline_path=None):
     total = len(results)
     passing = sum(1 for r in results.values() if r["pass"])
     cols = SCORED + INFO
-    short = {"draw_jump": "draw", "head_jump": "head", "chain_jump": "chain", "chain_bunch": "bunch", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
+    short = {"draw_jump": "draw", "head_jump": "head", "chain_jump": "chain", "chain_bunch": "bunch", "free_lag": "lag", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
              "foot_jump": "fjump", "sink": "sink", "float": "float", "cam_jerk": "cjerk", "shake": "shake",
              "tube_full": "tube", "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*", "settle": "settle*"}

@@ -20162,6 +20162,112 @@
     false,
     false
    ]
+  ],
+  "leap_on": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    4.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "leap_still": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    5.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "leap_back": [
+   [
+    1.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    0.6,
+    [
+     -1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
   ]
  },
  "scenes": {
@@ -25861,6 +25967,470 @@
    ],
    "state": "cling",
    "note": "walked 10 s into the jagged tunnel (where the head sawed 2 px a tick at rest), then nothing pressed for 3 s, twice more half a second on: the body comes to rest each time"
+  },
+  "drop_64": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_on",
+    "leap_still"
+   ],
+   "end_up": [
+    0,
+    -1
+   ],
+   "reach": [
+    720,
+    900,
+    1860,
+    1000
+   ],
+   "state": "cling",
+   "note": "a block 64 px over the floor: a jump off its edge, steered on, let go, or steered back toward the block; it lands feet first on the floor"
+  },
+  "drop_64_back": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_back"
+   ],
+   "state": "cling",
+   "note": "a block 64 px over the floor: a jump off its edge, steered back toward the block mid-air; it catches the block's face or lands on the floor"
+  },
+  "drop_64_pool": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "erase",
+     700,
+     960,
+     900,
+     100
+    ],
+    [
+     "water",
+     700,
+     960,
+     900,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still",
+    "leap_on"
+   ],
+   "end": [
+    700,
+    860,
+    1600,
+    1010
+   ],
+   "state": "swim",
+   "note": "a block 64 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
+  },
+  "drop_200": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     760,
+     500,
+     200
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    720
+   ],
+   "scripts": [
+    "leap_on",
+    "leap_still"
+   ],
+   "end_up": [
+    0,
+    -1
+   ],
+   "reach": [
+    720,
+    900,
+    1860,
+    1000
+   ],
+   "state": "cling",
+   "note": "a block 200 px over the floor: a jump off its edge, steered on, let go, or steered back toward the block; it lands feet first on the floor"
+  },
+  "drop_200_back": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     760,
+     500,
+     200
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    720
+   ],
+   "scripts": [
+    "leap_back"
+   ],
+   "state": "cling",
+   "note": "a block 200 px over the floor: a jump off its edge, steered back toward the block mid-air; it catches the block's face or lands on the floor"
+  },
+  "drop_200_pool": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     760,
+     500,
+     200
+    ],
+    [
+     "erase",
+     700,
+     960,
+     900,
+     100
+    ],
+    [
+     "water",
+     700,
+     960,
+     900,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    720
+   ],
+   "scripts": [
+    "leap_still",
+    "leap_on"
+   ],
+   "end": [
+    700,
+    860,
+    1600,
+    1010
+   ],
+   "state": "swim",
+   "note": "a block 200 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
+  },
+  "drop_440": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     520,
+     500,
+     440
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    480
+   ],
+   "scripts": [
+    "leap_on",
+    "leap_still"
+   ],
+   "end_up": [
+    0,
+    -1
+   ],
+   "reach": [
+    720,
+    900,
+    1860,
+    1000
+   ],
+   "state": "cling",
+   "note": "a block 440 px over the floor: a jump off its edge, steered on, let go, or steered back toward the block; it lands feet first on the floor"
+  },
+  "drop_440_back": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     520,
+     500,
+     440
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    480
+   ],
+   "scripts": [
+    "leap_back"
+   ],
+   "state": "cling",
+   "note": "a block 440 px over the floor: a jump off its edge, steered back toward the block mid-air; it catches the block's face or lands on the floor"
+  },
+  "drop_440_pool": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     520,
+     500,
+     440
+    ],
+    [
+     "erase",
+     700,
+     960,
+     900,
+     100
+    ],
+    [
+     "water",
+     700,
+     960,
+     900,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    480
+   ],
+   "scripts": [
+    "leap_still",
+    "leap_on"
+   ],
+   "state": "swim",
+   "note": "a block 440 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
+  },
+  "drop_760": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     200,
+     500,
+     760
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    160
+   ],
+   "scripts": [
+    "leap_on",
+    "leap_still"
+   ],
+   "end_up": [
+    0,
+    -1
+   ],
+   "reach": [
+    720,
+    900,
+    1860,
+    1000
+   ],
+   "state": "cling",
+   "note": "a block 760 px over the floor: a jump off its edge, steered on, let go, or steered back toward the block; it lands feet first on the floor"
+  },
+  "drop_760_back": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     200,
+     500,
+     760
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    160
+   ],
+   "scripts": [
+    "leap_back"
+   ],
+   "state": "cling",
+   "note": "a block 760 px over the floor: a jump off its edge, steered back toward the block mid-air; it catches the block's face or lands on the floor"
+  },
+  "drop_760_pool": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     200,
+     500,
+     760
+    ],
+    [
+     "erase",
+     700,
+     960,
+     900,
+     100
+    ],
+    [
+     "water",
+     700,
+     960,
+     900,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    160
+   ],
+   "scripts": [
+    "leap_still",
+    "leap_on"
+   ],
+   "state": "swim",
+   "note": "a block 760 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
   }
  }
 }

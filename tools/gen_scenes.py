@@ -500,6 +500,29 @@ SCRIPTS["walk_rest"] = [step(10.0, R), step(3.0, Z), step(0.5, R), step(3.0, Z),
 add("rest_jagged", ragged_run(600, 500, [8, 14, 8, 14, 8, 14, 8, 8], 100, 21), ["floor", 540, 600], ["walk_rest"], base="solid", state="cling",
     reach=[1200, 0, 1920, 1080], note="walked 10 s into the jagged tunnel (where the head sawed 2 px a tick at rest), then nothing pressed for 3 s, twice more half a second on: the body comes to rest each time")
 
+# Drops and jumps from height (2026-10-21: the user saw the body glide,
+# land upside down off a big height and freeze in one pose in water).
+# A tall chamber, floor at 960, a block from x 200 to 700 whose top is h
+# over the floor; the gecko walks to its edge and jumps, then either
+# steers on (leap_on) or lets go of the keys (leap_still), or steps off
+# the edge with a jump straight up held at the lip (hop_off). The pool
+# versions have deep water under the block's edge.
+SCRIPTS["leap_on"] = [step(1.0, R), step(0.3, R, jump=True), step(4.0, R)]
+SCRIPTS["leap_still"] = [step(1.0, R), step(0.3, R, jump=True), step(5.0, Z)]
+SCRIPTS["leap_back"] = [step(1.0, R), step(0.3, R, jump=True), step(0.6, L), step(3.5, Z)]
+TALL = [["erase", 60, 40, 1800, 920]]
+for h in (64, 200, 440, 760):
+    top = 960 - h
+    add("drop_%d" % h, TALL + [["fill", 200, top, 500, h]], ["floor", 560, top - 40], ["leap_on", "leap_still"],
+        base="solid", state="cling", end_up=[0, -1], reach=[720, 900, 1860, 1000],
+        note="a block %d px over the floor: a jump off its edge, steered on, let go, or steered back toward the block; it lands feet first on the floor" % h)
+    add("drop_%d_back" % h, TALL + [["fill", 200, top, 500, h]], ["floor", 560, top - 40], ["leap_back"], base="solid", state="cling",
+        note="a block %d px over the floor: a jump off its edge, steered back toward the block mid-air; it catches the block's face or lands on the floor" % h)
+    add("drop_%d_pool" % h, TALL + [["fill", 200, top, 500, h], ["erase", 700, 960, 900, 100], ["water", 700, 960, 900, 100]],
+        ["floor", 560, top - 40], ["leap_still", "leap_on"], base="solid", state="swim",
+        end=[700, 860, 1600, 1010] if h <= 200 else None,
+        note="a block %d px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool" % h)
+
 out = {"bases": BASES, "scripts": SCRIPTS, "scenes": scenes}
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 path = os.path.join(root, "tests", "scenes.json")
