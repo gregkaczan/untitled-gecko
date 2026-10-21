@@ -493,6 +493,57 @@ func probe(p: Vector2, radius: float) -> Dictionary:
 
 
 # Marches from p along dir in 2 px steps. The first solid point, or null.
+# The nearest solid cell within radius of p: found, dist and nearest as
+# probe gives them, without the normal. Ring by ring out from p's cell,
+# stopping once no further ring can hold a nearer cell (a ring's cells
+# are at least half a cell further than the ring before), so a point
+# riding over a floor scans a few rings, not the whole square: the
+# drawn body's ten points cost 1.8 ms a tick on probe's full square.
+func nearest_solid(p: Vector2, radius: float) -> Dictionary:
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	var n := int(ceil(radius / CELL))
+	var best_d2 := radius * radius
+	var best := Vector2.ZERO
+	var found := false
+	var half := CELL * 0.5
+	for k in range(0, n + 1):
+		if found and (k - 0.5) * CELL >= sqrt(best_d2):
+			break
+		var y0 := cy - k
+		var y1 := cy + k
+		for x in range(cx - k, cx + k + 1):
+			if is_solid(x, y0):
+				var d2 := p.distance_squared_to(Vector2(x * CELL + half, y0 * CELL + half))
+				if d2 < best_d2:
+					best_d2 = d2
+					best = Vector2(x * CELL + half, y0 * CELL + half)
+					found = true
+			if k > 0 and is_solid(x, y1):
+				var d2 := p.distance_squared_to(Vector2(x * CELL + half, y1 * CELL + half))
+				if d2 < best_d2:
+					best_d2 = d2
+					best = Vector2(x * CELL + half, y1 * CELL + half)
+					found = true
+		if k > 0:
+			var x0 := cx - k
+			var x1 := cx + k
+			for y in range(cy - k + 1, cy + k):
+				if is_solid(x0, y):
+					var d2 := p.distance_squared_to(Vector2(x0 * CELL + half, y * CELL + half))
+					if d2 < best_d2:
+						best_d2 = d2
+						best = Vector2(x0 * CELL + half, y * CELL + half)
+						found = true
+				if is_solid(x1, y):
+					var d2 := p.distance_squared_to(Vector2(x1 * CELL + half, y * CELL + half))
+					if d2 < best_d2:
+						best_d2 = d2
+						best = Vector2(x1 * CELL + half, y * CELL + half)
+						found = true
+	return {"found": found, "nearest": best, "dist": sqrt(best_d2)}
+
+
 func ray_hit(p: Vector2, dir: Vector2, length: float):
 	var steps := int(length / 2.0)
 	for i in range(steps + 1):

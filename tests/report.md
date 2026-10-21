@@ -1,6 +1,6 @@
 # Movement suite report
 
-Runs: 173, passing: 169, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 | run | result | draw | head | dance | upflip | uposc | state | stall | ftog | fslide | fjump | sink | float | cjerk | shake | tube | body* | stuck* | creep* | settle* | travel | outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -82,7 +82,12 @@ Runs: 173, passing: 169, failing: 4. Columns are event counts; * marks informati
 | pillar:climb_over | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  | 1119 | ok |
 | pillar_thin:climb_over | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 953 | ok |
 | pool:swim_across | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 997 | ok |
+| pool:swim_out | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1184 | ok |
 | pool_bank_slope:swim_across | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 959 | ok |
+| pool_bank_slope:swim_out | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1213 | ok |
+| pool_bank_slope:swim_out_back | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1104 | ok |
+| pool_bank_slope:swim_out_edge | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1365 | ok |
+| pool_bank_slope:swim_out_rest | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 959 | ok |
 | pool_current:swim_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 520 | ok |
 | pool_drop:float | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 441 | ok |
 | rest_jagged:walk_rest | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 1 |  | 777 | ok |

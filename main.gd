@@ -188,6 +188,15 @@ var _timing := OS.get_environment("GECKO_TIMING") != ""  # T lines every 60 tick
 var _t_sim: Array[int] = []
 var _t_gecko: Array[int] = []
 var _t_render: Array[int] = []
+var _fps_label: Label           # Bottom left, always on: fps, the frame, the gecko's tick and the sim's tick in ms, each with its worst over the last half second (the player's frame drops)
+var _fps_t := 0.0               # Seconds since the readout was last refreshed
+var _frame_peak := 0.0          # Worst frame (ms) since then
+var _gecko_us := 0
+var _gecko_peak := 0
+var _sim_us := 0
+var _sim_peak := 0
+var _read_us := 0
+var _read_peak := 0
 var _demo_step := -1
 var _demo_t := 0.0
 var _scene: Dictionary = {}    # The test scene being run, empty outside the suite
@@ -302,6 +311,11 @@ func _ready() -> void:
 	_label.position = Vector2(12, 8)
 	_label.add_theme_font_size_override("font_size", 20)
 	hud.add_child(_label)
+	_fps_label = Label.new()
+	_fps_label.position = Vector2(12, 970)
+	_fps_label.add_theme_font_size_override("font_size", 16)
+	_fps_label.modulate = Color(1.0, 0.95, 0.7)
+	hud.add_child(_fps_label)
 	# The panel keeps working while the world is paused: this node runs
 	# always and guards its own ticks, the world's nodes pause.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -603,8 +617,10 @@ func _physics_process(dt: float) -> void:
 		sim.set_glows(glows)
 		var t0 := Time.get_ticks_usec()
 		sim.tick()
+		_sim_us = Time.get_ticks_usec() - t0
+		_sim_peak = maxi(_sim_peak, _sim_us)
 		if _timing:
-			_t_sim.append(Time.get_ticks_usec() - t0)
+			_t_sim.append(_sim_us)
 			_t_gecko.append(gecko.tick_us)
 			if _t_sim.size() >= 60:
 				_print_timing()
@@ -1839,8 +1855,27 @@ func _process(_dt: float) -> void:
 	if sim:
 		var t0 := Time.get_ticks_usec()
 		sim.read_render()
+		_read_us = Time.get_ticks_usec() - t0
+		_read_peak = maxi(_read_peak, _read_us)
 		if _timing:
-			_t_render.append(Time.get_ticks_usec() - t0)
+			_t_render.append(_read_us)
+	# The frame readout: refreshed twice a second, the worst values since
+	# the last refresh beside the current ones, so a dropped frame shows.
+	_frame_peak = maxf(_frame_peak, _dt * 1000.0)
+	_gecko_us = gecko.tick_us
+	_gecko_peak = maxi(_gecko_peak, _gecko_us)
+	_fps_t += _dt
+	if _fps_t >= 0.5:
+		var text := "fps %d   frame %.1f ms (worst %.1f)   gecko tick %.2f ms (worst %.2f)" % [
+			Engine.get_frames_per_second(), _dt * 1000.0, _frame_peak, _gecko_us / 1000.0, _gecko_peak / 1000.0]
+		if sim:
+			text += "   sim tick %.2f ms (worst %.2f)   readback %.2f ms (worst %.2f)" % [_sim_us / 1000.0, _sim_peak / 1000.0, _read_us / 1000.0, _read_peak / 1000.0]
+		_fps_label.text = text
+		_fps_t = 0.0
+		_frame_peak = 0.0
+		_gecko_peak = 0
+		_sim_peak = 0
+		_read_peak = 0
 	if _trace:
 		# One line per drawn frame, for tools/analyze.py's camera metrics
 		# and the sheet tools: the body centre's screen position in the

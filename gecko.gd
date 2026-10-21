@@ -422,11 +422,15 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_release_settle()
 
 
-var tick_us := 0               # The last tick's time in microseconds, for GECKO_TIMING (main.gd)
+var tick_us := 0               # The last tick's time in microseconds, for GECKO_TIMING (main.gd) and the fps readout
+var _tick_t0 := 0              # When this tick began (the trace's us: the tick's cost up to the trace)
+var _profile := OS.get_environment("GECKO_PROFILE") != ""   # P lines every 60 ticks: the tick's sections in ms a tick (mean), to find the cost
+var _prof := {}                # Section name -> microseconds since the last P line
+var _prof_max := {}            # Section name -> the worst single call since the last P line
 
 
 func _physics_process(dt: float) -> void:
-	var _tick_t0 := Time.get_ticks_usec()
+	_tick_t0 = Time.get_ticks_usec()
 	var inp := _read_input()
 	var jump := _read_jump()
 	_blocked = false
@@ -498,17 +502,29 @@ func _physics_process(dt: float) -> void:
 			# Braced on the tongue: the feet stay planted, nothing else moves.
 			inp = Vector2.ZERO
 			jump = false
+		var _t_cling := Time.get_ticks_usec()
 		_update_clinging(inp, jump, dt)
+		_pt("cling", _t_cling)
+		var _t_rules := Time.get_ticks_usec()
 		_surface_rules(dt)
+		_pt("rules", _t_rules)
 	else:
 		_update_airborne(inp, dt)
+	var _t_tongue := Time.get_ticks_usec()
 	_update_tongue(dt)
+	_pt("tongue", _t_tongue)
 	_update_gape(dt)
+	var _t_chain := Time.get_ticks_usec()
 	_update_chain(dt)
+	_pt("chain", _t_chain)
 	_push_body()
 	_update_look(dt)
+	var _t_feet := Time.get_ticks_usec()
 	_update_feet(dt)
+	_pt("feet", _t_feet)
+	var _t_settle := Time.get_ticks_usec()
 	_update_settle(inp)
+	_pt("settle", _t_settle)
 	_update_idle(inp, dt)
 	_tick += 1
 	# Thorns: the cell that stopped a move this tick, in any state (a
@@ -517,12 +533,26 @@ func _physics_process(dt: float) -> void:
 		_prick(_block_cell)
 	_inp = inp
 	if _trace:
+		var _t_trace := Time.get_ticks_usec()
 		_print_trace()
+		_pt("trace", _t_trace)
+	var _t_blobs := Time.get_ticks_usec()
 	_push_blobs()
+	_pt("blobs", _t_blobs)
 	queue_redraw()
 	_under.queue_redraw()
 	_debug_layer.queue_redraw()
 	tick_us = Time.get_ticks_usec() - _tick_t0
+	if _profile:
+		_prof["tick"] = _prof.get("tick", 0) + tick_us
+		_prof_max["tick"] = maxi(_prof_max.get("tick", 0), tick_us)
+		if _tick % 60 == 0:
+			var line := "P"
+			for k in _prof:
+				line += " %s %.3f/%.2f" % [k, _prof[k] / 60000.0, _prof_max[k] / 1000.0]
+			print(line)
+			_prof.clear()
+			_prof_max.clear()
 	ticked.emit()
 
 
@@ -551,6 +581,13 @@ func _read_input() -> Vector2:
 # Feet are x,y,planted,stepping per foot, front near, front far, back
 # near, back far. cp is the chain, head first: offset along the
 # tangent, offset along up, drawn radius, thinned.
+func _pt(name: String, t0: int) -> void:
+	if _profile:
+		var us := Time.get_ticks_usec() - t0
+		_prof[name] = _prof.get(name, 0) + us
+		_prof_max[name] = maxi(_prof_max.get(name, 0), us)
+
+
 func _print_trace() -> void:
 	var hd := chain.head()
 	var state := "cling" if clinging else ("swim" if swimming else "air")
@@ -562,13 +599,13 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d us=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
 		_walk_bn.x, _walk_bn.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
-		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, _head_back, _lift, 1 if _settled else 0, _settle_n, _settle_i, 1 if _switched else 0, cp, fs])
+		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, _head_back, _lift, 1 if _settled else 0, _settle_n, _settle_i, 1 if _switched else 0, Time.get_ticks_usec() - _tick_t0, cp, fs])
 
 
 # in, out, stuck, grapple, drag, strain, back: what the tongue is doing (trace, panel).
@@ -797,7 +834,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# The walk's collision sees lumps whatever the senses do.
 	var ignoring: bool = map.ignore_chunks
 	map.ignore_chunks = false
+	var _t_walk := Time.get_ticks_usec()
 	var blocked := not _step(tangent * speed_along * dt)
+	_pt("walk", _t_walk)
 	# Loose grains (a bed of sand, a bank of clay) are no wall: a move
 	# they alone block goes on through them, slowed, the body's push
 	# shoving them aside (sim_map.gd). Rock beyond them still stops it.
@@ -831,8 +870,12 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		# A body chewing its way in squeezes through what it chews, the
 		# bites' ragged cusps included.
 		if not _squeeze and not shoving and s != 0.0:
+			var _t_passage := Time.get_ticks_usec()
 			_passage_ahead(inp)
+			_pt("passage", _t_passage)
+	var _t_probe := Time.get_ticks_usec()
 	var p: Dictionary = map.probe(pos, PROBE_R)
+	_pt("probe", _t_probe)
 	_last_probe = p
 	# A body centre inside rock (a spawn in a wall, a brush fill, a bite
 	# that missed) is pushed out along the probe normal before anything
@@ -849,7 +892,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# A hole the gecko is chewing after the cursor is the way, not a gap.
 	# Bridging ends only after the gap test has failed a few ticks in a
 	# row: at the gap's edge the front ray hits and misses by turns.
+	var _t_gap := Time.get_ticks_usec()
 	var gap := _gap_ahead() and _dig_aim == Vector2.ZERO and not _squeeze and not _sq_enter
+	_pt("gap", _t_gap)
 	# A bridge that has carried the body away from any rock was wrong.
 	if _bridging and p.found and p.dist > RIDE_H + 8.0:
 		gap = false
@@ -877,18 +922,24 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# no nudge. The nearest rock flips sides every tick there, and anything
 	# that follows it makes the gecko dance. It still follows the surface
 	# under it and slides along its tangent, so it sits still or backs out.
+	var _t_squeezed := Time.get_ticks_usec()
 	var squeezed := _squeezed()
+	_pt("squeezed", _t_squeezed)
 	_squeezed_f = squeezed
 	# A press straight into the surface over a slot in it (a crack in the
 	# floor, narrower than the body is long) enters the slot nose first.
 	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO \
 			and s == 0.0 and inp.length() > 0.2 and inp.dot(up) < -0.5:
+		var _t_slot := Time.get_ticks_usec()
 		_try_slot_entry(tangent, inp)
+		_pt("slot", _t_slot)
 	# A press straight away from a floor or ceiling, with the opposite
 	# surface within a leg's reach: switch to it where the body stands.
 	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO and not squeezed \
 			and s == 0.0 and inp.length() > 0.2 and inp.dot(up) > 0.7 and absf(up.y) > 0.7:
+		var _t_switch := Time.get_ticks_usec()
 		_switch_surface()
+		_pt("switch", _t_switch)
 	var n: Vector2
 	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
@@ -919,7 +970,9 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		n = _obstacle_normal(inp)
 		_grab_n = n
 	else:
+		var _t_reach := Time.get_ticks_usec()
 		n = _reach_for_wall(inp) if (not chewing and not squeezed and not _squeeze and inp.length() > 0.2) else Vector2.ZERO
+		_pt("reach", _t_reach)
 		if n != Vector2.ZERO and not _find_passage(inp, int((REACH + BODY_R) / map.CELL) + 2).is_empty():
 			# The wall reached for holds the mouth of a passage the press
 			# points into: no turn onto it. The walk goes on to the lip,
@@ -984,10 +1037,16 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		pass
 	elif _squeeze:
 		if _grab_n == Vector2.ZERO:
+			var _t_squeeze_nudge := Time.get_ticks_usec()
 			_squeeze_nudge()
+			_pt("squeeze_nudge", _t_squeeze_nudge)
+		var _t_squeeze_upd := Time.get_ticks_usec()
 		_update_squeeze()
+		_pt("squeeze_upd", _t_squeeze_upd)
 	elif not squeezed and not _bridging and not _lifting and _grab_n == Vector2.ZERO:
+		var _t_ride := Time.get_ticks_usec()
 		var floor_pt = _ray_fine(pos, -up, RAY_LEN)
+		_pt("ride", _t_ride)
 		if floor_pt != null:
 			var d: float = (pos - floor_pt).dot(up)
 			var want := RIDE_H - 1.5
@@ -2266,7 +2325,9 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 	if dir.length() > 0.001:
 		chain.heading = dir.normalized()
 	var old := chain.points.duplicate()
-	var q0: Dictionary = map.probe(new_head, chain.radii[0] + BODY_GAP)
+	var _t_rbh := Time.get_ticks_usec()
+	var q0: Dictionary = map.nearest_solid(new_head, chain.radii[0] + BODY_GAP)
+	_pt("rb_head", _t_rbh)
 	# Between two walls closer than its clearance (a passage) the head is
 	# centred by the thinning, like the body's points, not pushed off
 	# whichever wall is nearer. In a squeeze the clearance is the
@@ -2288,14 +2349,18 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 			desired = prev_dir.rotated(signf(ang) * MAX_BEND)
 		var p: Vector2 = anchor + desired * LINK
 		var r: float = chain.radii[i]
-		var q: Dictionary = map.probe(p, r + BODY_HUG)
+		var _t_rbp := Time.get_ticks_usec()
+		var q: Dictionary = map.nearest_solid(p, r + BODY_HUG)
+		_pt("rb_probe", _t_rbp)
 		if q.found:
 			var away: Vector2 = (p - q.nearest).normalized() if q.dist > 0.01 else up
 			# Laid higher than its clearance, like the head, by BODY_LIFT
 			# for the body and a pixel for the tail's tip, which drags
 			# along the ground behind the lifted body.
 			var want := r + BODY_GAP + lerpf(1.0, BODY_LIFT, clampf((r - 2.0) / 5.0, 0.0, 1.0))
+			var _t_rbt := Time.get_ticks_usec()
 			p = _thin_point(i, p, q)
+			_pt("rb_thin", _t_rbt)
 			if _thin_on[i]:
 				pass
 			elif q.dist < want:
@@ -2304,7 +2369,9 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 				p += away * (want - q.dist) * HUG_K
 			p = anchor + (p - anchor).normalized() * LINK
 		else:
+			var _t_rbt2 := Time.get_ticks_usec()
 			_thin_point(i, p, q)
+			_pt("rb_thin", _t_rbt2)
 		chain.points[i] = p
 		prev_dir = (p - anchor).normalized()
 
@@ -2609,7 +2676,7 @@ func _update_feet(dt: float) -> void:
 		while back < RIDE_H - 4.0 and map.is_solid_world(rest + up * back):
 			back += 2.0
 		rest += up * back
-		var q: Dictionary = map.probe(rest, LEG_REACH)
+		var q: Dictionary = map.nearest_solid(rest, LEG_REACH)
 		if q.found and q.nearest.distance_to(hip) > MAX_LEG:
 			q.found = false
 		if q.found and map.thorn_world(q.nearest):

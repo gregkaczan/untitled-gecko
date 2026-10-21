@@ -67,6 +67,14 @@ SCRIPTS = {
     "bite_climb": [step(1.6, R), step(0.5, Z, chew=True, aim=[12, -14]), step(3.5, U), step(0.5, Z)],
     # A jump into the pool and a swim to the right against whatever runs there.
     "swim_right": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(5.0, R)],
+    # Across the pool, out on the far bank, then nothing; or back down to the water's edge, then nothing.
+    "swim_out_rest": [step(6.0, R), step(2.5, U), step(1.5, R), step(4.0, Z)],
+    "swim_out_back": [step(6.0, R), step(2.5, U), step(1.5, R), step(1.2, L), step(4.0, Z)],
+    # A jump into the pool (a walk in clings to its floor), a swim to the
+    # far bank, out onto it with an up-right press, then nothing; or back
+    # down to the water's edge, then nothing.
+    "swim_out": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(4.5, R), step(2.0, [1, -1]), step(0.5, R), step(3.0, Z)],
+    "swim_out_edge": [step(1.3, R), step(0.3, R, jump=True), step(0.4, R), step(4.5, R), step(2.0, [1, -1]), step(0.5, R), step(1.2, L), step(3.0, Z)],
     # A dig straight down, into whatever is sealed under the floor.
     "dig_pocket": [step(0.4, Z), step(2.4, Z, chew=True, aim=[0, 140]), step(2.0, Z)],
     # Digging is a bite every 0.4 s and a creep of 45 px/s behind it,
@@ -267,10 +275,11 @@ add("cliff_jump", [["erase", 1000, F, 920, 200]], ["floor", 800, 700], ["cliff_j
 add("drop_funnel", [["funnel", 1200, F, 90, 100]], ["floor", 1000, 700], ["cliff_jump"], state="cling")
 
 # 13. Water
-add("pool", [["erase", 1000, F, 400, 100], ["water", 1000, F, 400, 100]], ["floor", 800, 700], ["swim_across"], state="cling",
+add("pool", [["erase", 1000, F, 400, 100], ["water", 1000, F, 400, 100]], ["floor", 800, 700], ["swim_across", "swim_out"], state="cling",
     note="walk in, swim across, climb out on the far wall", reach=[1420, 0, 1920, 1080])
 add("pool_bank_slope", [["erase", 1000, F, 400, 100], ["below", 1300, F + 100, 1400, F], ["water", 1000, F, 400, 100]],
-    ["floor", 800, 700], ["swim_across"], state="cling", reach=[1420, 0, 1920, 1080])
+    ["floor", 800, 700], ["swim_across", "swim_out_rest", "swim_out_back", "swim_out", "swim_out_edge"], state="cling", reach=[1300, 0, 1920, 1080],
+    note="a pool with a sloping far bank: swim across and climb out on the slope (the user's water exit folded the body into a loop, 2026-10-21); swim_out_rest stops on the bank and waits, swim_out_back walks back down to the water's edge and waits (the head jittered there)")
 # Deep water: a jump off the bank lands the gecko in it and it floats
 # there, state swim, in the top half of a 160 px pool, instead of
 # sinking to the bottom and clinging (the particle world's body pusher

@@ -796,6 +796,21 @@ on the floor under it: curl to sleep and stay so, wake to stand, a
 reset ending either), and the gecko's state.
 The world's mouse actions ignore the mouse while it is over the panel.
 
+## The cost of a tick
+
+The bottom left of the screen shows the frame rate, the frame's time,
+the gecko's tick and the particle sim's tick and readback, each in ms
+with the worst since the last half second beside it, so a dropped
+frame shows up as a spike there. `GECKO_PROFILE=1` prints a `P` line
+every 60 ticks with the gecko tick's sections (ms a tick, mean and the
+worst single call): cling, chain, feet, probe, the squeeze's parts and
+so on. On 2026-10-21 the tick cost 2.7 ms on a flat floor, 1.8 of them
+the drawn body's ten surface probes, each a full 31 by 31 cell square
+(`probe`, whose centroid normal needs every cell); the body's points
+and the feet now use `nearest_solid`, which walks rings outward from
+the point and stops once no further ring can hold a nearer cell, and
+the tick is 0.9 ms. The squeeze itself adds about 0.3 ms a tick.
+
 ## Checking it without a hand on the keys
 
 `GECKO_DEMO=climb|tunnel|swim|tongue|pull|strike|notch|crevice|traverse|dig`
