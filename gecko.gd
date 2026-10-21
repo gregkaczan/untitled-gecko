@@ -106,6 +106,7 @@ const LINK := 8.0
 const MAX_BEND := 0.6             # Most a link of the airborne body bends from the one before (radians); clinging, the body lies along the head's path instead (_lay_body)
 const PATH_KEEP := 100.0          # Px of the base's track kept behind it: the body's length (72) and a little over
 const PATH_LOOK := 3.0            # Px of the track's end its direction is read over, so a sideways step of a fraction of a pixel does not pass for a turn
+const LAND_SETTLE := 12          # Ticks after a landing the base's track is held a straight line back along the surface from it, while the body settles to its ride height
 const PATH_MIN_SEG := 0.5         # A base move shorter than this moves the track's end rather than adding a point to it
 const SAG_STEP := 2.0             # Px a tick a body point's offset off the track (its sag onto the surface, its push off rock) may change...
 const SAG_K := 0.2                # ...or this fraction of the offset left, if more: the body landing from the air settles onto its lay in a quarter second
@@ -372,6 +373,8 @@ var _switched := false         # This tick the body switched surfaces (trace: a 
 var _switch_ticks := SWITCH_SETTLE   # Ticks since the last switch, up to SWITCH_SETTLE
 var _face_ticks := TURN_SETTLE       # Ticks since the facing changed, up to TURN_SETTLE
 var _facing_was := 1.0               # Last tick's facing
+var _land_ticks := 0           # Ticks left of the landing's straight track (LAND_SETTLE)
+var _land_dir := Vector2.ZERO  # The way the straight track runs back from the base
 var _tick_pos := Vector2.ZERO  # The body centre when this tick began: off the surface the drawn body is carried by what it moved (_update_chain)
 var _tick_free := false        # Off the surface (air, water, the tongue's pull) when this tick began
 var _swim_drive := false       # This tick a key drove the swim
@@ -1523,6 +1526,12 @@ func _update_pull(dt: float) -> void:
 func _land(n: Vector2) -> void:
 	landed.emit(vel.length())
 	clinging = true
+	# The drawn base starts on the body centre, no further from it than
+	# the last tick's fall: left a tick behind, it settled 5 px onto the
+	# floor through the across filter, and that settle was laid into the
+	# body's track as a step the points behind the neck stood up on.
+	_pos_s = pos
+	_land_ticks = LAND_SETTLE
 	up = n
 	_n_target = n
 	_grab_n = Vector2.ZERO
@@ -2562,10 +2571,13 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 		# is the body's length, and an along part (from a landing or the
 		# spawn pose, the cap below, a push off a corner cell slanting
 		# along the way) never decayed, so a body bunched on a ball
-		# stayed bunched the whole way round (filmed 2026-10-21). The
-		# neck keeps its push as it was: taken off along the neck, it
-		# moved a resting point between two equally near cells of a
-		# tunnel's roof, and the point flipped 1.2 px every few ticks.
+		# stayed bunched the whole way round (filmed 2026-10-21). Kept
+		# along the nearest cell's normal instead, a small tail point's
+		# nearest cell sat a little to one side and the point slid along
+		# the floor and back at rest. The neck keeps its push as it was:
+		# taken off along the neck, it moved a resting point between two
+		# equally near cells of a tunnel's roof, and the point flipped
+		# 1.2 px every few ticks.
 		if on_track:
 			var off := w_want - p
 			w_want = p + off - tdir * off.dot(tdir)
@@ -2602,10 +2614,40 @@ func _extend_path(h: Vector2) -> void:
 		_path.append(h - chain.heading * PATH_KEEP)
 		_path.append(h)
 		_fold_at = -1
+		_land_dir = chain.heading
+		return
+	# Just landed, the body settles to its ride height (a fall from
+	# height lands it 4 px deep and the ride nudge lifts it over four
+	# ticks, sliding on): the track stays the straight line it started
+	# as, moved with the base. Laid as it went, that settle was a step
+	# up at the track's end, and the points behind the neck stood on it,
+	# a hump that never went (filmed 2026-10-21).
+	if _land_ticks > 0:
+		_land_ticks -= 1
+		# Along the surface as up turns onto it (a landing on a corner
+		# turns the frame 40 degrees in those ticks): held the way it
+		# was at the landing, the line ran into the wall and the points
+		# laid on it stuck in the rock.
+		var t := _tangent()
+		_land_dir = t if t.dot(_land_dir) >= 0.0 else -t
+		_path[0] = h - _land_dir * PATH_KEEP
+		_path[1] = h
 		return
 	var last := _path.size() - 1
 	var move := h - _path[last]
 	if move.length() < 0.001:
+		return
+	# The base moving straight off or onto the surface with no walk (the
+	# body settling onto a floor after a landing, its across bounce
+	# easing out) takes the whole track with it: it is the same track,
+	# a little higher or lower. Added to it, the settle after a landing
+	# stood 5 px straight up at the track's end, the points behind the
+	# neck lay up that leg, and with their offset held across the track
+	# they could not sag down it: the body kept a hump (filmed
+	# 2026-10-21).
+	if _fold_at < 0 and absf(move.dot(_tangent())) < 0.05:
+		for k in _path.size():
+			_path[k] += move
 		return
 	var seg := _path_dir()
 	var back := -move.dot(seg)
@@ -2709,7 +2751,11 @@ func _thin_point(i: int, p: Vector2, q: Dictionary) -> Vector2:
 	var target := r
 	var out := p
 	var narrow := false
-	if q.found and q.dist < want + 2.0:
+	# A point sunk into rock is not in a passage, though it reads as the
+	# narrowest one (no air either way): thinned there, it was never
+	# pushed out, and a turn-around on a floor left the tail's points in
+	# the floor, the tail drawn in a zigzag for good (filmed 2026-10-21).
+	if q.found and q.dist < want + 2.0 and (_squeeze or not map.is_solid_world(p.round())):
 		var away: Vector2 = (p - q.nearest).normalized() if q.dist > 0.01 else up
 		# Spans from the point's whole pixel, so the middle they give is
 		# a fixed line the point settles on, not one that shifts half a

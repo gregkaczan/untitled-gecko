@@ -161,6 +161,18 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   scenes jump off a block 64, 200, 440 and 760 px high onto a floor and
   into a deep pool, steered on, let go, or steered back (the gecko
   catches the block's face).
+- After a landing the track is held a straight line back along the
+  surface for 12 ticks, turning with up, while the body settles to its
+  ride height (a fall lands it 4 px deep and the nudge lifts it out);
+  the drawn base starts on the body centre, and a base moving straight
+  off or onto the surface with no walk takes the whole track with it.
+  Laid as it went, that settle stood a few px straight up at the track's
+  end, the points behind the neck lay up it, and with their offset held
+  across the track they could not sag down it: a hump on the back after
+  every jump. A point whose centre sank into rock read as the narrowest
+  passage there is and was thinned, so it was never pushed out: a
+  turn-around on a floor left the tail zigzagging into it for good. A
+  point in rock is no longer in a passage outside a squeeze.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
