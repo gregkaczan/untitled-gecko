@@ -1,8 +1,8 @@
-# Scene driver for the gecko game: the first cave (levels/clutch.json,
-# the scene named LEVEL, built in the particle sim, or in the bitmap
-# stand-in with GECKO_WORLD=bitmap) with its loose lumps and its exit,
-# which pulls the camera back over the whole cave when the gecko gets
-# there; one gecko; a
+# Scene driver for the gecko game: a generated cave (seed OPEN_SEED)
+# built in the particle sim, or in the bitmap stand-in with
+# GECKO_WORLD=bitmap; the first cave (levels/clutch.json, the scene named
+# LEVEL, Shift+Tab) with its loose lumps and its exit, which pulls the
+# camera back over the whole cave when the gecko gets there; one gecko; a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
 # R to start the cave again (a fresh chamber when in a generated one),
 # F1 for debug mode (the gecko's overlay and a
@@ -56,7 +56,8 @@ const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
-const LEVEL := "clutch"        # The first cave: the scene the game opens on and Shift+Tab returns to
+const LEVEL := "clutch"        # The first cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0)
+const OPEN_SEED := 5           # The game opens in the generated cave with this seed; 0 opens on LEVEL instead
 const WIN_ZOOM := 0.85         # The camera's zoom once the gecko is out, the whole cave in view
 const WIN_PULL := 0.6          # How fast it pulls back (per second)
 const CAM_LIMIT := 1000000     # No camera limit, while the pull-back shows the rock round the cave
@@ -167,7 +168,7 @@ var sim: Sim
 var gecko: Gecko
 var blobs: BlobLayer
 var brush_r := 24.0
-var seed_value := 7
+var seed_value := OPEN_SEED if OPEN_SEED > 0 else 7
 var _label: Label
 var _camera: Camera2D
 var _cam := Vector2.ZERO       # The camera's eased position before pixel snapping
@@ -340,7 +341,7 @@ func _ready() -> void:
 		if sim:
 			sim.set_light(on))
 	_panel.anim_requested.connect(play_anim)
-	if picked.is_empty() and _demo_name == "":
+	if picked.is_empty() and _demo_name == "" and OPEN_SEED <= 0:
 		_pick_level()
 	_reset()
 	if OS.get_environment("GECKO_ANIM") != "":

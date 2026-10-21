@@ -326,8 +326,10 @@ and a seeded run repeats.
 
 ## The first cave
 
-`levels/clutch.json` (written by `tools/gen_clutch.py`) is the cave the
-game opens on: one world, the sim's whole 1920x1080 buffer, played from
+`levels/clutch.json` (written by `tools/gen_clutch.py`) is the first
+cave, reached with Shift+Tab (the game opens in a generated cave, seed
+5, `OPEN_SEED` in main.gd; 0 there opens on the clutch instead): one
+world, the sim's whole 1920x1080 buffer, played from
 a sealed pocket at the bottom left to a crack of light at the top, in
 an S: the bottom band runs right, the middle band left, the top band
 right. It is a scene in the suite's format (a base of terrain ops, a
