@@ -6,7 +6,7 @@ Runs: 201, passing: 198, failing: 3. Columns are event counts; * marks informati
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | clutch_pit:cl_pit | FAIL | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  |  | 628 | ok |
 | dig_45:dig_45 | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 186 | never reaches x 0..1920 y 900..1080 |
-| moss_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  | 596 | ok |
+| moss_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  | 554 | ok |
 | ball_hang:ball_round | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 7 |  |  | 816 | ok |
 | ball_hang:bounce | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 464 | ok |
 | boulder_120:boulder_big | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1385 | ok |
@@ -41,7 +41,7 @@ Runs: 201, passing: 198, failing: 3. Columns are event counts; * marks informati
 | clutch_shaft:cl_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 607 | ok |
 | clutch_turn:cl_turn | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 812 | ok |
 | corner_climb:wall_ceiling | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1612 | ok |
-| crumble_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 843 | ok |
+| crumble_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 840 | ok |
 | dig_level_wall:dig_level | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 335 | ok |
 | dig_shaft:dig_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 215 | ok |
 | dig_turns:dig_turns | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 520 | ok |
@@ -215,5 +215,5 @@ Runs: 201, passing: 198, failing: 3. Columns are event counts; * marks informati
 - outcome: never reaches x 0..1920 y 900..1080
 
 ### moss_wall:climb_wall
-- state_flicker: 1 events, worst 8: t225 (8)
+- state_flicker: 2 events, worst 8: t225 (8), t300 (8)
 

@@ -145,24 +145,22 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   travelled it, and folded behind a head that swung up onto a ledge and
   walked on. The airborne body still trails the head freely, each link
   bent at most 0.6 radians from the one before.
-- Off the surface (a jump, a fall, the water) the drawn body is carried
-  with the body centre, and only the head's swing about it is held to
-  6 px a tick. Held to 6 px outright, a fall from 760 px (20 px a tick
-  at the end) left the drawn gecko 400 px up: it fell out of the
-  camera, floated down after its own landing and stood on its tail
-  until the body had come down the neck (the player's "gliding" and
-  "inverts it tail down"). The body's line is level the way it flies,
-  tipped toward its flight by at most 35 degrees, so a falling gecko
-  stays belly down with its legs spread under it, and lands on them; up
-  turns back to the world's up in the air. Each point eases toward the
-  straight line behind the head a pixel and a half a tick, and the
-  bends are held from that line, not from the head's own motion (off
-  which the carried body curled into a U). The suite's `free_lag` (the
-  drawn head over 30 px from the body centre in the air or the water)
-  counted 624 ticks in 16 runs before, none after. The `drop_*` scenes
-  jump off a block 64, 200, 440 and 760 px high onto a floor and into a
-  deep pool, steered on, let go, or steered back (the gecko catches the
-  block's face).
+- Off the surface (a jump, a fall, the water) the drawn head is carried
+  with the body centre, and only its swing about it is held to 6 px a
+  tick. Held to 6 px outright, a fall from 760 px (20 px a tick at the
+  end) left the drawn gecko 400 px up: it fell out of the camera,
+  floated down after its own landing and stood on its tail until the
+  body had come down the neck (the player's "gliding" and "inverts it
+  tail down"). The body still trails the head through the world, head
+  first along the flight (the pose the player wants), and on landing
+  lies down onto the floor from there in about a third of a second.
+  Carrying the whole body and holding it belly down was tried and
+  withdrawn: the air pose was right as it was. The suite's `free_lag`
+  (the drawn head over 30 px from the body centre in the air or the
+  water) counted 624 ticks in 16 runs before, none after. The `drop_*`
+  scenes jump off a block 64, 200, 440 and 760 px high onto a floor and
+  into a deep pool, steered on, let go, or steered back (the gecko
+  catches the block's face).
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
