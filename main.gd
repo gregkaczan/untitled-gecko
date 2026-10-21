@@ -12,7 +12,8 @@
 # for the gecko's pixel grid (2 px like the rock, or 1 px), Tab or F2 for
 # the map editor (editor.gd), Ctrl+Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the first cave (the
-# keys drive the gecko in a scene loaded this way); the panel's New cave
+# keys drive the gecko in a scene loaded this way), F3 for the pose
+# editor (pose_editor.gd, a scene of its own); the panel's New cave
 # builds a generated chamber from its seed. GECKO_DUMP_MAP=file.png
 # writes the bitmap world's cells as a PNG and quits. The mouse buttons are
 # the gecko's: a left press shoots the tongue, which strikes what it
@@ -59,6 +60,7 @@ const Gecko = preload("res://gecko.gd")
 const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
+const PoseAnim = preload("res://pose_anim.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
 const LEVEL := "clutch"        # The first cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0)
@@ -368,7 +370,9 @@ func _ready() -> void:
 	_panel.sound_changed.connect(func(on: bool) -> void: AudioServer.set_bus_mute(0, not on))
 	_panel.light_changed.connect(set_light)
 	_panel.anim_requested.connect(play_anim)
-	_panel.set_overlay(OPEN_OVERLAY)
+	_panel.pose_editor_requested.connect(_open_pose_editor)
+	_panel.set_poses(PoseAnim.names())
+	_panel.set_overlay(OPEN_OVERLAY or OS.get_environment("GECKO_OVERLAY") == "1")   # GECKO_OVERLAY=1: the gecko's overlay on from the start (a headless look at it)
 	if picked.is_empty() and _demo_name == "":
 		if OPEN_SEED <= 0:
 			_pick_level()
@@ -1471,7 +1475,13 @@ func _edit_clear() -> void:
 	_dirty_v = false
 
 
-# --- The gecko's sprite animations (the debug panel's Curl and Wake) ---
+# --- The gecko's animations (the debug panel's Curl and Wake) ---
+#
+# The wake-up and the curl are the pose animation poses/wake.json made
+# in the pose editor (pose_anim.gd, pose_editor.gd), played on the
+# gecko's own body: forwards to wake, backwards and held to sleep, a
+# key waking it. Without that file the sprite frames from
+# decor/gecko/wake play over the hidden body instead.
 
 const ANIM_DIR := "res://decor/gecko/wake"
 const ANIM_FRAMES := 17        # wake_1x_00 (curled asleep) to wake_1x_16 (the standing sprite)
@@ -1481,6 +1491,7 @@ var _anim_tex: Array = []
 var _anim_name := ""           # "" none, "wake" curled to standing, "curl" the reverse, held asleep at its end
 var _anim_t := 0.0
 var _anim_input = null         # The gecko's input override before the animation froze it
+var _anim_pose := false        # The animation playing is the pose one (the gecko's play_pose), not the sprites
 
 
 func _anim_load() -> void:
@@ -1502,6 +1513,21 @@ func _anim_load() -> void:
 # gecko's 2 px grid and facing its way; the gecko is hidden and takes no
 # input meanwhile.
 func play_anim(name: String) -> void:
+	# wake and curl are the wake file forwards and backwards; any other
+	# name is a pose file of its own, played forwards (the panel's Pose
+	# row, GECKO_ANIM): its last frame should be the standing pose.
+	var file := PoseAnim.WAKE if (name == "wake" or name == "curl") else name
+	if PoseAnim.exists(file):
+		var frames := PoseAnim.load_head(file)
+		if not frames.is_empty():
+			_anim_stop()
+			_anim_name = name
+			_anim_pose = true
+			gecko.play_pose(frames, name == "curl", name == "curl")
+			return
+	if name != "wake" and name != "curl":
+		push_warning("no pose file poses/%s.json" % name)
+		return
 	_anim_load()
 	if _anim_tex.is_empty() or _anim == null:
 		return
@@ -1532,6 +1558,12 @@ func _anim_show() -> void:
 func _anim_tick(dt: float) -> void:
 	if _anim_name == "":
 		return
+	if _anim_pose:
+		if not gecko.posing:
+			_anim_stop()   # The wake-up ran out: the gecko has its body back
+		elif gecko.pose_held() and gecko.input_override == null and (Input.get_vector("move_left", "move_right", "move_up", "move_down").length() > 0.2 or Input.is_action_just_pressed("jump")):
+			play_anim("wake")   # Asleep: a key wakes it
+		return
 	_anim_t += dt
 	if _anim_t >= ANIM_FRAMES * ANIM_STEP:
 		if _anim_name == "wake":
@@ -1547,8 +1579,18 @@ func _anim_stop() -> void:
 	_anim_name = ""
 	_anim.visible = false
 	gecko.body_hidden = false
-	gecko.input_override = _anim_input
-	_anim_input = null
+	if _anim_pose:
+		_anim_pose = false
+		gecko.stop_pose()
+	else:
+		gecko.input_override = _anim_input
+		_anim_input = null
+
+
+# The pose editor (pose_editor.gd), a scene of its own: F3 or the
+# panel's Poses button. F3 or Esc there comes back to a fresh game.
+func _open_pose_editor() -> void:
+	get_tree().change_scene_to_file.call_deferred("res://pose_editor.tscn")
 
 
 # Gas pockets from the authored cells (painted ones have no op): each
@@ -1989,6 +2031,8 @@ func _process(_dt: float) -> void:
 			edit_home()
 	if Input.is_action_just_pressed("debug_toggle"):
 		_set_debug(not _debug)
+	if Input.is_action_just_pressed("pose_editor"):
+		_open_pose_editor()
 	if Input.is_action_just_pressed("render_coarse"):
 		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
 		_panel.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)

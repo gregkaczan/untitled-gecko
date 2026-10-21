@@ -461,6 +461,73 @@ at its closing phase. The face has its own random generator, seeded
 from `GECKO_SEED`, so the suite's seeded bites and steps are untouched
 and a seeded run repeats.
 
+## Where the body lies over itself
+
+The metaballs merge the whole body into one silhouette, so a tail
+tucked along the flank or a head laid on the body would vanish into
+it. Two chain points at least three links apart whose discs reach into
+each other mark the one farther from the body's middle (the tail, the
+head) as lying on top (`gecko.gd _over_points`); its blobs are drawn
+after the rest and flagged, and the blob layer draws them as flat
+discs into the density's blue channel as well as splats into the red.
+The metaball shader then darkens the pixel ring just outside those
+discs where it falls inside the body and off the body's own rim
+(`over_darken`, a third): the terminator between the two parts, a
+one-pixel shadow that follows the metaball's own grid. The sleeping
+pose shows the tail as a tapered strip along the flank this way, and
+the body folding on a turn-around gets the same crease.
+
+## Pose animations and the pose editor
+
+The wake-up (and the curl to sleep, the same backwards) is a pose
+animation: frames of the gecko's own chain, feet and look, in the
+gecko's frame (the surface line at y = 0, up along -y, the walk's
+facing along +x), the eye as an offset on the head's disc (riding
+with the look unless placed by hand), each with the seconds to the
+next, an ease (smooth, linear, in, out) and whether the eye is shut
+(asleep). Playback (`pose_anim.gd`) blends frame to
+frame in link space, each link's angle and length, so a curled body
+unrolls through the blend instead of shrinking through it as blended
+points would; the head and the feet blend as points. A link that turns
+more than 150 degrees between two frames (the tail tucked forward
+along the flank when asleep, laid out behind when awake) is pulled
+through instead of swung round: its drawn length shrinks to nothing
+and grows back the other way, the side view of a tail curling round
+sideways, as the body folds on a turn-around. While one plays
+the gecko's tick sets the body from the blend and the physics waits
+(`gecko.gd play_pose`); the keys do nothing. At the end the body is
+handed back from where the last frame left it: the track starts over,
+so the landing branch of the lay eases the body onto its lay in a
+quarter second, and the feet stand planted where the pose put them.
+A last frame near the rest pose (the editor's Standing: the settled
+pose read off the suite's flat:idle trace) hands over without a jump.
+The curl plays the frames backwards and holds the first (asleep) until
+Wake, a key or a reset. The panel's Pose row plays any file in
+`poses/` by name (`GECKO_ANIM=name` too); `tools/gen_poses.py`
+wrote the first wake-up and a meerkat stand (`poses/meerkat.json`,
+up on the hind legs with the tail as a prop, a look round, and down)
+from link angles, for the editor to take over.
+
+The pose editor (`pose_editor.gd`, F3 in the game or
+`tools/pose_editor.sh`) is a scene of its own: one gecko drawn by the
+blob layer as in the game, at a zoom of 4, the frames as cards along
+the top (the chain in small, the seconds), a panel down the left. The
+chain's points, the feet, the look and the eye are handles: a dragged
+point pulls the body after it like a rope (every link keeps its
+length), Shift moves the one point, Ctrl drags the whole pose; the eye
+stays on the head's disc, and Eye to look hands it back to the look. The onion skin
+draws the frame before in blue and after in orange. + adds a copy of
+the frame after it, - takes it away, < and > move it; Standing,
+Mirror, Even links (every link back to 8 px), Feet down, Copy previous
+and Copy next replace the frame's pose. Play runs the blend (Loop,
+Reverse for the curl, a speed), the slider scrubs. Files live under
+`poses/` as the levels do: versions `poses/<name>/vNNNN.json`, an auto
+version a minute while there are edits (the last ten kept) and on
+leaving, and Save writes a saved version and the head
+`poses/<name>.json`, what the game plays; New and Load as the map
+editor's. The file named `wake` is the wake-up; `GECKO_POSE=name`
+opens another. Ctrl+Z and Ctrl+Y undo and redo, ? lists the keys.
+
 ## The first cave
 
 `levels/clutch.json` (written by `tools/gen_clutch.py`) is the first
@@ -869,10 +936,15 @@ vector, probe reach, feet, bite) and a panel down the right of the
 screen with the scene list to click into, main cave and reload, the
 cave seed and New cave for a generated chamber, the brush radius, the
 time scale, pause and a single-tick
-step, the pixel grid and the overlay toggle, Curl and Wake (the gecko's
-sprite animations from `decor/gecko/wake`, played over the hidden body
-on the floor under it: curl to sleep and stay so, wake to stand, a
-reset ending either), and the gecko's state.
+step, the pixel grid and the overlay toggle, Curl and Wake (the pose
+animation `poses/wake.json` on the gecko's own body, see below: curl to
+sleep and stay so until a key, wake to stand, a reset ending either;
+without that file the sprite frames from `decor/gecko/wake` play over
+the hidden body instead), Poses for the pose editor, and the gecko's
+state. The overlay draws the chain too: a ring at each point's drawn
+radius, the links, the hips the legs hang from in blue, the look off
+the head in orange and the base's track the body lies along in purple.
+F3 opens the pose editor (and leaves it).
 The world's mouse actions ignore the mouse while it is over the panel.
 
 ## The cost of a tick
@@ -907,6 +979,11 @@ the gecko's screen position, the tick, the camera's centre as shown,
 the drawn body's seat on the screen and in the world, and whether the
 camera has let go of the gecko at the exit; `tools/strip.sh` turns
 movie-mode frames into a contact sheet cropped around the gecko.
+`GECKO_ANIM=wake|curl` plays an animation at the start, `GECKO_OVERLAY=1`
+turns the gecko's overlay on from the start (the chain and its track in
+a recording), and the pose editor records like any scene:
+`godot --path . --write-movie dir/f.png --fixed-fps 30 --quit-after 12
+res://pose_editor.tscn` on the virtual display.
 
 The movement suite is the regression gate for any movement change:
 

@@ -30,6 +30,7 @@ signal pricked(at: Vector2)    # Thrown off thorns there
 signal blasted                 # A gas burst threw the gecko
 
 const Chain = preload("res://chain.gd")
+const PoseAnim = preload("res://pose_anim.gd")
 
 const WALK_SPEED := 130.0
 const WALK_ACCEL := 1600.0
@@ -187,6 +188,7 @@ const TONGUE_COLOR := Color(0.80, 0.42, 0.48)
 const FAR_LEG_COLOR := Color(0.34, 0.40, 0.24)
 const EYE_COLOR := Color.BLACK
 const MOUTH_COLOR := Color(0.24, 0.08, 0.10)
+const OVER_TOUCH := 0.9        # Two chain points at least three links apart whose discs reach into each other by this fraction of their radii: one lies over the other
 const LIFT_EASE := 1.0         # Px a tick the drawn body's lift moves between its lifted line and a passage's middle
 const IDLE_AFTER := 2.0        # Seconds of nothing happening before the idle animations begin
 const IDLE_GAP_MIN := 1.5      # Seconds between one idle animation and the next
@@ -240,6 +242,18 @@ var look := Vector2.RIGHT      # Where the head points: toward the mouse, within
 var _pos_s := Vector2.ZERO     # Body centre with its across-surface bounce filtered out, for the drawn body
 var input_override = null      # Vector2 from the demo pilot, null for real input
 var body_hidden := false            # The body not drawn: a sprite animation stands in (main.gd play_anim)
+var posing := false            # A pose animation drives the body: the tick plays it, the physics waits (play_pose)
+var _pose_frames: Array = []   # Its frames (pose_anim.gd)
+var _pose_t := 0.0             # Seconds into it
+var _pose_reverse := false     # Played from the last frame to the first (the curl)
+var _pose_hold := false        # At the end the last pose stays (asleep) until stop_pose
+var _pose_done := false        # The end reached
+var _pose_base := Vector2.ZERO # The frame the poses are set in: the surface point under the body, its up and facing when the animation began
+var _pose_up := Vector2.UP
+var _pose_facing := 1.0
+var _pose_shut := false        # The pose shown has the eye shut (asleep)
+var _pose_eye := Vector2.ZERO  # The pose's eye as a world offset from the head (a pose places it; otherwise it rides with the look)
+var _pose_eye_on := false
 var jump_override := false
 var chew_override := false
 var lmb_override := false      # Demo pilot's left button
@@ -447,6 +461,18 @@ var _prof_max := {}            # Section name -> the worst single call since the
 
 func _physics_process(dt: float) -> void:
 	_tick_t0 = Time.get_ticks_usec()
+	if posing:
+		# A pose animation drives the body: the tick plays it and the
+		# physics waits (play_pose).
+		_pose_tick(dt)
+		_tick += 1
+		_push_blobs()
+		queue_redraw()
+		_under.queue_redraw()
+		_debug_layer.queue_redraw()
+		tick_us = Time.get_ticks_usec() - _tick_t0
+		ticked.emit()
+		return
 	var inp := _read_input()
 	var jump := _read_jump()
 	_blocked = false
@@ -2914,13 +2940,25 @@ func _push_blobs() -> void:
 	if _gulp > 0.0:
 		gulp_at = (1.0 - _gulp / GULP_TIME) * 4.0
 	_tube_full = 0
+	# Where the body lies over itself (the tail tucked along the flank in
+	# a curl, the head laid on the body) the part on top is drawn after
+	# the rest and flagged, so the blob layer darkens its own edge inside
+	# the body: the terminator between the two (metaball.gdshader).
+	var over := _over_points()
+	var under_list: Array = []
+	var over_list: Array = []
 	for i in chain.size():
 		var r_i: float = _draw_r[i]
 		if gulp_at >= 0.0:
 			r_i += 3.5 * maxf(0.0, 1.0 - absf(i - gulp_at))
-		list.append([chain.points[i], r_i, BODY_COLOR])
+		var on_top: bool = over[i] == 1
+		var dst: Array = over_list if on_top else under_list
+		dst.append(_blob(chain.points[i], r_i, on_top))
 		if i == 0:
 			continue
+		if over[i - 1] == 1:
+			dst = over_list
+			on_top = true
 		if (_thin_on[i] or _thin_on[i - 1]) and (_draw_r[i] < chain.radii[i] - 1.0 or _draw_r[i - 1] < chain.radii[i - 1] - 1.0):
 			# A segment thinned to a passage is drawn as a tube: blobs
 			# every 2 px, so its edge is straight rather than scalloped,
@@ -2933,7 +2971,7 @@ func _push_blobs() -> void:
 				_tube_full += 1
 			for k in range(1, 4):
 				var t := k / 4.0
-				list.append([chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), BODY_COLOR])
+				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], t), lerpf(_draw_r[i - 1], _draw_r[i], t), on_top))
 		elif _draw_r[i] < 4.5:
 			# Thin tail segments get filler blobs between them, so the tail
 			# renders as a line rather than a row of dots; the thinnest get
@@ -2941,13 +2979,39 @@ func _push_blobs() -> void:
 			var r_mid: float = (_draw_r[i - 1] + _draw_r[i]) * 0.5
 			if _draw_r[i] < 3.0:
 				for k in range(1, 4):
-					list.append([chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, BODY_COLOR])
+					dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], k / 4.0), r_mid, on_top))
 			else:
-				list.append([chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, BODY_COLOR])
-	var marks := _face(list)
+				dst.append(_blob(chain.points[i - 1].lerp(chain.points[i], 0.5), r_mid, on_top))
+	list.append_array(under_list)
+	list.append_array(over_list)
+	var marks := _face(list, over[0] == 1)
 	_leg_blobs(list, 1.0, BODY_COLOR)
 	blobs.set_blobs([] if body_hidden else list)
 	blobs.set_marks([] if body_hidden else marks)
+
+
+func _blob(p: Vector2, r: float, on_top: bool) -> Array:
+	return [p, r, BODY_COLOR, true] if on_top else [p, r, BODY_COLOR]
+
+
+# Which chain points lie over another part of the body: of two points
+# at least three links apart whose discs reach into each other, the one
+# farther from the body's middle (the tail, the head) is on top.
+func _over_points() -> PackedByteArray:
+	var n := chain.size()
+	var over := PackedByteArray()
+	over.resize(n)
+	over.fill(0)
+	for i in n:
+		for j in range(i + 3, n):
+			var pi: Vector2 = chain.points[i]
+			var pj: Vector2 = chain.points[j]
+			if pi.distance_to(pj) < (_draw_r[i] + _draw_r[j]) * OVER_TOUCH:
+				if absi(i - 2) >= absi(j - 2):
+					over[i] = 1
+				else:
+					over[j] = 1
+	return over
 
 
 func _leg_blobs(list: Array, side: float, color: Color) -> void:
@@ -2980,13 +3044,13 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 # (added to list) below it and opens the dark inside of the mouth
 # between them, the eye shut while it gapes. A lick runs the tongue
 # from the mouth round the snout's tip to the eye and back.
-func _face(list: Array) -> Array:
+func _face(list: Array, head_over := false) -> Array:
 	var marks: Array = []
-	var eye := chain.points[0] + look * 3.5 + up * 1.0
+	var eye := chain.points[0] + (_pose_eye if _pose_eye_on else look * 3.5 + up * 1.0)
 	var ax := _axis(up)
 	var across := ax.abs()
 	var along := Vector2.ONE - across
-	var shut := false
+	var shut := _pose_shut   # A pose asleep: the eye shut as in a blink
 	var gape := 0.0
 	var lick := 0.0
 	var ph := _anim_phase()
@@ -3009,12 +3073,12 @@ func _face(list: Array) -> Array:
 	# shutting, to CHEW_MOUTH at the widest.
 	var chew := _gape_chew and _gape >= gape
 	gape = maxf(gape, _gape)
-	list.append([chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, BODY_COLOR])
+	list.append(_blob(chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, head_over))
 	if gape > 0.0:
 		# The mouth goes under the eye: at its widest its top row can
 		# share the eye's row on the pixel grid.
 		if not chew:
-			list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
+			list.append(_blob(chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, head_over))
 		var h := minf(gape, CHEW_MOUTH) if chew else gape
 		var size := along * 6.0 + across * (h + 1.0)
 		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
@@ -3120,6 +3184,118 @@ func _next_anim() -> String:
 	return _anim_bag.pop_back()
 
 
+# --- Pose animations (pose_anim.gd): the wake-up and the curl ---
+#
+# Frames of the chain, the feet and the look in the gecko's own frame,
+# made in the pose editor (pose_editor.gd, F3). Playing one, the tick
+# sets the body from the blended frame instead of running the physics,
+# and the keys do nothing. At the end the body is handed back to the
+# physics from where the last frame left it: the track starts over (the
+# landing branch of _lay_body eases the body from its pose onto its lay
+# in a quarter second) and the feet stand planted where the pose put
+# them, so a last frame near the rest pose hands over without a jump.
+
+func play_pose(frames: Array, reverse := false, hold := false) -> void:
+	if frames.is_empty():
+		return
+	_pose_frames = frames
+	_pose_t = 0.0
+	_pose_reverse = reverse
+	_pose_hold = hold
+	_pose_done = false
+	_pose_base = pos - up * RIDE_H
+	_pose_up = up
+	_pose_facing = facing
+	if tongue_out:
+		_release_tongue()
+	chewing = false
+	_anim = ""
+	_gape = 0.0
+	_gulp = 0.0
+	_release_settle()
+	posing = true
+	_pose_tick(0.0)
+
+
+func stop_pose() -> void:
+	if not posing:
+		return
+	posing = false
+	_pose_done = false
+	_pose_shut = false
+	_pose_eye_on = false
+	_path.clear()
+	_fold_at = -1
+	_pos_s = pos
+	for f in feet:
+		f.planted = true
+		f.stepping = false
+		f.anchor = f.pos
+	_idle_t = 0.0
+	_face_ticks = 0
+	_release_settle()
+
+
+# Asleep: the animation played to its end and holds its last pose.
+func pose_held() -> bool:
+	return posing and _pose_done
+
+
+func _pose_tick(dt: float) -> void:
+	_pose_t += dt
+	var tot := PoseAnim.total(_pose_frames)
+	# Played backwards, the last frame's hold at the end would be a
+	# hold at the start: the span runs to the last frame itself.
+	var span := tot - float(_pose_frames[_pose_frames.size() - 1].dur) if _pose_reverse else tot
+	if _pose_t >= span:
+		_pose_t = span
+		_pose_done = true
+	var t := span - _pose_t if _pose_reverse else _pose_t
+	pose_apply(PoseAnim.sample(_pose_frames, t), _pose_base, _pose_up, _pose_facing)
+	if _pose_done and not _pose_hold:
+		stop_pose()
+
+
+# The body set from a pose in the frame given: the chain's points, the
+# feet (drawn where the pose has them, so their anchors sit FOOT_LIFT
+# under), the look; the drawn radii whole, the body clinging.
+func pose_apply(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float) -> void:
+	up = up_dir
+	_n_target = up_dir
+	facing = facing_dir
+	_chain_facing = facing_dir
+	clinging = true
+	swimming = false
+	_lift = BODY_LIFT
+	var pts: PackedVector2Array = p.points
+	for i in chain.size():
+		chain.points[i] = PoseAnim.to_world(pts[i], base, up_dir, facing_dir)
+		_draw_r[i] = chain.radii[i]
+		_thin_on[i] = 0
+	var neck := chain.points[0] - chain.points[1]
+	chain.heading = neck.normalized() if neck.length() > 0.001 else _tangent() * facing_dir
+	var fp: PackedVector2Array = p.feet
+	for k in feet.size():
+		var f: Foot = feet[k]
+		f.pos = PoseAnim.to_world(fp[k], base, up_dir, facing_dir) - up_dir * FOOT_LIFT
+		f.up = up_dir
+		f.planted = true
+		f.stepping = false
+	look = PoseAnim.dir_to_world(p.look, up_dir, facing_dir)
+	_pose_shut = bool(p.get("shut", false))
+	_pose_eye = PoseAnim.vec_to_world(p.get("eye", PoseAnim.eye_for(p.look)), up_dir, facing_dir)
+	_pose_eye_on = true
+
+
+# The pose editor's view: the body set and drawn, nothing ticking.
+func pose_show(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float) -> void:
+	pose_apply(p, base, up_dir, facing_dir)
+	_push_blobs()
+	queue_redraw()
+	_under.queue_redraw()
+	_debug_layer.queue_redraw()
+
+
 func _draw() -> void:
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
@@ -3145,6 +3321,19 @@ func _draw_debug() -> void:
 	for f in feet:
 		var col := Color(0.2, 1.0, 0.3) if f.planted else (Color(1.0, 0.9, 0.2) if f.stepping else Color(1.0, 0.2, 0.2))
 		c.draw_rect(Rect2(f.pos - Vector2(2.5, 2.5), Vector2(5.0, 5.0)), col, false, 1.0)
+	# The chain: the base's track the body lies along, each point's ring
+	# at its drawn radius, the links between them, the hips the legs hang
+	# from in blue, the look off the head in orange.
+	for i in range(1, _path.size()):
+		c.draw_line(_path[i - 1], _path[i], Color(0.9, 0.5, 1.0, 0.4), 1.0)
+	for i in chain.size():
+		var p: Vector2 = chain.points[i]
+		if i > 0:
+			c.draw_line(chain.points[i - 1], p, Color(1.0, 1.0, 1.0, 0.6), 1.0)
+		c.draw_arc(p, _draw_r[i], 0.0, TAU, 20, Color(1.0, 1.0, 1.0, 0.22), 1.0)
+		var hip := i == FRONT_HIP or i == BACK_HIP
+		c.draw_circle(p, 1.6 if hip else 1.1, Color(0.6, 0.85, 1.0) if hip else Color(1.0, 1.0, 1.0, 0.9))
+	c.draw_line(chain.head(), chain.head() + look * 12.0, Color(1.0, 0.72, 0.3, 0.9), 1.0)
 
 
 func debug_text() -> String:

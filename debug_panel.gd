@@ -19,7 +19,8 @@ signal sense_changed(cell: float)   # The senses' grid: 2 px (the sim's cells) o
 signal crumb_changed(n: int)        # Crumbs of up to n cells are air to the senses and loosened by the body's touch; 0 for none
 signal overlay_changed(on: bool)
 signal light_changed(on: bool)
-signal anim_requested(name: String)   # The gecko's sprite animations (decor/gecko/wake): "curl" to sleep, "wake" up (main.gd play_anim)
+signal anim_requested(name: String)   # The gecko's animations: "curl" to sleep, "wake" up (main.gd play_anim: poses/wake.json, or the sprites in decor/gecko/wake)
+signal pose_editor_requested          # The pose editor scene (pose_editor.gd, F3)
 
 const WIDTH := 300.0
 
@@ -34,6 +35,7 @@ var _sense: OptionButton
 var _sound: CheckButton
 var _light: CheckButton
 var _crumb: SpinBox
+var _poses: OptionButton
 var _status: Label
 
 
@@ -68,6 +70,17 @@ func _ready() -> void:
 	anim_row.add_child(_label("Anim"))
 	anim_row.add_child(_button("Curl", func() -> void: anim_requested.emit("curl")))
 	anim_row.add_child(_button("Wake", func() -> void: anim_requested.emit("wake")))
+	anim_row.add_child(_button("Poses (F3)", func() -> void: pose_editor_requested.emit()))
+	var pose_row := HBoxContainer.new()
+	col.add_child(pose_row)
+	pose_row.add_child(_label("Pose file"))
+	_poses = OptionButton.new()
+	_poses.focus_mode = Control.FOCUS_NONE
+	_poses.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pose_row.add_child(_poses)
+	pose_row.add_child(_button("Play", func() -> void:
+		if _poses.selected >= 0:
+			anim_requested.emit(_poses.get_item_text(_poses.selected))))
 
 	col.add_child(HSeparator.new())
 	col.add_child(_heading("World"))
@@ -172,6 +185,13 @@ func select_scene(i: int) -> void:
 		return
 	_scenes.select(i)
 	_scenes.ensure_current_is_visible()
+
+
+# The pose files in poses/ for the Pose row (main.gd play_anim plays one by name).
+func set_poses(names: Array) -> void:
+	_poses.clear()
+	for n in names:
+		_poses.add_item(String(n))
 
 
 func set_seed(v: int) -> void:

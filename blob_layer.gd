@@ -6,7 +6,13 @@
 # of pixel_sz world units: 1 px by default, twice as fine as the
 # terrain's, or 2 px to share the rock's grid (keys 1 and 2 in main.gd).
 #
-# Usage per frame: set_blobs([[pos, radius, color], ...]), and
+# Usage per frame: set_blobs([[pos, radius, color], ...]), a fourth
+# element true for a blob of a part lying over the rest of the same
+# body (the gecko's tail tucked along its flank, its head laid on its
+# body): a flat disc of its visible size goes into the density's blue
+# channel as well, and the shader darkens the pixel ring just outside
+# those discs inside the merged silhouette, the terminator the
+# metaballs would not show; and
 # set_marks([[pos, size, color], ...]) for flat rectangles (an eye, a
 # mouth) drawn over the composite on the same pixel grid, so they come
 # out as crisp as the body does; size is a float for a square or a
@@ -29,6 +35,9 @@ const PIXEL_SZ_FINE := 1.0      # The gecko draws at 1 px pixels over 2 px rock
 const PIXEL_SZ_COARSE := 2.0    # The old look: the gecko shares the rock's grid
 const SPLAT_SCALE := 1.6     # Splat draw radius over the body radius
 const SPLAT_TEX_SIZE := 64
+const SPLAT := Color(1.0, 1.0, 0.0, 1.0)   # Every splat into red (the body's density; green is spare)
+const OVER := Color(0.0, 0.0, 1.0, 1.0)    # A part on top: a flat disc into blue as well
+const VISIBLE := 1.15        # A blob's visible radius over its body radius in a run of blobs (alone 1.06: the kernel at the threshold)
 
 var _density_vp: SubViewport
 var _color_vp: SubViewport
@@ -162,7 +171,9 @@ func _draw_density() -> void:
 		var pos: Vector2 = (blob[0] - origin) / pixel_sz
 		var r: float = blob[1] / pixel_sz * SPLAT_SCALE
 		var rect := Rect2(pos - Vector2(r, r), Vector2(r * 2.0, r * 2.0))
-		_density_canvas.draw_texture_rect(_splat_tex, rect, false)
+		_density_canvas.draw_texture_rect(_splat_tex, rect, false, SPLAT)
+		if blob.size() > 3 and blob[3]:
+			_density_canvas.draw_circle(pos, blob[1] / pixel_sz * VISIBLE, OVER)
 
 
 func _draw_color() -> void:
