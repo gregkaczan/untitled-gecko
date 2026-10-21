@@ -58,6 +58,7 @@ const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
+var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
 const LEVEL := "clutch"        # The first cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0)
 const OPEN_SEED := 5           # The game opens in the generated cave with this seed; 0 opens on LEVEL instead
 const OPEN_DEBUG := true       # A hand-played run (no GECKO_SCENE or GECKO_DEMO) starts in debug mode, as after F1
@@ -1805,9 +1806,20 @@ func _run_demo(dt: float) -> void:
 		gecko.chew_override = false
 		gecko.lmb_override = false
 		gecko.aim_override = Vector2.ZERO
+		if _stay and not _scene.is_empty():
+			_demo_step = -1
+			gecko.input_override = null
+			_hint = "the script is done: the keys are yours (R rebuilds the scene, Tab the next one)"
+			_hint_t = 6.0
+			return
 		if not _scene.is_empty():
 			_scene_done = maxf(_scene_done, 0.0) + dt
 			if _scene_done >= SCENE_SETTLE:
+				# GECKO_DUMP_END=file.png: the bitmap world's cells as the
+				# script left them (a dug tunnel), for a look.
+				var dump := OS.get_environment("GECKO_DUMP_END")
+				if dump != "" and not sim:
+					map.save_png(dump)
 				get_tree().quit()
 		return
 	var step: Array = _demo[_demo_step]

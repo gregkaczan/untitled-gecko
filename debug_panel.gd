@@ -149,7 +149,7 @@ func _ready() -> void:
 	col.add_child(_overlay)
 	var light := CheckButton.new()
 	light.text = "Light (off: the whole cave lit)"
-	light.button_pressed = true
+	light.button_pressed = OS.get_environment("GECKO_LIGHT") == "1"   # Off by default, as sim.gd light_on
 	light.focus_mode = Control.FOCUS_NONE
 	light.toggled.connect(func(on: bool) -> void: light_changed.emit(on))
 	col.add_child(light)

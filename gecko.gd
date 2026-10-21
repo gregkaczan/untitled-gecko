@@ -123,7 +123,8 @@ const REACH := 24.0            # How far past the body clearance a wall beside t
 const GRAB_PULL := 90.0        # Speed the body closes on a wall it is turning onto (px/s)
 const MAX_TURN_DOT := -0.35    # No turn onto a surface more than ~110 degrees from up (no flips)
 const SQUEEZE_D := 20.0        # Rock this close on both sides along the tangent = wedged in a crevice
-const SQUEEZE_MIN := 11.0      # Narrowest passage the body squeezes through (px between its walls; cells are 4)
+const SQUEEZE_MIN := 10.0      # Narrowest passage the body squeezes into (px between its walls, on 2 px cells): a tongue strike's dent (STRIKE_R and the carve pad) is this tall, so a tunnel dug with taps can be entered
+const SQUEEZE_THROAT := 8.0    # Narrowest column threaded inside a passage: the throat between two strikes' dents. Narrower is a bump the walk stops at
 const SQUEEZE_MAX := 19.0      # Widest passage that is a squeeze; from 20 px the body walks at its full clearance
 const SQUEEZE_BLOCKED := 24.0  # ...unless the walk is blocked at its mouth: a ragged passage reads wider at the scan's column than at its narrowest, so one up to this tall is squeezed into when the body cannot enter it at full clearance
 const SQUEEZE_RECOVER := 0.5   # Px a tick the clearance grows back after a squeeze, so the body eases out, never pops
@@ -191,6 +192,16 @@ const YAWN_TICKS := [5, 16, 4]   # Mouth opening, agape, closing
 const YAWN_GAPE := 6.0           # Px the jaw drops at the widest
 const LICK_SAMPLES := 20         # Marks along the tongue's curve at full stretch
 const THIN_RELEASE := 1.0        # Most a point whose drawn radius is still growing back from a thinning is pushed off rock in one tick
+const SETTLE_REV := 2          # Reversals of a drawn point's or a foot's motion at rest before the body is held still (the settle latch): a rattle may go back and forth twice
+const SETTLE_FAR := 6.0        # A point this far from where its first reversal was counted is going somewhere, not rattling: its count starts over
+const SETTLE_MOVED := 1.0      # The body centre moved this far by something else while held (a lump, a current, sand): the hold lets go
+const SWITCH_REACH := 28.0     # The opposite surface this close to the body centre (a leg's reach, MAX_LEG) is switched to by a press straight away from a floor or ceiling: the frame flips, the feet step across
+const SWITCH_HOLD := 6         # Ticks the back feet wait after a switch, so the front legs reach the new surface first
+const SWITCH_SETTLE := 30      # Ticks after a switch during which the body is not at rest to the settle latch: the feet are crossing over
+const TURN_SETTLE := 20        # Ticks after the facing changes during which the body is not at rest to the latch: the head swings round and the body folds behind it
+const HEAD_FAR := 7.0          # A drawn head this far from its target is travelling (a swing round, the chain catching up after a landing), not rattling
+const SETTLE_TURN := 0.002     # Up turning faster than this a tick (radians) is a body still following its surface, not at rest
+const HEAD_PUSH := 3.0         # Most the head is pushed off rock in one tick in a squeeze: at a mouth, before the walls take it, the body's full clearance shoved it 7 px in a tick
 
 
 class Foot:
@@ -204,6 +215,7 @@ class Foot:
 	var step_from := Vector2.ZERO
 	var step_to := Vector2.ZERO
 	var step_t := 0.0
+	var up := Vector2.UP      # The surface up the foot was planted or sent with: its drawn lift is along it, so a foot still on the old surface after a switch stands on that surface
 
 
 var map: Node2D
@@ -263,6 +275,7 @@ var _debug_layer: Node2D
 var _under: Node2D             # Drawn beneath the body: the tongue, so it emerges from the snout
 var _last_probe := {}
 var _block_normal := Vector2.ZERO
+var _walk_bn := Vector2.ZERO    # The normal of the rock that stopped this tick's walk (trace): _block_normal is the last failed move's, a nudge's as often as not
 var _bridging := false         # Crossing a gap shorter than the body: keep the line, no nudge, no drop
 var _blocked := false          # This tick's walk was stopped by rock (trace)
 var _squeezed_f := false       # This tick the body was wedged in a crevice (trace)
@@ -317,6 +330,21 @@ var _rng := RandomNumberGenerator.new()  # The face's own generator, so the suit
 var _tick := 0
 var _trace := OS.get_environment("GECKO_TRACE") != ""
 var _inp := Vector2.ZERO       # This tick's input vector (trace)
+var _settled := false          # The settle latch: at rest the drawn body rattled SETTLE_REV times and is held still until the player does something (_update_settle)
+var _settle_on := OS.get_environment("GECKO_NO_SETTLE") == ""   # GECKO_NO_SETTLE=1 turns the hold off (the count goes on), to see a loop whole in the trace
+var _settle_last := PackedVector2Array()   # Last tick's rounded chain points
+var _settle_dir := PackedVector2Array()    # Each point's last displacement
+var _settle_from := PackedVector2Array()   # Where each point's first reversal was counted
+var _settle_rev := PackedInt32Array()      # Each point's reversals in a row at rest
+var _settle_n := 0             # The most reversals any point has (trace)
+var _settle_i := -1            # Which chain point (trace)
+var _settle_pos := Vector2.ZERO            # The body centre when the latch took hold
+var _switch_hold := 0          # Ticks left of the back feet waiting after a surface switch
+var _switched := false         # This tick the body switched surfaces (trace: a 180 degree turn by design)
+var _switch_ticks := SWITCH_SETTLE   # Ticks since the last switch, up to SWITCH_SETTLE
+var _face_ticks := TURN_SETTLE       # Ticks since the facing changed, up to TURN_SETTLE
+var _facing_was := 1.0               # Last tick's facing
+var _head_far := false               # This tick the drawn head was more than HEAD_FAR from its target
 
 
 func _ready() -> void:
@@ -389,6 +417,9 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 		f.planted = false
 		f.stepping = false
 		f.pos = chain.points[f.hip]
+		f.up = up
+	_face_ticks = 0
+	_release_settle()
 
 
 var tick_us := 0               # The last tick's time in microseconds, for GECKO_TIMING (main.gd)
@@ -404,6 +435,7 @@ func _physics_process(dt: float) -> void:
 	_s = 0.0
 	_n_dbg = Vector2.ZERO
 	_jumped = false
+	_switched = false
 	pulling = false
 	straining = false
 	_block_cell = null
@@ -452,6 +484,11 @@ func _physics_process(dt: float) -> void:
 		vel *= 0.4
 	elif swimming and not in_water:
 		swimming = false
+	# The settle latch lets go on anything the player does, on leaving
+	# the surface, and when something else has moved the body.
+	if _settled and (inp.length() > 0.2 or jump or _lmb or chewing or tongue_out or not clinging or swimming \
+			or pos.distance_to(_settle_pos) > SETTLE_MOVED or _planted() < MIN_FEET):
+		_release_settle()
 	if tongue_anchored and not clinging:
 		_update_pull(dt)
 	elif swimming:
@@ -471,6 +508,7 @@ func _physics_process(dt: float) -> void:
 	_push_body()
 	_update_look(dt)
 	_update_feet(dt)
+	_update_settle(inp)
 	_update_idle(inp, dt)
 	_tick += 1
 	# Thorns: the cell that stopped a move this tick, in any state (a
@@ -524,13 +562,13 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
-		_block_normal.x, _block_normal.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
-		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, cp, fs])
+		_walk_bn.x, _walk_bn.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
+		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, _head_back, _lift, 1 if _settled else 0, _settle_n, _settle_i, 1 if _switched else 0, cp, fs])
 
 
 # in, out, stuck, grapple, drag, strain, back: what the tongue is doing (trace, panel).
@@ -771,6 +809,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		_burrowing = not blocked
 	map.ignore_chunks = ignoring
 	_blocked = blocked
+	_walk_bn = _block_normal if blocked else Vector2.ZERO
 	# Stopped by a loose lump: shove it along, the whole lump moved as
 	# one the way the walk points (a push on its near particles alone
 	# rolls it up over the body, or flattens it), keeping a slow walk up
@@ -792,7 +831,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		# A body chewing its way in squeezes through what it chews, the
 		# bites' ragged cusps included.
 		if not _squeeze and not shoving and s != 0.0:
-			_passage_ahead()
+			_passage_ahead(inp)
 	var p: Dictionary = map.probe(pos, PROBE_R)
 	_last_probe = p
 	# A body centre inside rock (a spawn in a wall, a brush fill, a bite
@@ -844,7 +883,12 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# floor, narrower than the body is long) enters the slot nose first.
 	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO \
 			and s == 0.0 and inp.length() > 0.2 and inp.dot(up) < -0.5:
-		_try_slot_entry(tangent)
+		_try_slot_entry(tangent, inp)
+	# A press straight away from a floor or ceiling, with the opposite
+	# surface within a leg's reach: switch to it where the body stands.
+	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO and not squeezed \
+			and s == 0.0 and inp.length() > 0.2 and inp.dot(up) > 0.7 and absf(up.y) > 0.7:
+		_switch_surface()
 	var n: Vector2
 	var dig_n := _dig_normal()
 	if _grab_n != Vector2.ZERO and absf(up.angle_to(_grab_n)) < 0.12:
@@ -876,14 +920,22 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		_grab_n = n
 	else:
 		n = _reach_for_wall(inp) if (not chewing and not squeezed and not _squeeze and inp.length() > 0.2) else Vector2.ZERO
-		if n != Vector2.ZERO:
+		if n != Vector2.ZERO and not _find_passage(inp, int((REACH + BODY_R) / map.CELL) + 2).is_empty():
+			# The wall reached for holds the mouth of a passage the press
+			# points into: no turn onto it. The walk goes on to the lip,
+			# where the squeeze takes the body in. Turned onto the wall
+			# (a tunnel rising away from its mouth has a ramp for a lower
+			# lip), the body swung half way up it and back down in ten
+			# ticks once the squeeze, begun at the top, took its frame.
+			n = _surface_normal(p)
+		elif n != Vector2.ZERO:
 			_grab_n = n
 			speed_along = 0.0
 		else:
 			n = _surface_normal(p)
 	_n_dbg = n
 	var up_before := up
-	if n != Vector2.ZERO:
+	if n != Vector2.ZERO and not _settled:
 		# Whether the raw normal keeps turning the same way (a corner being
 		# rounded) or turns back and forth (rough ground, an edge where
 		# two readings take turns).
@@ -927,7 +979,10 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# Not while a lift or a grab pull is already moving the body across.
 	# In a squeeze the body keeps to the middle of the passage instead,
 	# and the squeeze ends once the passage has opened out round it.
-	if _squeeze:
+	# Held by the settle latch, the body is nudged nowhere.
+	if _settled:
+		pass
+	elif _squeeze:
 		if _grab_n == Vector2.ZERO:
 			_squeeze_nudge()
 		_update_squeeze()
@@ -1346,6 +1401,7 @@ func _land(n: Vector2) -> void:
 		f.planted = false
 		f.stepping = false
 		f.pos = chain.points[f.hip] + t * f.end * facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
+		f.up = up
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
 	if absf(speed_along) > 1.0:
 		facing = signf(speed_along)
@@ -1409,6 +1465,11 @@ func _step(delta: Vector2) -> bool:
 	pos = start
 	if delta.length() < 0.01:
 		return false
+	# The rock that stopped the walk, kept for the walk's own verdict:
+	# the lift tried below fails on the ceiling as often as not and
+	# would leave its cell (straight above) as the walk's.
+	var walk_bn := _block_normal
+	var walk_cell = _block_cell
 	var cell = map.blocking_cell(pos, pos + delta, _clear_r())
 	var floor_pt = map.ray_hit(pos, -up, RAY_LEN)
 	if cell == null or floor_pt == null or _lift_ticks >= LIFT_TICKS:
@@ -1434,6 +1495,8 @@ func _step(delta: Vector2) -> bool:
 		_move(delta)
 		return true
 	pos = save
+	_block_normal = walk_bn
+	_block_cell = walk_cell
 	return false
 
 
@@ -1558,17 +1621,16 @@ func _free_span(p: Vector2, dir: Vector2, max_len: float) -> float:
 	return INF
 
 
-# The run of air along up through at: the one containing at, or the
-# nearest to it within SQUEEZE_LOOK either way. h is its length in px,
-# mid its middle as an offset along up from at, line a world point on
-# that middle (between the pixel centres of the run's two ends, since
-# the scan reads whole pixels); open means it reaches the end of the
-# scan (not a passage but the open cave).
-func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
+# Every run of air along u through the scan about at (SQUEEZE_LOOK
+# either way): h its length in px, lo and hi its first and last pixel
+# and mid its middle as offsets along u from at (whole pixels: the scan
+# reads them), line a world point on that middle (between the pixel
+# centres of the run's two ends), open whether it reaches the end of
+# the scan (not a passage but the open cave).
+func _runs(at_raw: Vector2, u: Vector2) -> Array:
 	var at := at_raw.round()
 	var n := int(SQUEEZE_LOOK)
-	var best := {"air": false, "h": 0.0, "mid": 0.0, "open": false, "line": Vector2.ZERO}
-	var best_d := INF
+	var out: Array = []
 	var k := -n
 	while k <= n:
 		if map.is_solid_world(at + u * k):
@@ -1578,11 +1640,21 @@ func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
 		while k <= n and not map.is_solid_world(at + u * k):
 			k += 1
 		var k1 := k - 1
-		var d := 0.0 if (k0 <= 0 and 0 <= k1) else minf(absf(float(k0)), absf(float(k1)))
+		out.append({"air": true, "h": float(k1 - k0 + 1), "lo": float(k0), "hi": float(k1), "mid": (k0 + k1) * 0.5,
+			"open": k0 == -n or k1 == n, "line": at + u * ((k0 + k1) * 0.5) + Vector2(0.5, 0.5)})
+	return out
+
+
+# The run of air along u through at: the one containing at, or the
+# nearest to it within SQUEEZE_LOOK either way (air false when none).
+func _narrow_run(at_raw: Vector2, u: Vector2) -> Dictionary:
+	var best := {"air": false, "h": 0.0, "lo": 0.0, "hi": 0.0, "mid": 0.0, "open": false, "line": Vector2.ZERO}
+	var best_d := INF
+	for q in _runs(at_raw, u):
+		var d: float = 0.0 if (q.lo <= 0.0 and 0.0 <= q.hi) else minf(absf(q.lo), absf(q.hi))
 		if d < best_d:
 			best_d = d
-			best = {"air": true, "h": float(k1 - k0 + 1), "mid": (k0 + k1) * 0.5, "open": k0 == -n or k1 == n,
-				"line": at + u * ((k0 + k1) * 0.5) + Vector2(0.5, 0.5)}
+			best = q
 	return best
 
 
@@ -1599,9 +1671,14 @@ func _squeeze_r(h: float) -> float:
 	# The passage's walls are cells whose centres sit a cell / 2 outside
 	# its air; the centre of the passage is (h + a cell) / 2 from each, and
 	# the clearance leaves a pixel and a half of play, since the body is
-	# centred from whole-pixel scans. Never less than the narrowest
-	# passage allows: a crevice closing further is not squeezed into.
-	return clampf((maxf(h, SQUEEZE_MIN) + map.CELL) * 0.5 - 1.5, 0.0, BODY_R)
+	# centred from whole-pixel scans. Never less than a corridor a cell
+	# narrower than a throat allows (2.5 px): the walls of a tunnel dug
+	# with the tongue wobble a cell every strike, so the corridor through
+	# them reads narrower than any of its columns, and the body threads
+	# it at that clearance rather than being stopped by it. A crevice
+	# closing further is never entered (_passage_ahead) and stops the
+	# walk where the clearance meets its walls.
+	return clampf((maxf(h, SQUEEZE_THROAT - map.CELL) + map.CELL) * 0.5 - 1.5, 0.0, BODY_R)
 
 
 func _begin_squeeze(h: float, u: Vector2, line: Vector2, wide := SQUEEZE_MAX) -> void:
@@ -1632,27 +1709,132 @@ func _end_squeeze() -> void:
 # full clearance. In the squeeze the clearance follows the narrowest
 # column ahead and the body keeps the middle line, which gets it
 # through; a straight passage that wide never blocks, and is walked.
-func _passage_ahead() -> bool:
-	var u := _axis(up)
-	var fwd := Vector2(-u.y, u.x) * facing
-	var at := pos + fwd * (BODY_R + 2.0)
-	var r := _narrow_run(at, u)
-	if not r.air or r.open or r.h < SQUEEZE_MIN or r.h > SQUEEZE_BLOCKED:
+func _passage_ahead(inp: Vector2) -> bool:
+	var found := _find_passage(inp, 3)
+	if found.is_empty():
 		return false
-	if absf(r.mid) > RIDE_H + 8.0:
-		return false
-	var mouth: Vector2 = at + u * r.mid
-	if _free_span(mouth, fwd, SQUEEZE_DEPTH) < SQUEEZE_DEPTH:
-		return false
-	# Still a passage further in, not a crevice closing to nothing: the
-	# gecko is not wedged deeper and deeper into a V. Open cave or a
-	# wider pocket there instead is a hole through a thin wall (a door)
-	# or a throat into a chamber, squeezed through all the same.
-	var deeper := _narrow_run(at + fwd * SQUEEZE_DEPTH, u)
-	if not deeper.air or (not deeper.open and deeper.h < SQUEEZE_MIN):
-		return false
-	_begin_squeeze(r.h, u, r.line, SQUEEZE_BLOCKED)
+	_begin_squeeze(found.mouth.h, found.up, found.mouth.line, SQUEEZE_BLOCKED)
 	return true
+
+
+# The passage, if any, within `columns` cells ahead of the body along
+# the press: its mouth run and the frame's up, or nothing. Called with
+# three columns when the walk is blocked (the body is at the lip), and
+# with the reach of a wall grab when a wall is reached for, so the
+# walk goes on to a mouth in it instead of turning onto it.
+func _find_passage(inp: Vector2, columns: int, near := -1.0) -> Dictionary:
+	# `near`: how far across the walk from the body's row a run may lie
+	# and still count as the mouth; three cells unless the caller says.
+	if near < 0.0:
+		near = 3.0 * map.CELL
+	# The frame from the press, not the body: at the lip of a tunnel
+	# that rises away the body has climbed the lip's ramp and tilted
+	# half way to a wall, and the axis nearest its up would scan for a
+	# passage going up the wall when the player is pressing into one
+	# going right.
+	var fwd := _axis(inp) if inp.length() > 0.2 else _axis(_tangent() * facing)
+	var u := Vector2(fwd.y, -fwd.x)
+	if u.dot(up) < 0.0:
+		u = -u
+	# The mouth: every run of air that reads as a passage, within reach
+	# of the body's row, at the first column ahead that has one. One
+	# column alone is not enough (a tunnel dug with the tongue has a
+	# throat between every two strikes, and the column scanned may be
+	# one), and one run alone is not either: the strikes a player
+	# widens a mouth with leave pockets above or below the tunnel's own
+	# line, and the tunnel may lead on from any of them. A run counts as
+	# the mouth where it holds the body's row or comes within three
+	# cells of it (a crumb a widening strike left can split the mouth
+	# in two), never a pocket further off across the walk: a hole
+	# crumbled out of the wall being climbed is not a passage. The
+	# columns of open cave before the wall are passed over; a column in
+	# the wall with no run that near at least a throat tall is shut (the
+	# point of a wedge, with the crevice widening beyond it, is no way
+	# in).
+	var at := Vector2.ZERO
+	var mouths: Array = []
+	for i in columns:
+		at = pos + fwd * (BODY_R + 2.0 + i * map.CELL)
+		var way := false
+		var cave := false
+		for q in _runs(at, u):
+			if q.lo > near or q.hi < -near:
+				continue
+			if q.open:
+				cave = true
+				continue
+			if q.h >= SQUEEZE_THROAT:
+				way = true
+			if q.h >= SQUEEZE_MIN and q.h <= SQUEEZE_BLOCKED:
+				mouths.append(q)
+		if not mouths.is_empty():
+			break
+		if not way and not cave:
+			return {}
+	if mouths.is_empty():
+		return {}
+	# The passage goes on: a route of runs at least a throat tall, each
+	# overlapping the one before it, from a mouth over SQUEEZE_DEPTH,
+	# so a mouth wider than the tunnel behind it or a tunnel that
+	# wobbles off the mouth's middle line still reads as the connected
+	# corridor it is. Open cave or a wider pocket before the depth is
+	# up is a hole through a thin wall (a door) or a throat into a
+	# chamber, squeezed through all the same; a crevice closing to
+	# nothing is not entered, so the gecko is never wedged deeper and
+	# deeper into a V. Each live run remembers the mouth it came from
+	# and the narrowest run on its way.
+	var alive: Array = []
+	for m in mouths.size():
+		alive.append([mouths[m].lo, mouths[m].hi, m, mouths[m].h])
+	var found := -1
+	var narrow := INF
+	var i := 1
+	while i * map.CELL <= SQUEEZE_DEPTH and found < 0:
+		var next: Array = []
+		for q in _runs(at + fwd * (i * map.CELL), u):
+			if not q.open and q.h < SQUEEZE_THROAT:
+				continue
+			for a in alive:
+				if q.hi >= a[0] and q.lo <= a[1]:
+					if q.open:
+						found = a[2]
+						narrow = a[3]
+					else:
+						next.append([q.lo, q.hi, a[2], minf(a[3], q.h)])
+					break
+			if found >= 0:
+				break
+		if found >= 0:
+			break
+		if next.is_empty():
+			return {}
+		alive = next
+		i += 1
+	if found < 0:
+		# Every route that goes the depth is good: the one from the mouth
+		# nearest the body's row.
+		var best := INF
+		for a in alive:
+			var d: float = absf(mouths[a[2]].mid)
+			if d < best:
+				best = d
+				found = a[2]
+				narrow = a[3]
+	var m: Dictionary = mouths[found]
+	if narrow > SQUEEZE_MAX:
+		# Wider than a squeeze the whole way: a passage the body walks at
+		# its full clearance, squeezed into from a blocked walk only
+		# because ragged walls narrow it below the column scanned, and
+		# only when it runs straight and the body stands in its frame. A
+		# bend in a wide tunnel is a corner, climbed as a step, not crept
+		# round in a squeeze; a body blocked on another surface (turned
+		# onto the end wall of a tunnel this wide, pressing back the way
+		# it came) is at no lip, and walks the tunnel once it has turned.
+		if _free_span(m.line, fwd, SQUEEZE_DEPTH) < SQUEEZE_DEPTH:
+			return {}
+		if up.dot(u) < 0.7:
+			return {}
+	return {"mouth": m, "up": u}
 
 
 # A press into the surface over a slot in it: columns along the surface
@@ -1660,7 +1842,7 @@ func _passage_ahead() -> bool:
 # between shallow ones, at least SQUEEZE_MIN wide and narrower than a
 # bridged gap, is a slot. The body turns nose first into it, as a wall
 # grab onto its side, centred over its mouth, squeezing if it is narrow.
-func _try_slot_entry(tangent: Vector2) -> void:
+func _try_slot_entry(tangent: Vector2, inp: Vector2) -> void:
 	var n := int(SLOT_SCAN)
 	var deep: Array[bool] = []
 	for k in range(-n, n + 1):
@@ -1685,13 +1867,23 @@ func _try_slot_entry(tangent: Vector2) -> void:
 			best_d = d
 			best_k0 = k0
 			best_k1 = k1
-	if best_k1 < best_k0:
+	var w := float(best_k1 - best_k0 + 1) if best_k1 >= best_k0 else 0.0
+	if w >= BRIDGE:
 		return
-	var w := float(best_k1 - best_k0 + 1)
-	if w < SQUEEZE_MIN or w >= BRIDGE:
-		return
+	var target := pos + tangent * ((best_k0 + best_k1) * 0.5)
+	if w < SQUEEZE_MIN:
+		# Too few columns that deep: a crack tapped out with the tongue
+		# has a throat every few cells, which cuts a column's free span
+		# short. The route search the horizontal passages use (a mouth
+		# run at the first cells in, a connected run at least a throat
+		# tall for 16 px) reads it as the passage it is.
+		var found := _find_passage(inp, 3, SLOT_SCAN)
+		if found.is_empty():
+			return
+		w = found.mouth.h
+		target = found.mouth.line
 	_sq_enter = true
-	_sq_target = pos + tangent * ((best_k0 + best_k1) * 0.5)
+	_sq_target = target
 	_sq_n = _axis(tangent * facing)
 	_grab_n = _sq_n
 	_bridging = false
@@ -1710,13 +1902,17 @@ func _squeeze_nudge() -> void:
 	if _up_rate > LIFT_TURN_MAX or up.dot(_sq_up) < 0.98:
 		return
 	# Toward the middle of the corridor here and a body length ahead
-	# (_corridor), so a ragged wall does not bob the body from cell to
+	# (_corridor_fit), so a ragged wall does not bob the body from cell to
 	# cell, and at the mouth the body lines up with the first columns,
 	# not one further in.
-	var c := _corridor()
+	var c := _corridor_fit()
 	if not c.ok:
 		return
-	var mid: float = (c.lo + c.hi) * 0.5
+	# The corridor's middle as an offset from the body itself: the scan
+	# reads whole pixels from the body's rounded position, and measured
+	# from there a body half a pixel off rounded up one tick and down
+	# the next, and sawed a quarter pixel each way for ever at a wall.
+	var mid: float = (c.lo + c.hi) * 0.5 + 0.5 * (_sq_up.x + _sq_up.y) + (pos.round() - pos).dot(_sq_up)
 	# A dead band above the scan's half-pixel steps, or the body rocks a
 	# fraction of a pixel each tick chasing a middle that is not there;
 	# narrower while the walk is blocked, since a body a pixel off the
@@ -1726,46 +1922,81 @@ func _squeeze_nudge() -> void:
 	_move(_sq_up * clampf(mid * 0.5, -NUDGE_MAX, NUDGE_MAX))
 
 
-# The corridor over the next body length: the overlap of the air
-# columns at every cell from the body's own to 12 px ahead (those that
-# read as the passage), as offsets along _sq_up from the body. Every
-# column may be tall enough and the corridor still narrow, where the
-# passage's middle wobbles; a column skipped is a bump stopped at.
-func _corridor() -> Dictionary:
+# The corridor over the next `ahead` px: the overlap of the air columns
+# at every cell from the body's own to there (those that read as the
+# passage, a throat included), as offsets along _sq_up from the body.
+# Every column may be tall enough and the corridor still narrow, where
+# the passage's middle wobbles; a column skipped is a bump stopped at.
+func _corridor(ahead: float) -> Dictionary:
 	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
+	var origin := _sq_origin()
+	var shift: float = (origin.round() - pos.round()).dot(_sq_up)
 	var lo: float = -INF
 	var hi: float = INF
 	var n := 0
 	var i := 0
-	while i * map.CELL <= 12.0:
-		var a := _narrow_run(pos + fwd * (i * map.CELL), _sq_up)
-		if a.air and not a.open and a.h >= SQUEEZE_MIN - 1.0 and a.h <= _sq_max + 4.0:
-			lo = maxf(lo, a.mid - (a.h - 1.0) * 0.5)
-			hi = minf(hi, a.mid + (a.h - 1.0) * 0.5)
+	while i * map.CELL <= ahead:
+		var a := _narrow_run(origin + fwd * (i * map.CELL), _sq_up)
+		if a.air and not a.open and a.h >= SQUEEZE_THROAT and a.h <= _sq_max + 4.0:
+			lo = maxf(lo, shift + a.lo)
+			hi = minf(hi, shift + a.hi)
 			n += 1
 		i += 1
 	return {"ok": n > 0 and hi >= lo, "lo": lo, "hi": hi}
 
 
+# Where the passage is scanned from across the walk: the body's own row
+# once it is in, and the line the squeeze began on before that (the
+# mouth run's middle), which a pocket the player's widening strikes
+# opened above or below the tunnel can put a cell or two off the body's
+# row. The runs found are given as offsets from the body's own row.
+func _sq_origin() -> Vector2:
+	if _sq_in:
+		return pos
+	return pos + _sq_up * (_sq_line - pos).dot(_sq_up)
+
+
+# The corridor over the next body length (12 px), which keeps the body
+# on a straight line through a ragged passage, or, where that reads
+# narrower than a throat (a tunnel dug with the tongue wobbles a cell up
+# and down from strike to strike, and a sloping one climbs a cell every
+# few), over the next step or two only, so the body follows the wobble
+# at a clearance that fits it instead of being stopped by a straight
+# line that fits nothing.
+func _corridor_fit() -> Dictionary:
+	var c := _corridor(12.0)
+	if not c.ok or c.hi - c.lo + 1.0 < SQUEEZE_THROAT:
+		var near := _corridor(_sq_r + 2.0 * map.CELL)
+		if near.ok:
+			return near
+	return c
+
+
 # The squeeze ends once the passage round the body has read wide for
 # SQUEEZE_RELEASE ticks, or when the body never got in.
 func _update_squeeze() -> void:
-	var fwd := Vector2(-_sq_up.y, _sq_up.x) * facing
-	var r := _narrow_run(pos, _sq_up)
+	var origin := _sq_origin()
+	var shift: float = (origin.round() - pos.round()).dot(_sq_up)
+	var r := _narrow_run(origin, _sq_up)
 	var here: bool = r.air and not r.open and r.h <= _sq_max + 2.0
-	if here and r.h < SQUEEZE_MIN - 1.0:
-		# Pinched: the passage has closed past what the body can squeeze
-		# through. The clearance grows back and pushes it out.
-		_end_squeeze()
-		return
+	if here and not _sq_in:
+		# In once the body's own row lies in the run the line passes
+		# through, not in a pocket beside it the nudge is lifting it out of.
+		var b: float = (pos - origin.round()).dot(_sq_up)
+		here = b >= r.lo - 0.5 and b <= r.hi + 0.5
+	# A column at the body narrower than a throat does not end the
+	# squeeze: the clearance growing back inside a passage would read
+	# the body as buried, let it move through anything and push it off
+	# the walls by turns. The walk stops where the clearance meets the
+	# walls, and backs out.
 	# The clearance fits the corridor the body has over the next body
-	# length (_corridor), so a narrowing step, one cell of a ragged wall
-	# standing proud, or a passage whose middle wobbles up and down is
-	# passed rather than stopped at, at the mouth as much as inside. The
-	# body is kept on that corridor's middle.
-	var c := _corridor()
+	# length (_corridor_fit), so a narrowing step, one cell of a ragged
+	# wall standing proud, or a passage whose middle wobbles up and down
+	# is passed rather than stopped at, at the mouth as much as inside.
+	# The body is kept on that corridor's middle.
+	var c := _corridor_fit()
 	_sq_cw = c.hi - c.lo + 1.0 if c.ok else -1.0
-	var line_mid: float = r.mid
+	var line_mid: float = r.mid + shift
 	# Wide: the straight corridor takes the body at its full clearance,
 	# so the squeeze has nothing left to do. A squeeze entered from a
 	# blocked walk reads a passage up to SQUEEZE_BLOCKED as here, and
@@ -1913,6 +2144,8 @@ static func _turn_toward(a: Vector2, b: Vector2, max_angle: float) -> Vector2:
 # surface behind it. Airborne, it points along the velocity and the body
 # trails freely, only pushed out of rock.
 func _update_chain(dt: float) -> void:
+	if _settled:
+		return
 	# The drawn body hangs off a base that follows the body centre exactly
 	# along the surface but only slowly across it, so bumps in the ground
 	# do not bob the head: a chicken's head on its gyro.
@@ -1931,8 +2164,16 @@ func _update_chain(dt: float) -> void:
 		# tongue, the snout is held back as well: the gecko leaning back
 		# on its feet, bracing.
 		var brace := BRACE_BACK if (tongue_anchored and clinging) else 0.0
-		var back := move_toward(_head_back, brace, (HEAD_RETRACT if brace > _head_back else HEAD_RECOVER) * dt)
-		var back_max := minf(HEAD_LEAD - 4.0, maxf(back, _head_back + HEAD_RETRACT * dt))
+		var want_back := move_toward(_head_back, brace, (HEAD_RETRACT if brace > _head_back else HEAD_RECOVER) * dt)
+		var back_max := minf(HEAD_LEAD - 4.0, maxf(want_back, _head_back + HEAD_RETRACT * dt))
+		# Drawn back further (the brace) at once; forward again a pixel
+		# at a time, and only while the snout stays clear of rock. The
+		# recovery used to come forward its 3 px a tick regardless and
+		# the wall test below pushed it back in 2 px steps, so at a wall
+		# the two never met and the head sawed a pixel back and forth
+		# every tick, the whole body laid behind it along with it, for as
+		# long as the gecko stood there (the player's idle flicker).
+		var back := maxf(_head_back, want_back)
 		# The drawn body rides BODY_LIFT above the body centre's line, except
 		# in a passage, where it lies on the passage's middle at the head: the
 		# lift eases between the two, never jumps. A head targeted at the
@@ -1942,20 +2183,40 @@ func _update_chain(dt: float) -> void:
 		# edge, so the head sawed back and forth as the body crept along.
 		var want_lift := BODY_LIFT
 		if _squeeze:
-			# The middle at the head's own column once the head is in; the
-			# squeeze's line (the mouth's, then the body's column) before,
-			# so the head heads for the passage from the moment the squeeze
-			# begins rather than being shoved in off the lip.
-			var run := _narrow_run(chain.head(), _sq_up)
-			var line: Vector2 = run.line if (run.air and not run.open and run.h <= _sq_max + 2.0) else _sq_line
-			want_lift = (line - _pos_s).dot(up)
+			# The squeeze's own line: the mouth's middle until the body is
+			# in, then the middle of the corridor over the next body length
+			# (_update_squeeze), the line the body centre is nudged to, so
+			# the head heads for the passage from the moment the squeeze
+			# begins rather than being shoved in off the lip, and goes
+			# through a throat from a pocket. The middle of the run at the
+			# head's own column fed back into where the head went: in a
+			# jagged tunnel at rest the lift moved a pixel toward one
+			# column's line, which put the snout's target against a jag,
+			# which drew the head back 2 px into the next column, whose line
+			# sent the lift back, and so on every tick, the whole body along
+			# with it. The run at the body's column is a pocket's middle,
+			# which can miss the throat ahead by 6 px, and the head stood
+			# 10 px back at every throat; read a lead ahead, a sloping
+			# tunnel's line was the one 15 px on, and the base sank off its
+			# own middle into the floor at the mouth.
+			want_lift = (_sq_line - _pos_s).dot(up)
 		_lift = move_toward(_lift, want_lift, LIFT_EASE)
 		var base := _pos_s + up * _lift
-		target = base + t * facing * (HEAD_LEAD - back)
 		# The snout stops at rock ahead. In a passage the walls beside it are
 		# always within the body's clearance, so the test there is the
 		# squeeze's own, or the head would draw in the whole way through.
+		# The push-out off the nearest cell (_resolve_body) uses the same
+		# clearance there: with the body's full one it shoved the head 7 px
+		# off a mouth's lip the snout test had let it up to, and with the
+		# snout test on the full one instead the head stood 10 px behind
+		# its lead in every pocket of a jagged tunnel, pumping at each jag.
 		var head_clear := _sq_r if _squeeze else chain.radii[0] + BODY_GAP
+		while back > want_back:
+			var fwd_step := minf(1.0, back - want_back)
+			if map.solid_within(base + t * facing * (HEAD_LEAD - (back - fwd_step)), head_clear):
+				break
+			back -= fwd_step
+		target = base + t * facing * (HEAD_LEAD - back)
 		while back < back_max and map.solid_within(target, head_clear):
 			back = minf(back + 2.0, back_max)
 			target = base + t * facing * (HEAD_LEAD - back)
@@ -1966,6 +2227,7 @@ func _update_chain(dt: float) -> void:
 		target = pos + dir * HEAD_LEAD
 	var head := chain.head()
 	var to := target - head
+	_head_far = to.length() > HEAD_FAR
 	var dir := Vector2.ZERO
 	var new_head := head
 	if to.length() > 0.001:
@@ -2007,10 +2269,13 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 	var q0: Dictionary = map.probe(new_head, chain.radii[0] + BODY_GAP)
 	# Between two walls closer than its clearance (a passage) the head is
 	# centred by the thinning, like the body's points, not pushed off
-	# whichever wall is nearer.
-	if q0.found and q0.dist < chain.radii[0] + BODY_GAP and not _thin_on[0]:
+	# whichever wall is nearer. In a squeeze the clearance is the
+	# squeeze's, the snout test's ruler (_update_chain): two rulers on
+	# one head made a loop of a mouth's lip.
+	var want0 := _sq_r if _squeeze else chain.radii[0] + BODY_GAP
+	if q0.found and q0.dist < want0 and not _thin_on[0]:
 		var away0: Vector2 = (new_head - q0.nearest).normalized() if q0.dist > 0.01 else up
-		new_head += away0 * _push_len(0, chain.radii[0] + BODY_GAP - q0.dist)
+		new_head += away0 * _push_len(0, want0 - q0.dist)
 	new_head = _thin_point(0, new_head, q0)
 	chain.points[0] = new_head
 	var prev_dir := -chain.heading
@@ -2052,6 +2317,8 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 func _push_len(i: int, overlap: float) -> float:
 	if _draw_r[i] < chain.radii[i] - 0.5:
 		return minf(overlap, THIN_RELEASE)
+	if i == 0 and _squeeze:
+		return minf(overlap, HEAD_PUSH)
 	return overlap
 
 
@@ -2116,6 +2383,140 @@ func _thin_point(i: int, p: Vector2, q: Dictionary) -> Vector2:
 	return out
 
 
+# A press straight away from a floor or ceiling with the opposite surface
+# within SWITCH_REACH of the body centre: the body switches to it where
+# it stands. The frame flips at once, up to the other surface's normal
+# and facing reversed, so the head keeps pointing the same way in the
+# world and the keys keep their screen sense; the body centre does not
+# move (in a passage this low it rides halfway between the two anyway),
+# the drawn body, laid in world directions, is untouched, and the feet
+# step across, the front pair first and the back pair SWITCH_HOLD ticks
+# later, each drawn on the surface it is still on meanwhile. Turning the
+# frame through 180 degrees at the usual rate would swing the head and
+# the legs through a half circle. The flip is recorded as a grab already
+# complete, so the new surface is held against other readings for a
+# while and the suite reads the tick as a committed turn. A lump
+# overhead is no ceiling. Walls are not switched between: in a narrow
+# shaft a press off a wall walks to its inside corner (the away rule).
+func _switch_surface() -> bool:
+	var hit = map.ray_hit(pos, up, SWITCH_REACH)
+	if hit == null or map.chunk_at_world(hit) >= 0:
+		return false
+	var q: Dictionary = map.probe(hit - up * 3.0, 10.0)
+	var n: Vector2 = q.normal if (q.found and q.normal != Vector2.ZERO) else -up
+	if n.dot(up) > -0.7:
+		return false
+	up = n
+	_n_target = n
+	_n_raw = n
+	_flip_ticks = 0
+	_grab_n = n
+	facing = -facing
+	# The drawn body's lift is along up: reversed with it, it eases over
+	# to the new side a pixel a tick instead of jumping 4 px across.
+	_lift = -_lift
+	_switched = true
+	speed_along = 0.0
+	_away_s = 0.0
+	_press_stop = false
+	_step_climb = false
+	_bridging = false
+	for f in feet:
+		f.planted = false
+		f.stepping = false
+	_switch_hold = SWITCH_HOLD
+	_switch_ticks = 0
+	_release_settle()
+	return true
+
+
+# The settle latch. At rest (clinging, nothing pressed, no tongue, no
+# chew, no turn under way) each drawn chain point, rounded to the pixel,
+# may reverse its motion SETTLE_REV times; on the last reversal the body
+# is held: no nudge, no turn of up, the chain not laid again, until a
+# key or a button is pressed, the body leaves the surface, or something
+# else moves the body centre (_physics_process). The feet stay free to
+# step (a step is an arc with a reversal in it, and a foot late to its
+# rest spot must get there), and the face, the look and the idle
+# animations go on, so the gecko never looks dead. Every rule that
+# moves the body at rest has its own dead band, and new ones find new
+# ways to disagree (the head's lead, its lift and the push-out off the
+# nearest cell each moved the head in a jagged tunnel, and no position
+# satisfied all three, so it sawed 2 px every tick): this is the rule
+# above them all. It is the opposite of a correction: it stops
+# correcting, which moves the body nowhere. A point that has gone
+# SETTLE_FAR from its first reversal is going somewhere (a slow turn, a
+# foot settling after a walk) and its count starts over. The trace
+# carries the latch (set) and the count (rev), so the loops it hides
+# from the player stay visible to the suite.
+func _update_settle(inp: Vector2) -> void:
+	var n := chain.size()
+	if _settle_last.size() != n:
+		_settle_last.resize(n)
+		_settle_dir.resize(n)
+		_settle_from.resize(n)
+		_settle_rev.resize(n)
+		for i in n:
+			_settle_last[i] = chain.points[i].round()
+			_settle_dir[i] = Vector2.ZERO
+			_settle_rev[i] = 0
+	_switch_ticks = mini(_switch_ticks + 1, SWITCH_SETTLE)
+	_face_ticks = 0 if facing != _facing_was else mini(_face_ticks + 1, TURN_SETTLE)
+	_facing_was = facing
+	# At rest: nothing pressed (a held key that is blocked for a tick, at
+	# a bump or the start of a turn, is a walk, and a body held under a
+	# key reads as a key ignored), no turn of up under way (the normal
+	# blends in slowly after a stop and the body follows it; frozen
+	# mid-blend it would sit tilted), not with the feet crossing to
+	# another surface after a switch, not with too few of them planted
+	# (loose feet must be free to step again), not just after a turn (the
+	# head swings round and the body folds behind it at no walking
+	# speed), and not with the drawn head still travelling to its lead.
+	var rest := clinging and not swimming and not chewing and not tongue_out and _grab_n == Vector2.ZERO \
+			and inp.length() <= 0.2 and not _lmb and _up_rate < SETTLE_TURN \
+			and not _sq_enter and not _lifting and absf(speed_along) < 1.0 and _switch_ticks >= SWITCH_SETTLE and _planted() >= MIN_FEET \
+			and _face_ticks >= TURN_SETTLE and not _head_far
+	_settle_n = 0
+	_settle_i = -1
+	for i in n:
+		var p: Vector2 = chain.points[i].round()
+		if rest:
+			var d := p - _settle_last[i]
+			if d != Vector2.ZERO:
+				if _settle_dir[i] != Vector2.ZERO and d.dot(_settle_dir[i]) < 0.0:
+					if _settle_rev[i] == 0:
+						_settle_from[i] = p
+					_settle_rev[i] += 1
+				_settle_dir[i] = d
+			if _settle_rev[i] > 0 and p.distance_to(_settle_from[i]) > SETTLE_FAR:
+				_settle_rev[i] = 0
+			if _settle_rev[i] > _settle_n:
+				_settle_n = _settle_rev[i]
+				_settle_i = i
+		else:
+			_settle_dir[i] = Vector2.ZERO
+			_settle_rev[i] = 0
+		_settle_last[i] = p
+	if rest and not _settled and _settle_n >= SETTLE_REV and _settle_on:
+		_settled = true
+		_settle_pos = pos
+
+
+func _planted() -> int:
+	var n := 0
+	for f in feet:
+		if f.planted:
+			n += 1
+	return n
+
+
+func _release_settle() -> void:
+	_settled = false
+	for i in _settle_rev.size():
+		_settle_rev[i] = 0
+		_settle_dir[i] = Vector2.ZERO
+
+
 # The head looks at the mouse, within LOOK_LIMIT of the body line, so the
 # gecko never looks back through itself. The demo pilot has no mouse and
 # looks where it goes.
@@ -2144,6 +2545,7 @@ func _diagonal(f: Foot) -> Foot:
 
 func _update_feet(dt: float) -> void:
 	var tangent := _tangent()
+	_switch_hold = maxi(_switch_hold - 1, 0)
 	var stepping := 0
 	for f in feet:
 		if f.stepping:
@@ -2166,6 +2568,10 @@ func _update_feet(dt: float) -> void:
 				var drop := (hip - f.step_to).dot(up) - FOOT_LIFT
 				var arc := minf(STEP_HEIGHT * _leg_scale(f), maxf(drop, 1.0))
 				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * arc * sin(PI * f.step_t)
+			continue
+		# After a switch the back feet wait, so the front legs reach the
+		# new surface first.
+		if _switch_hold > 0 and f.end < 0.0:
 			continue
 		if f.planted:
 			if map.solid_near(f.anchor, _cells(4.0)) and f.anchor.distance_to(hip) < MAX_LEG:
@@ -2227,6 +2633,7 @@ func _update_feet(dt: float) -> void:
 		f.step_from = f.pos
 		f.step_to = q.nearest
 		f.step_t = 0.0
+		f.up = up
 		stepping += 1
 
 
@@ -2251,7 +2658,7 @@ func _knee(f: Foot) -> Vector2:
 # centre (planted) or at that level (settling, or the end of a step), 2
 # px inside the rock: the drawn foot is lifted onto the surface.
 func _foot_draw(f: Foot) -> Vector2:
-	return f.pos + (up * FOOT_LIFT if clinging else Vector2.ZERO)
+	return f.pos + (f.up * FOOT_LIFT if clinging else Vector2.ZERO)
 
 
 # Far legs first, then the body, then the near legs: the colour layer

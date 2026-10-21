@@ -145,7 +145,7 @@ var cells4 := PackedByteArray()     # O_C4 readback while fold_on: the classes f
 var fold_on := false                # Read the folded grid back each tick (the coarse senses, sim_map.gd)
 var crumb_cells := 4                # A bit of matter of at most this many cells (of its 5x5) is a crumb: air to the senses, loosened at the body's touch; 0 for none
 var ready_to_run := false
-var light_on := OS.get_environment("GECKO_LIGHT") != "0"  # The light pass and its overlay; GECKO_LIGHT=0 for the flat look
+var light_on := OS.get_environment("GECKO_LIGHT") == "1"  # The light pass and its overlay: off unless GECKO_LIGHT=1 or the panel turns it on, the whole cave lit (the user's choice, 2026-10-21)
 var chunks := {}                    # Chunk id -> {mat, count} as spawned (the GPU owns what is left of each)
 
 var _rd: RenderingDevice

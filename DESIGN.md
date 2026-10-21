@@ -233,18 +233,47 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   press changes; it never reverses in a loop.
 - Turns are decided from the cell that actually blocked the step, never
   from the cell the body rests on.
-- A passage narrower than the body (11 to 19 px between its walls; 20
+- A passage narrower than the body (10 to 19 px between its walls; 20
   and up the body walks at its full clearance, unless it is stopped at
   the lip of one up to 24 px, which ragged walls make narrower than
-  the one column scanned) is squeezed through. Stopped at its lip, the
-  gecko scans across the walk for the run of air, and enters it if it
-  goes on at least 16 px without closing, or opens into cave or a
-  wider pocket beyond (a hole through a thin wall, a door; a throat
-  into a chamber): the clearance drops to fit the corridor the body
-  has, the overlap of the air columns read at every cell over the next
-  body length (every column may be tall enough and the corridor still
-  narrow where a chewed passage's middle wobbles up and down), the
-  walk slows to 40 percent, the body is nudged to that corridor's
+  the one column scanned) is squeezed through. A tongue strike's dent
+  is 10 px tall, so a tunnel dug with taps is entered, throats of 8 px
+  between its dents included; narrower is a bump the walk stops at.
+  Stopped at its lip, the gecko scans across the walk, in the frame of
+  the press (not the body's: tilted on the lip it would scan up the
+  wall), at the three columns just ahead for every run of air that
+  reads as a passage and holds its row or comes within three cells of
+  it (one column may be a throat; a crumb a widening strike left can
+  split a mouth in two, and the pocket a widened mouth leaves above or
+  below the tunnel's line is where the tunnel may lead on from), and
+  enters one if a route of runs at least a throat tall, each
+  overlapping the last, goes on from it for 16 px, or opens into cave
+  or a wider pocket before that (a hole through a thin wall, a door; a
+  throat into a chamber). Connected, not straight: a mouth opened
+  wider than the tunnel behind it by a few more strikes, or a tunnel
+  that wobbles off the mouth's middle, is a passage all the same (a
+  ray along the mouth's middle refused both). A column in the wall
+  with no run that near at least a throat tall is shut (the point of
+  a wedge, whose crevice widens beyond it, is no way in). A route
+  wider than a squeeze the whole way (20 to 24 px) is entered only
+  when it runs straight and the body stands in its frame: a bend in a
+  wide tunnel is a corner, climbed as a step, and a body turned onto a
+  dead end's wall is at no lip. A wall within reach that holds a mouth
+  is walked to, not turned onto: turned onto the ramp a rising tunnel
+  has for a lower lip, the body swung half way up it and back in ten
+  ticks once the squeeze took its frame. Until the body is in, the
+  corridor is read about the mouth run's line rather than the body's
+  row, so the nudge lifts it out of a pocket beside the mouth into the
+  run the route leads on from. The clearance drops to fit
+  the corridor the body has, the overlap of the air columns read at
+  every cell over the next body length (every column may be tall
+  enough and the corridor still narrow where a chewed passage's middle
+  wobbles up and down), or, where that overlap reads narrower than a
+  throat (a tongue-dug tunnel wobbles a cell every strike, a sloping
+  one climbs a cell every few), over the next step or two only, so the
+  body follows the wobble at a clearance that fits it (2.5 px at the
+  least) instead of being stopped by a straight line that fits nothing.
+  The walk slows to 40 percent, the body is nudged to that corridor's
   middle (within a quarter pixel while the walk is blocked, since a
   body a pixel off it can be the one a bump stops), and its drawn
   points thin to the
@@ -252,21 +281,42 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   leave it. A press straight into the surface over a slot in it (a
   crack in the floor, a slot in the ceiling overhead, a hole in the
   wall being climbed) enters the slot nose first, as a wall grab onto
-  its side, centred over its mouth. The squeeze keeps its own
-  axis-aligned frame, ends once the passage has opened out round the
-  body, and never follows a crevice that closes below 11 px.
-  Afterwards the clearance grows back half a pixel a tick, so the body
-  eases out rather than pops. A body chewing its way in squeezes
+  its side, centred over its mouth. The slot is read as the run of
+  columns deep enough under the surface, or, where too few are (a
+  crack tapped out with the tongue has a throat every few cells, which
+  cuts a column's free span short), by the same route search the
+  horizontal passages use. The squeeze keeps its own
+  axis-aligned frame and ends once the passage has opened out round the
+  body, never inside one: a column at the body narrower than a throat
+  stops the walk where the clearance meets the walls, and the body
+  backs out (ending the squeeze there let the clearance grow back
+  inside the passage, which read the body as buried, let it move
+  through anything and pushed it off the walls by turns). A crevice
+  that closes to nothing is never entered. Afterwards the clearance
+  grows back half a pixel a tick, so the body eases out rather than
+  pops. A body chewing its way in squeezes
   through what it chews, the bites' cusps included. There is no jump
   out of a squeeze.
 - In a passage the drawn body lies on the passage's middle line, not
   its usual 2 px above the body centre: the lift eases between the two
   at a pixel a tick from the moment the squeeze begins, so the head
   heads for the passage rather than being shoved in off the lip. The
-  head keeps its full lead (the snout test uses the squeeze's own
-  clearance, or the walls beside it would draw it in the whole way
-  through) and, between two walls, is centred by the thinning like the
-  body's points instead of being pushed off whichever wall is nearer:
+  line is read at the body's own column, never the head's: read where
+  the head was, it fed back into where the head went (in a jagged
+  tunnel at rest the lift moved a pixel toward one column's line, which
+  put the snout's target against a jag, which drew the head back 2 px
+  into the next column, whose line sent the lift back, every tick, the
+  whole body along with it); read a lead ahead, a sloping tunnel's line
+  was the one 15 px on and the base sank off its own middle at the
+  mouth. The head keeps its full lead once the walls have taken it
+  (between them the snout test uses the squeeze's own clearance, or
+  the walls beside it would draw it in the whole way through); at the
+  mouth it waits at the lip, drawn back as far as 4 px ahead of the
+  base, since let forward by the smaller clearance it came up to the
+  lip's corner and was shoved 6 px off it in a tick, and in a squeeze
+  it is pushed off rock no more than 3 px a tick. Between two walls it
+  is centred by the thinning like the body's points instead of being
+  pushed off whichever wall is nearer:
   targeted at the lifted line it sat inside the wall's clearance and
   the push off the nearest cell, with an along-passage part that swept
   across each cell column and flipped at its edge, sawed it back and
@@ -278,6 +328,13 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   one tick and centred under the lip the next. A point whose drawn
   radius is still growing back from a thinning is pushed off rock no
   more than a pixel a tick.
+- At a wall the snout stops at the rock, drawn back along the body
+  line, and comes forward again a pixel at a time, only while it stays
+  clear. It used to come forward its 3 px a tick regardless and be
+  pushed back in 2 px steps, so at a wall the two never met: the head
+  sawed a pixel back and forth every tick and the body laid behind it
+  went with it, which the player saw as the idle gecko flickering in
+  the mouth of a crack with nothing pressed.
 - The drawn body rides 2 px above the body centre's line, the tail's
   tip 1 px, so the belly clears the ground and the tail drags on it. A
   planted foot is drawn on the rock's surface rather than at its
@@ -306,6 +363,45 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   readings. A corner turned onto a new surface runs across it, not
   against, and walks on. The wall reach never grabs a wall the input
   points away from (a slab's foot behind the gecko).
+
+- The settle latch: at rest (clinging, nothing pressed, no tongue, no
+  chew, no turn under way, up not turning, the feet planted) the drawn
+  body may reverse its motion twice; on the second reversal of any body
+  point, rounded to the pixel, the body is held still, with no ride or
+  squeeze nudge, no turn of up and the body not laid again, until a key
+  or a button is pressed, the body leaves the surface, or something
+  else moves it (a lump, a current, sand). The feet stay free to step,
+  and the face, the look and the idle animations go on. Every rule that
+  moves the body at rest has its own dead band, and new ones keep
+  finding new ways to disagree (the head's lead, its lift and the
+  push-out off the nearest cell each moved the head in a jagged tunnel,
+  and no position satisfied all three); this is the rule above them
+  all, and the opposite of a correction: it stops correcting, which
+  moves the body nowhere. The trace carries it (set, rev, revi) and the
+  suite's settle column counts its trips, so a loop it hides from the
+  player stays visible to us (at the time of writing: a body point at a
+  bite's cusp after a dig, and the body in ragged tunnels at rest).
+  GECKO_NO_SETTLE=1 turns the hold off to see a loop whole. Scene
+  rest_jagged.
+- The switch: a press straight away from a floor or ceiling (within 45
+  degrees of level) with the opposite surface within 28 px of the body
+  centre, a leg's reach, puts the gecko on that surface where it
+  stands. The frame flips at once, up to the other surface's normal and
+  facing reversed, so the head keeps pointing the same way in the world
+  and the keys keep their screen sense; the body centre does not move
+  (in a passage this low it rides halfway between the two anyway), the
+  drawn body, laid in world directions, is untouched, its lift reversed
+  with the frame so it eases over rather than jumping, and the feet
+  step across, the front pair first and the back pair six ticks later,
+  each drawn on the surface it is still on meanwhile. Turning the frame
+  through 180 degrees at the usual rate would swing the head and the
+  legs through a half circle. A held press does not flip the body back:
+  on the new surface it points into the rock. A lump overhead is no
+  ceiling, and walls are not switched between (in a narrow shaft a
+  press off a wall walks to its inside corner, the away rule). Scenes
+  switch_30 and switch_40 (up, held, walking on along the ceiling, back
+  down, and down from the ceiling) and switch_60 (out of reach: the
+  press does nothing).
 
 ## Idle animations
 
@@ -417,7 +513,8 @@ What the first slice adds on top of the movement, each a first version
   multiplied over the particles and the backdrop with an ambient floor
   (`light_overlay.gdshader`), under the gecko, whose whole body is
   drawn the same brightness (a shaded gecko read as a different
-  creature). `GECKO_LIGHT=0` turns it off. Godot's compute barrier
+  creature). It is off by default, the whole cave lit (the user's
+  choice, 2026-10-21); `GECKO_LIGHT=1` or the panel's Light turns it on. Godot's compute barrier
   re-applies the last push constant to whatever it re-binds, so no
   barrier follows the output pass.
 - Sound, kept light (`sound.gd`): one-shots on the gecko's signals
@@ -675,7 +772,9 @@ written, the latest loaded and compared.
 
 ## Controls
 
-WASD or arrows move, Space jumps, E or Shift chews. Left mouse shoots
+WASD or arrows move, Space jumps, E or Shift chews. In a passage low
+enough, up on the floor or down on the ceiling switches to the other
+surface. Left mouse shoots
 the tongue: a tap strikes, a hold grapples, and with the right button
 held as well it sticks and drags. Right mouse chews at the cursor. Ctrl+right erases (anything,
 bedrock too), middle
@@ -717,15 +816,24 @@ movie-mode frames into a contact sheet cropped around the gecko.
 
 The movement suite is the regression gate for any movement change:
 
-- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 106 scenes
+- `tests/scenes.json` (written by `tools/gen_scenes.py`) holds 148 scenes
   built from terrain primitives on the bitmap map, each with a spawn and
   scripted input: flat floor, slopes, steps, bumps, corners, overhangs,
   gaps, crevices, ceilings, tunnels, landings, water (a pool swum
   across, a deep pool jumped into and floated in), generated caves,
   cursor digs, squeezes (low passages, slots, a chewed passage, holes
   at the floor through walls 12 and 24 px thick, a hole 40 px up a wall
-  entered from the climb), an idle stand on the flat for the idle
-  animations, and three for the particle world only (`sim_only`, run
+  entered from the climb), tunnels dug with the tongue (24 taps at a
+  wall, the aim wandering a little: level, low, rising, steep and
+  falling, each plain and with its mouth widened by two or four more
+  taps, walked in to the end and back out; the player who dug one got
+  in only after widening its mouth and stuck on the way out), a crack
+  tapped straight down from the floor, entered with a down press and
+  climbed back toward its lip (three heights), an idle stand on the
+  flat for the idle animations and idle clings to a wall's face
+  (plain, with the head under the wall's rim, above a ledge) and in a
+  slot (the head under its lip and poking out) for the drawn body's
+  pixels, and three for the particle world only (`sim_only`, run
   with `tools/record.sh`): `sand_bed`, a bed of sand on the floor and
   a trench of it on bedrock, walked over and back and dug into;
   `sand_hopper`, a hopper of sand over a low pocket whose plate is

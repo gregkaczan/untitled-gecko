@@ -62,7 +62,7 @@ CREEP_WIN = 12             # frames the body has been still before a moving came
 
 SCORED = ["draw_jump", "head_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
           "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake", "tube_full"]
-INFO = ["body_jump", "stuck", "cam_creep"]
+INFO = ["body_jump", "stuck", "cam_creep", "settle"]
 
 
 def vec(s):
@@ -122,6 +122,8 @@ def parse(path):
                 "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1",
                 "sqz": d.get("sqz", "0") == "1", "ps": d.get("ps", "0") == "1", "feet": feet,
                 "cw": float(d.get("cw", "-1")), "sqin": d.get("sqin", "0") == "1", "tube": int(d.get("tube", "0")),
+                "set": d.get("set", "0") == "1", "rev": int(d.get("rev", "0")), "sw": d.get("sw", "0") == "1",
+                "hb": float(d.get("hb", "0")), "lift": float(d.get("lift", "0")),
             })
     return ticks
 
@@ -233,7 +235,9 @@ def metrics(ticks, frames=()):
                 dh = dist(head_rel(a), head_rel(b))
                 if dh > HEAD_JUMP:
                     ev["head_jump"].append((t, round(dh, 2)))
-            if not a["grab"] and not b["grab"]:
+            # A switch between a floor and its ceiling turns up round by
+            # design (gecko.gd _switch_surface).
+            if not a["grab"] and not b["grab"] and not b["sw"]:
                 da = abs(angle_between(a["up"], b["up"]))
                 if da > UP_FLIP:
                     ev["up_flip"].append((t, round(math.degrees(da), 1)))
@@ -312,7 +316,9 @@ def metrics(ticks, frames=()):
         prog = dist(ticks[i]["pos"], ticks[i - STALL_WIN + 1]["pos"])
         if prog >= STALL_PX:
             continue
-        into_rock = sum(1 for j in w if ticks[j]["blk"] and dot(inp, ticks[j]["bn"]) < -0.3)
+        def into(j):
+            return ticks[j]["blk"] and dot(inp, ticks[j]["bn"]) < -0.3
+        into_rock = sum(1 for j in w if into(j))
         # A press into the surface the body clings to attempts no step at
         # all (no block is recorded), and does nothing by design.
         rest = range(i - IDLE_TAIL + 1, i + 1)
@@ -322,7 +328,11 @@ def metrics(ticks, frames=()):
         # by design: the alternative is reversing in a loop.
         press_stop = all(ticks[j]["ps"] for j in rest)
         idle_ok = into_surface or press_stop or all(abs(dot(inp, tangent(ticks[j]["up"]))) < 0.3 and abs(tangent(ticks[j]["up"])[1]) <= 0.5 for j in rest)
-        if into_rock > STALL_WIN // 2:
+        # A squeeze walks slowly (26 px a window), so a window that ends
+        # at a wall holds too little progress before half of it is
+        # blocked: a tail of blocked ticks is the wall all the same.
+        into_rock_tail = sum(1 for j in rest if into(j))
+        if into_rock > STALL_WIN // 2 or into_rock_tail >= IDLE_TAIL * 2 // 3:
             if i - last_stuck >= STALL_WIN:
                 ev["stuck"].append((ticks[i]["tick"], round(prog, 1)))
                 last_stuck = i
@@ -360,6 +370,13 @@ def metrics(ticks, frames=()):
         if tk["tube"] and i - last_tube >= SINK_TICKS:
             ev["tube_full"].append((tk["tick"], tk["tube"]))
             last_tube = i
+    # The settle latch taking hold (informational): at rest a drawn point
+    # or a foot reversed its motion twice, and the body was held still.
+    # The player sees one rattle; the loop behind it is still there, and
+    # this column says where to look for it.
+    for i in range(1, n):
+        if ticks[i]["set"] and not ticks[i - 1]["set"]:
+            ev["settle"].append((ticks[i]["tick"], ticks[i]["rev"]))
     return ev
 
 
@@ -379,6 +396,11 @@ def outcome(ticks, scene):
         x0, y0, x1, y1 = scene["reach"]
         if not any(x0 <= tk["pos"][0] <= x1 and y0 <= tk["pos"][1] <= y1 for tk in ticks):
             why.append("never reaches x %d..%d y %d..%d" % (x0, x1, y0, y1))
+    if "end_up" in scene:
+        # The surface the body must end on, as its up (within 45 degrees).
+        ux, uy = scene["end_up"]
+        if dot(last["up"], (ux, uy)) < 0.7:
+            why.append("ends with up (%.2f, %.2f), expected (%d, %d)" % (last["up"][0], last["up"][1], ux, uy))
     return {"ok": not why, "why": "; ".join(why)}
 
 
@@ -447,7 +469,7 @@ def analyze(runs_dir, baseline_path=None):
     short = {"draw_jump": "draw", "head_jump": "head", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
              "foot_jump": "fjump", "sink": "sink", "float": "float", "cam_jerk": "cjerk", "shake": "shake",
-             "tube_full": "tube", "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*"}
+             "tube_full": "tube", "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*", "settle": "settle*"}
     lines = ["# Movement suite report", "",
              "Runs: %d, passing: %d, failing: %d. Columns are event counts; * marks informational metrics; "
              "travel is the body's path length in px, a check that the scene was exercised." % (total, passing, total - passing), ""]

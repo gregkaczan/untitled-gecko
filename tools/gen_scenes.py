@@ -93,10 +93,13 @@ BASES = {
 scenes = {}
 
 
-def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=None, reach=None, lumps=None, sim_only=False):
+def add(name, terrain, spawn, scripts, base="room", end=None, state=None, note=None, reach=None, lumps=None, sim_only=False, end_up=None):
     sc = {"base": base, "terrain": terrain, "spawn": spawn, "scripts": scripts}
     if end:
         sc["end"] = end
+    if end_up:
+        # The surface the run must end on, as the body's up.
+        sc["end_up"] = end_up
     if reach:
         sc["reach"] = reach
     if state:
@@ -346,6 +349,73 @@ add("squeeze_ragged", [["ragged", 500, 600, 660, 600, 8, 5], ["room", 300, 540, 
     ["floor", 400, 600], ["traverse"], base="solid", state="cling", reach=[690, 0, 1920, 1080],
     note="a ragged chewed passage 11 to 20 px tall at floor level between two rooms, 160 px long")
 
+# 17. A tunnel dug with the tongue: taps at a wall, each strike a
+# 4 px dent (STRIKE_R plus the carve pad), the aim moved up and down a
+# little as a player's cursor wanders, so the passage comes out ragged
+# and about as tall as a strike is wide. Then a walk in to its end and
+# a walk back out: the player got in only after widening the mouth and
+# was stuck going out (2026-10-21).
+TAP = 0.3        # Seconds a tap cycle takes: the tongue out, the strike, and back (900 px/s over up to 120 px)
+
+
+def tap_dig(n, aims):
+    out = []
+    for i in range(n):
+        a = aims[i % len(aims)]
+        out.append(step(0.016, Z, lmb=True, aim=a))
+        out.append(step(TAP - 0.016, Z, aim=a))
+    return out
+
+
+# The tongue fans out from the mouth, so the dents land within a pixel
+# of each other at the wall's face and spread deeper in: the mouth is
+# the narrowest part, a strike's own 10 px, however the aim wanders.
+# The "mouth" variants add taps aimed short, which widen the mouth the
+# way the player did.
+MOUTH = {"": [], "mouth": [[40, -3], [40, 1]], "mouth_wide": [[40, -5], [40, 3], [40, -3], [40, 1]]}
+for name, aims, tall in (("level", [[120, -3], [120, 0], [120, 3]], "10 at the mouth, 14 to 18 inside"),
+                         ("low", [[120, 3], [120, 6], [120, 9]], "10 at the mouth, 12 to 16 inside"),
+                         ("thin", [[120, 0], [120, 2]], "10 to 12"), ("wide", [[120, -5], [120, 0], [120, 5]], "10 at the mouth, 14 to 20 inside"),
+                         # Rising and falling, as a player's tunnel does (the one of 2026-10-21 rose to the right).
+                         ("rise", [[120, -16], [120, -13], [120, -10]], "10 to 16, rising a cell every 15"),
+                         ("steep", [[120, -28], [120, -25], [120, -22]], "10 to 16, rising a cell every 8"),
+                         ("fall", [[120, 12], [120, 15], [120, 18]], "10 to 16, falling a cell every 14")):
+    for m, extra in MOUTH.items():
+        sn = "tap_dig_" + name + ("_" + m if m else "")
+        SCRIPTS[sn] = tap_dig(24, aims) + tap_dig(len(extra), extra) + [step(5.0, R), step(6.0, L), step(0.5, Z)]
+        add("tongue_tunnel_" + name + ("_" + m if m else ""), [["fill", 1000, C, 920, F - C]], ["floor", 950, 700], [sn], state="cling",
+            reach=[1060, 0, 1920, 1080], end=[0, 0, 990, 1080],
+            note="a wall at 1000 dug into with 24 tongue taps, the aim over three heights, a passage %s px tall%s: walked in to its end and back out"
+                 % (tall, ", its mouth widened by %d short taps" % len(extra) if extra else ""))
+
+# 18. Idle on a wall and under a ledge, nothing pressed: the drawn body
+# must hold its pixels (the player saw the body and head flick a pixel
+# now and then while clinging to a wall with no input, 2026-10-21).
+# Headless on the bitmap and, with tools/record.sh, on the sim's cells,
+# which jiggle under the probe.
+add("idle_wall", [["fill", 1000, 300, 300, 500]], ["wall_right", 980, 600], ["idle"], state="cling", end=[960, 560, 1000, 640],
+    note="spawned on the left face of a wall, nothing pressed for 13 s: the body stays put, pixel for pixel")
+add("idle_ledge", [["fill", 1000, 300, 300, 300], ["fill", 1000, 600, 60, 200]], ["wall_right", 980, 560], ["idle"], state="cling", end=[960, 520, 1000, 600],
+    note="on a wall's face just above where a ledge steps back under it, nothing pressed for 13 s")
+add("idle_rim", [["fill", 1000, 300, 300, 500]], ["wall_right", 980, 322], ["idle"], state="cling", end=[960, 290, 1000, 360],
+    note="on a wall's face with the head just under its top corner (the screencast's pose), nothing pressed for 13 s")
+# Into the 16 px slot of squeeze_slot_16, down to its shaft and part way
+# back up, then nothing for 8 s with the body in the slot: the head just
+# under the lip (slot_lip) and poking out above it (slot_out), the poses
+# the player filmed the flicker in (2026-10-21).
+SCRIPTS["slot_lip"] = [step(1.0, R), step(3.0, D), step(1.35, U), step(8.0, Z)]
+SCRIPTS["slot_out"] = [step(1.0, R), step(3.0, D), step(1.6, U), step(8.0, Z)]
+add("idle_slot", [["erase", 1000, F, 16, 60], ["erase", 1000, F + 60, 60, 60]], ["floor", 890, 700], ["slot_lip", "slot_out"], state="cling",
+    reach=[1000, F + 90, 1060, F + 120], note="the 16 px slot: down it, back up to the lip or just past it, then nothing pressed for 8 s")
+# A crack dug straight down with tongue taps (the mouth sits 15 px
+# ahead of the body, so the aim is offset to keep the line vertical),
+# entered with a down press, climbed back up to its lip, then nothing
+# for 8 s: the player's crack, dug the same way.
+for name, up_s in (("a", 1.2), ("b", 1.5), ("c", 1.8)):
+    SCRIPTS["tap_shaft_" + name] = tap_dig(24, [[15, 120], [18, 120], [12, 120]]) + [step(0.12, R), step(0.4, Z), step(3.0, D), step(up_s, U), step(8.0, Z)]
+    add("tongue_shaft_" + name, [], ["floor", 950, 700], ["tap_shaft_" + name], state="cling", reach=[930, F + 20, 1000, F + 120],
+        note="a crack tapped straight down from the floor, entered with a down press, climbed back %.1f s toward its lip, then nothing pressed" % up_s)
+
 # 14. Loose matter and the other materials, in the particle world only
 # (sim_only: in the bitmap, sand is ground like rock). Sand and clay
 # are loose grains that sleep until undermined, then pour; the gecko
@@ -367,6 +437,37 @@ add("materials", bed("sand", 300, 560, 48) + bed("clay", 640, 900, 48)
     ["floor", 150, 700], ["idle", "traverse_long"], state="cling", sim_only=True,
     lumps=[["boulder", 1850, 700, 10], ["clay", 1880, 700, 7]],
     note="every material in a row: a bed of sand, a bank of clay, a pool of water, a pool of lava (nothing to the gecko yet: it falls in and stands on the bottom), a block of hard rock, a block of bedrock, a vein of copper, a stone and a clump of clay, bedrock 160 px under the floor; the brush and the keys try them")
+
+# 19. The switch between a floor and the ceiling over it (2026-10-21): a
+# press straight away from the surface, with the other one within a
+# leg's reach of the body centre (28 px), flips the body onto it where
+# it stands, the feet stepping across. Bored tunnels 30 and 40 px tall
+# (the user's passages were 28 to 34), and one 60 px tall, where the
+# ceiling is out of reach and the press does nothing. The held press
+# must not flip the body back and forth: once on the ceiling it points
+# into the surface.
+SCRIPTS["switch_up"] = [step(0.5, Z), step(0.3, U), step(1.5, Z)]
+SCRIPTS["switch_up_hold"] = [step(0.5, Z), step(2.0, U)]
+SCRIPTS["switch_back"] = [step(0.5, Z), step(0.3, U), step(1.0, Z), step(0.3, D), step(1.5, Z)]
+SCRIPTS["switch_walk"] = [step(0.5, Z), step(0.3, U), step(0.5, Z), step(3.0, R), step(0.5, Z)]
+SCRIPTS["switch_down"] = [step(0.5, Z), step(0.3, D), step(1.5, Z)]
+for tall in (30, 40):
+    bore = [["tunnel", 500, 600, 1500, 600, tall // 2]]
+    add("switch_%d" % tall, bore, ["floor", 700, 600], ["switch_up", "switch_up_hold", "switch_walk"], base="solid", state="cling",
+        end_up=[0, 1], reach=[700, 0, 1920, 1080],
+        note="a bored tunnel %d px tall: a press up from its floor puts the gecko on its ceiling (held, it stays there; switch_walk walks on along the ceiling)" % tall)
+    add("switch_%d_back" % tall, bore, ["floor", 700, 600], ["switch_back"], base="solid", state="cling", end_up=[0, -1], end=[650, 560, 750, 640],
+        note="up to the ceiling, then down to the floor again")
+    add("switch_%d_ceiling" % tall, bore, ["ceiling", 700, 600], ["switch_down"], base="solid", state="cling", end_up=[0, -1], end=[650, 560, 750, 640],
+        note="spawned on the ceiling: a press down puts the gecko on the floor")
+add("switch_60", [["tunnel", 500, 600, 1500, 600, 30]], ["floor", 700, 600], ["switch_up", "switch_up_hold"], base="solid", state="cling", end_up=[0, -1],
+    end=[650, 560, 750, 680], note="a tunnel 60 px tall: the ceiling is out of reach, a press up does nothing")
+# The settle latch (2026-10-21): a walk stopped in a jagged tunnel, then
+# nothing pressed for 6 s. The body rattled there (the head 2 px along
+# the tunnel every tick, the body laid behind it) and must come to rest.
+SCRIPTS["walk_rest"] = [step(10.0, R), step(3.0, Z), step(0.5, R), step(3.0, Z), step(0.5, R), step(3.0, Z)]
+add("rest_jagged", ragged_run(600, 500, [8, 14, 8, 14, 8, 14, 8, 8], 100, 21), ["floor", 540, 600], ["walk_rest"], base="solid", state="cling",
+    reach=[1200, 0, 1920, 1080], note="walked 10 s into the jagged tunnel (where the head sawed 2 px a tick at rest), then nothing pressed for 3 s, twice more half a second on: the body comes to rest each time")
 
 out = {"bases": BASES, "scripts": SCRIPTS, "scenes": scenes}
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
