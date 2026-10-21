@@ -1,0 +1,32 @@
+{
+ "bases": {
+  "cave5": [
+   [
+    "blank"
+   ],
+   [
+    "cells",
+    "res://levels/cave5/v0001.cells.png"
+   ]
+  ]
+ },
+ "kind": "saved",
+ "saved_at": "2026-10-21 10:14:02",
+ "scenes": {
+  "cave5": {
+   "base": "cave5",
+   "decor": [],
+   "lights": [],
+   "lumps": [],
+   "slugs": [],
+   "spawn": [
+    "floor",
+    960,
+    540
+   ]
+  }
+ },
+ "scripts": {
+
+ }
+}
