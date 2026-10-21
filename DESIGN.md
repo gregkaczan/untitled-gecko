@@ -405,8 +405,9 @@ What the first slice adds on top of the movement, each a first version
 - Light: the sim has a light pass (`light_seed.glsl`, `light_spread.glsl`,
   `light_out.glsl`), three regions at the tail of its buffer. Each
   tick the seed takes last tick's light decayed by 0.8, the emission
-  the particles wrote (copper a little, lava a lot, glowshrooms green
-  with a slow breath, `render_write.glsl`), daylight on the open cells
+  the particles wrote (copper a little, lava a lot, glowshrooms and the
+  glowing decor with a slow, shallow breath, a 32 px patch to a phase,
+  `render_write.glsl`), daylight on the open cells
   of the exit's rect, and the glows (the gecko's head, warm and small;
   each slug's; the level's lights, thirteen glows in all); nineteen
   spread passes carry it a cell at a time, the
@@ -553,7 +554,7 @@ on), `notch_climb` (the same bites on bare rock), `crumble_wall`,
 
 ## The map editor
 
-F2 opens the editor (`editor.gd`), a panel down the left (it scrolls),
+Tab or F2 opens the editor (`editor.gd`), a panel down the left (it scrolls),
 its sections cards: paints (every cell kind as a box in its colour,
 the brush under them, [ and ] or the wheel sizing it); decor (one icon
 a group of `decor/stamps/`, its name on hover, the group's variants
@@ -640,7 +641,7 @@ a cell, its kind in the red channel, exact), the json carrying
 while there are strokes since the last version, keeping the last ten;
 Save writes a saved version, kept for good, and the head pair
 `levels/<name>.json` and `levels/<name>.cells.png`, what the game and
-the suite load (Tab cycles the heads, the suite runs any with scripts,
+the suite load (Ctrl+Tab cycles the heads, the suite runs any with scripts,
 so a painted level is a level). A level with no name yet gets one on
 its first stroke: cave<seed> in a generated cave, <scene>-edit in a
 scene from a file that tools wrote (the clutch keeps its generator as
@@ -661,17 +662,54 @@ way (the camera's whole-pixel grid follows the zoom, and a view wider
 than the world centres on it), the middle button pans, Home brings it
 back to the gecko at the game's zoom, as leaving the editor does.
 
-Every edit goes to the live world (the particle sim: an erase this tick
-and a fill the next, once the readback shows the cells empty; a stamp's
-cells filled one by one; or the bitmap) and to an authoring cell map,
-the CPU map the sim was built from (a generated cave's as well, made on
-a CaveMap and handed to the sim), kept for this. A version's json is a
-base of its cells png and one scene on it with the spawn, the exit, the
-vines and lumps, the slugs, the decor list and the lights. Painted gas
-pockets are found from the cells. `GECKO_EDIT_TEST=1` runs a headless
-round trip: paint, stamps with sizes, a PNG stamp undone and redone, a
-cone light set and a point light removed, a saved and an auto version
-written, the latest loaded and compared.
+Every edit goes to the live world (the particle sim: a melt in the
+next tick and the fill spawned right after it, so the fill is not
+melted with the rest; a stamp's cells filled one by one; or the
+bitmap) and to an authoring cell map, the CPU map the sim was built
+from (a generated cave's as well, made on a CaveMap and handed to the
+sim), kept for this. The live world and the map agree to the cell: a
+paint of a kind melts CARVE_PAD less than a bite, so it takes exactly
+the circle it fills; the brush's melt takes static matter by where it
+sat at the tick's start (`pbd_delta.glsl`), not drawn into the hole by
+the solve and taken a cell or two further as a bite erodes the ground;
+static particles sit on their cells' centres (`sim.gd`); static
+matter's grain hangs on its cell, not its particle (`render_write.glsl`),
+so a cell painted, saved and loaded is drawn the same to the pixel; the
+backdrop's dripstone silhouettes are made again after every stroke
+that changed cells. A version's json is a base of its cells png and
+one scene on it with the spawn, the exit, the vines and lumps, the
+slugs, the decor list and the lights; a generated cave writes its own
+spawn and the lumps it scattered, so a load of it starts where it
+started. Painted gas pockets are found from the cells. A play-test's
+bites and the game's own brush touch the live world only: a save
+holds the cells as authored. `GECKO_EDIT_TEST=1` runs a headless round
+trip: paint, stamps with sizes, a PNG stamp undone and redone, a cone
+light set and a point light removed, a saved and an auto version
+written, the latest loaded and compared. `tools/save_test.sh` runs
+`tests/save_test.gd` in the particle world on a virtual display (the
+GPU's Vulkan driver, `SAVE_ICD` for another): the generated cave
+edited through the editor's calls, paints of every kind, decor by the
+brush and set free, cones, a vine, a slug and lights of the three
+shapes, the view shot, the level saved and loaded, the view shot again
+and compared pixel for pixel outside what settles (water, lava, loose
+grains, lumps and vines, grown four cells), with the authored cells,
+the sim's static cells and the lists compared too; the shots and a
+diff land in `runs/save/`. `GECKO_PROBE=res://path.gd` runs any script
+inside the game with `main` set, as the test is run; `tests/look_probe.gd`
+with `GECKO_LOOK=<level>` shoots a level whole and in close-ups to
+`runs/look/`.
+
+A cave to see everything in: `godot --headless --path . -s
+tools/gen_showcase.gd -- [name seed]` writes `levels/showcase.json`
+and its cells png (the editor's format, so the game, the editor and
+the suite load it): four chambers carved by noise and joined by a
+winding way and a switchback climb to a crack of daylight, bedrock
+under it all, hard rock in seams, copper veins into the walls, sand in
+the dips, clay by the lake, moss on its shores, lava in a pit with
+embers round it, crumbling ledges on the climb, thorns on its walls,
+gas sealed beside the way, glowshroom flesh in the nooks, the decor
+brush run along the floors, ceilings and walls, cones, columns, vines,
+lumps, a slug and lights of every kind and shape.
 
 ## Controls
 
@@ -684,9 +722,9 @@ clay or a heap of sand at the cursor, half the brush's size, and N
 held pours sand there. R starts
 the cave again (a fresh chamber when in a generated one), 1 and 2
 pick the gecko's pixel grid.
-Tab loads the next scene from the movement suite (built in whichever
-world is running, the keys driving the gecko) and Shift+Tab goes back
-to the first cave. F1 is debug mode: the gecko's overlay (up
+Tab or F2 opens the map editor. Ctrl+Tab loads the next scene from the
+movement suite (built in whichever world is running, the keys driving
+the gecko) and Shift+Tab goes back to the first cave. F1 is debug mode: the gecko's overlay (up
 vector, probe reach, feet, bite) and a panel down the right of the
 screen with the scene list to click into, main cave and reload, the
 cave seed and New cave for a generated chamber, the brush radius, the

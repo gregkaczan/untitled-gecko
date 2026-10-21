@@ -9,7 +9,8 @@
 # panel down the right: scenes, seed, brush, clock, pixel grid, and the
 # gecko's overlay behind the panel's Overlay check; a hand-played run
 # starts in debug mode, OPEN_DEBUG, with the overlay off, OPEN_OVERLAY), 1 and 2
-# for the gecko's pixel grid (2 px like the rock, or 1 px), Tab for the next test scene
+# for the gecko's pixel grid (2 px like the rock, or 1 px), Tab or F2 for
+# the map editor (editor.gd), Ctrl+Tab for the next test scene
 # from tests/scenes.json and Shift+Tab back to the first cave (the
 # keys drive the gecko in a scene loaded this way); the panel's New cave
 # builds a generated chamber from its seed. GECKO_DUMP_MAP=file.png
@@ -22,6 +23,7 @@
 # boulder, a clump of clay or a heap of sand at the cursor, half the
 # brush's size, and N held pours sand there. The generated cave gets a
 # few lumps and heaps of its own (_scatter_chunks).
+# GECKO_LEVEL=name opens the game on a level from levels/.
 # GECKO_DEMO=1 in the environment replaces the keyboard with a scripted
 # walk so movie-mode frames show the gecko moving without anyone at the keys.
 # GECKO_SCENE=name[:script] runs a test scene from tests/scenes.json the
@@ -206,11 +208,13 @@ var _vines := {}                # Chunk id -> {top, load}: the vines hanging in 
 var _backdrop: Node2D           # backdrop.gd: the far wall and the near dripstone, particle world only
 var _slugs: Array = []          # slug.gd: the glow slugs in the level
 var _gas: Array = []            # Rect2 of each sealed gas pocket still to burst (the scene's gas ops)
-var _editor: CanvasLayer        # editor.gd: the map editor's panel (F2)
+var _editor: CanvasLayer        # editor.gd: the map editor's panel (Tab or F2)
 var _editing := false
 var _cam_grid := CAM_GRID       # The camera's grid, 1 / zoom: CAM_GRID at the game's zoom, finer or coarser once the editor zooms
 var _edit_cam := false          # The editor zoomed or panned: the camera stays put, no follow, until Home
 var _author: CaveMap            # The cells as authored: the bitmap map itself, or the CPU map the sim was built from, kept for the editor
+var _gen_spawn := Vector2.ZERO  # The generated cave's spawn (its flattest floor) and the lumps scattered on it, [kind, x, y, r] each: a save of the cave keeps them
+var _gen_lumps: Array = []
 var _fills: Array = []          # Editor paints waiting for the sim's erase to land: [p, r, kind]
 var _won := false              # The gecko reached the exit: the camera pulls back
 
@@ -347,9 +351,7 @@ func _ready() -> void:
 			sim.crumb_cells = n)
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
 	_panel.sound_changed.connect(func(on: bool) -> void: AudioServer.set_bus_mute(0, not on))
-	_panel.light_changed.connect(func(on: bool) -> void:
-		if sim:
-			sim.set_light(on))
+	_panel.light_changed.connect(set_light)
 	_panel.anim_requested.connect(play_anim)
 	_panel.set_overlay(OPEN_OVERLAY)
 	if picked.is_empty() and _demo_name == "":
@@ -358,10 +360,13 @@ func _ready() -> void:
 		if OPEN_DEBUG:
 			_set_debug(true)
 	_reset()
+	if OS.get_environment("GECKO_LEVEL") != "":
+		# The game opens on a level from levels/ (the showcase cave).
+		print(load_level(OS.get_environment("GECKO_LEVEL")))
 	if OS.get_environment("GECKO_ANIM") != "":
 		play_anim(OS.get_environment("GECKO_ANIM"))   # A look at an animation without a hand on the panel
 	if OS.get_environment("GECKO_EDIT") != "":
-		# Straight into the map editor (a look at its panel without a hand on F2).
+		# Straight into the map editor (a look at its panel without a hand on Tab).
 		_editing = true
 		_editor.visible = true
 		_marks.visible = true
@@ -372,6 +377,18 @@ func _ready() -> void:
 		# The editor's save and load, headless: paint, stamp, save, load,
 		# count the kinds, quit (tools and the memory notes).
 		_edit_self_test.call_deferred()
+	var probe := OS.get_environment("GECKO_PROBE")
+	if probe != "":
+		# A script run inside the game with this node as its `main`:
+		# tests/save_test.gd (the editor's save and load, pixel for
+		# pixel, tools/save_test.sh) and one-off probes of the sim.
+		var script = load(probe)
+		if script == null:
+			push_error("no probe at " + probe)
+		else:
+			var t: Node = script.new()
+			t.set("main", self)
+			add_child(t)
 	var dump := OS.get_environment("GECKO_DUMP_MAP")
 	if dump != "":
 		if not sim:
@@ -441,6 +458,8 @@ func _reset() -> void:
 	else:
 		map.generate(seed_value)
 	var spawn := _flat_spawn()
+	_gen_spawn = spawn
+	_gen_lumps.clear()
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
 		map.fill_rect(Rect2(spawn.x + 110.0, spawn.y - 170.0, 32.0, 200.0))
@@ -541,6 +560,7 @@ func _scatter_chunks(spawn: Vector2) -> void:
 			if absf(x - spawn.x) < 140.0:
 				continue
 			if _lump_on_floor(x, lump[0], lump[1]) > 0:
+				_gen_lumps.append(["clay" if lump[1] else "boulder", x, 540.0, lump[0]])
 				break
 	for r in [26.0, 18.0]:
 		for _try in 8:
@@ -552,6 +572,7 @@ func _scatter_chunks(spawn: Vector2) -> void:
 			if map.solid_within(p, r + 2.0):
 				continue
 			map.spawn_sand(p, r)
+			_gen_lumps.append(["sand", p.x, p.y, r])
 			break
 
 
@@ -583,12 +604,6 @@ func _physics_process(dt: float) -> void:
 	_update_slugs(dt)
 	_autosave(dt)
 	_anim_tick(dt)
-	if sim and not _fills.is_empty():
-		# Editor paints: the erase of a tick ago has landed, the cells
-		# read empty, the fill can spawn into them.
-		for f in _fills:
-			map.material_circle(f[0], f[1], f[2])
-		_fills.clear()
 	if sim:
 		var glows: Array = []
 		if gecko.glow_snuff <= 0.0:
@@ -607,6 +622,14 @@ func _physics_process(dt: float) -> void:
 			_t_gecko.append(gecko.tick_us)
 			if _t_sim.size() >= 60:
 				_print_timing()
+		if not _fills.is_empty():
+			# Editor paints and stamps: the tick just run took the paint's
+			# erase (a melt is on for one tick, sim.gd tick), so the
+			# fill spawns into empty cells now and is drawn next tick.
+			# Spawned before the tick, it would be melted with the rest.
+			for f in _fills:
+				map.material_circle(f[0], f[1], f[2])
+			_fills.clear()
 		_update_vines(dt)
 	if not _won and _exit.has_area() and _exit.has_point(gecko.pos):
 		_win()
@@ -619,7 +642,7 @@ func _physics_process(dt: float) -> void:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0 and not _editing:
-		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab test scene   F1 debug"
+		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab editor   F1 debug"
 	else:
 		_label.text = ""
 
@@ -718,7 +741,12 @@ func edit_end() -> void:
 		return
 	var before := _stroke
 	_stroke = {}
-	if _edit_changed(before, _edit_state()):
+	var now := _edit_state()
+	if _edit_changed(before, now):
+		if before.cells != now.cells and _backdrop:
+			# The dripstone silhouettes hang from the cells: made again
+			# now, so the view is what a load of these cells shows.
+			_backdrop.rebuild_near(_author.solid)
 		_undo.append(before)
 		while _undo.size() > UNDO_MAX:
 			_undo.pop_front()
@@ -776,7 +804,7 @@ func _edit_restore(st: Dictionary) -> void:
 	_fills.clear()
 	if sim:
 		map.build_cells(_author.solid)
-		_backdrop.build(_author.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
+		_backdrop.rebuild_near(_author.solid)
 	else:
 		_author.repaint_all()
 	_dress_world()
@@ -785,9 +813,12 @@ func _edit_restore(st: Dictionary) -> void:
 
 
 # A circle of kind at p: the live world and the authoring map alike.
-# In the sim the circle is erased now and filled next tick, once the
-# readback shows it empty (fill_circle spawns only into air). Air drops
-# the decor entries it covers.
+# In the sim the circle is melted this tick and filled after it
+# (_physics_process). A melt reaches CARVE_PAD past its radius, as a
+# bite does, and so does the map's erase: a paint of a kind melts that
+# much less, so it takes exactly the circle it fills, as the map does,
+# and leaves no ring of air round it. Air drops the decor entries and
+# the lights it covers.
 func edit_paint(p: Vector2, r: float, kind: int) -> void:
 	if _author == null:
 		return
@@ -809,7 +840,7 @@ func edit_paint(p: Vector2, r: float, kind: int) -> void:
 	else:
 		_author.material_circle(p, r, kind)
 	if sim:
-		map.erase_circle(p, r, true)
+		map.erase_circle(p, r if kind == CaveMap.CELL_AIR else r - CaveMap.CARVE_PAD, true)
 		if kind != CaveMap.CELL_AIR:
 			_fills.append([p, r, kind])
 	if kind == CaveMap.CELL_GAS:
@@ -1239,11 +1270,15 @@ func _default_level_name() -> String:
 
 # The level as a file: a base of the cells png and one scene on it with
 # the spawn, the exit, the vines and lumps, the slugs, the decor and the
-# lights. The game and the suite load it like the clutch.
+# lights. The game and the suite load it like the clutch. A generated
+# cave saves its own spawn and the lumps it scattered, so a load of it
+# starts where it started, with the same boulders and heaps.
 func _level_dict(name: String, png: String) -> Dictionary:
-	var spawn: Array = ["at", _edit_spawn.x, _edit_spawn.y, 0, -1] if _edit_spawn != Vector2.INF else _scene.get("spawn", ["floor", 960, 540])
+	var spawn: Array = ["at", _edit_spawn.x, _edit_spawn.y, 0, -1] if _edit_spawn != Vector2.INF else _scene.get("spawn", ["floor", _gen_spawn.x, _gen_spawn.y - 20.0])
 	var lumps: Array = []
 	lumps.append_array(_scene.get("lumps", []))
+	if _scene.is_empty():
+		lumps.append_array(_gen_lumps)
 	lumps.append_array(_edit_lumps)
 	var slugs: Array = []
 	slugs.append_array(_scene.get("slugs", []))
@@ -1734,8 +1769,21 @@ func _set_debug(on: bool) -> void:
 	gecko.debug = on and _panel.overlay_on()
 
 
+# The sim's light pass on or off (the whole cave lit flat): the debug
+# panel's check and the editor's, kept in step.
+func set_light(on: bool) -> void:
+	if sim:
+		sim.set_light(on)
+	_panel.set_light(on)
+	_editor.set_light(on)
+
+
+func light_on() -> bool:
+	return sim.light_on if sim else false
+
+
 # The first cave as the scene to build: its index in the scene list, so
-# Tab goes on from it.
+# Ctrl+Tab goes on from it.
 func _pick_level() -> void:
 	_ensure_scenes()
 	var scenes: Dictionary = _scene_all.get("scenes", {})
@@ -1759,8 +1807,8 @@ func _ensure_scenes() -> void:
 		_scene_all = SceneBuilder.load_all()
 
 
-# Tab: the next test scene from tests/scenes.json, built in this world,
-# with the keys driving the gecko instead of the scene's script.
+# Ctrl+Tab: the next test scene from tests/scenes.json, built in this
+# world, with the keys driving the gecko instead of the scene's script.
 func _next_scene() -> void:
 	_ensure_scenes()
 	var n: int = _scene_all.get("scenes", {}).size()
@@ -1783,7 +1831,7 @@ func _load_scene(i: int) -> void:
 	gecko.lmb_override = false
 	_reset()
 	_panel.select_scene(i)
-	_hint = "scene %d/%d  %s   (Tab next, Shift+Tab main cave)" % [i + 1, names.size(), name]
+	_hint = "scene %d/%d  %s   (Ctrl+Tab next, Shift+Tab main cave)" % [i + 1, names.size(), name]
 	_hint_t = 5.0
 
 
@@ -1877,7 +1925,7 @@ func _process(_dt: float) -> void:
 		_next_scene()
 	if Input.is_action_just_pressed("scene_main", true):
 		_main_cave()
-	if Input.is_action_just_pressed("edit_toggle"):
+	if Input.is_action_just_pressed("edit_toggle", true) and not _editor.dialog_open():
 		_editing = not _editing
 		_editor.visible = _editing
 		_marks.visible = _editing

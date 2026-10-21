@@ -557,11 +557,13 @@ func spawn_chunk_disc(centre: Vector2, radius: float, mat: int) -> int:
 	return spawn_chunk(list, mat)
 
 
+# Every cell the rect touches, as cave_map.gd _set_rect takes them, so
+# a cone drawn on both (the editor's stamps) is the same cells.
 func fill_rect(r: Rect2, mat := MAT_ROCK, frac := -1.0) -> void:
 	var y := floorf(r.position.y / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
-	while y < r.end.y:
+	while y - PIXEL_SZ * 0.5 < r.end.y:
 		var x := floorf(r.position.x / PIXEL_SZ) * PIXEL_SZ + PIXEL_SZ * 0.5
-		while x < r.end.x:
+		while x - PIXEL_SZ * 0.5 < r.end.x:
 			spawn_particle(Vector2(x, y), mat, Vector2.ZERO, frac)
 			x += PIXEL_SZ
 		y += PIXEL_SZ
@@ -761,9 +763,16 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 				_wf(data, b + 7, 0.0)
 				_dead.append(idx)
 			else:
-				var x := clampf(xi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_W - 1.0)
-				var y := clampf(yi * PIXEL_SZ + PIXEL_SZ * 0.5 + _rng.randf_range(-0.5, 0.5), 1.0, WORLD_H - 1.0)
+				# Static matter sits on its cell's centre, as the editor's
+				# fills put it (fill_circle), so a brush's melt, which
+				# takes particles by position, takes the cells the
+				# authoring map erases; what moves starts a little off it.
 				var mat := material_of(kind)
+				var still := mat == MAT_ROCK or mat == MAT_HARD or mat == MAT_COPPER or mat == MAT_BEDROCK or mat == MAT_SHROOM
+				var jx := 0.0 if still else _rng.randf_range(-0.5, 0.5)
+				var jy := 0.0 if still else _rng.randf_range(-0.5, 0.5)
+				var x := clampf(xi * PIXEL_SZ + PIXEL_SZ * 0.5 + jx, 1.0, WORLD_W - 1.0)
+				var y := clampf(yi * PIXEL_SZ + PIXEL_SZ * 0.5 + jy, 1.0, WORLD_H - 1.0)
 				var cls := CT_SOLID
 				if mat == MAT_WATER:
 					cls = 1

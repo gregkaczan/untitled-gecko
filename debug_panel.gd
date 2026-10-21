@@ -32,6 +32,7 @@ var _overlay: CheckButton
 var _pixel: OptionButton
 var _sense: OptionButton
 var _sound: CheckButton
+var _light: CheckButton
 var _crumb: SpinBox
 var _status: Label
 
@@ -147,12 +148,12 @@ func _ready() -> void:
 	_overlay.focus_mode = Control.FOCUS_NONE
 	_overlay.toggled.connect(func(on: bool) -> void: overlay_changed.emit(on))
 	col.add_child(_overlay)
-	var light := CheckButton.new()
-	light.text = "Light (off: the whole cave lit)"
-	light.button_pressed = true
-	light.focus_mode = Control.FOCUS_NONE
-	light.toggled.connect(func(on: bool) -> void: light_changed.emit(on))
-	col.add_child(light)
+	_light = CheckButton.new()
+	_light.text = "Light (off: the whole cave lit)"
+	_light.button_pressed = true
+	_light.focus_mode = Control.FOCUS_NONE
+	_light.toggled.connect(func(on: bool) -> void: light_changed.emit(on))
+	col.add_child(_light)
 	_status = Label.new()
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.add_theme_font_size_override("font_size", 13)
@@ -195,6 +196,10 @@ func set_paused(on: bool) -> void:
 
 func set_pixel_size(v: float) -> void:
 	_pixel.select(_pixel.get_item_index(int(v)))
+
+
+func set_light(on: bool) -> void:
+	_light.set_pressed_no_signal(on)
 
 
 func set_sound(on: bool) -> void:

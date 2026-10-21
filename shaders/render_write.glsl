@@ -82,11 +82,21 @@ void main() {
     int rx = int(floor(px / psz));
     int ry = int(floor(py / psz));
     if (rx < 0 || rx >= int(rw) || ry < 0 || ry >= int(rh)) return;
+    // Static matter (rock and its bands, hard rock, copper, bedrock, the
+    // glowshroom and the decor cells) hangs its grain on the cell, not
+    // on the particle's slot, fraction or exact position, so a cell
+    // painted in the editor, saved and loaded, or filled again, is
+    // drawn the same to the pixel. Loose grains and liquids keep their own.
+    bool stat = (mat == 3u || mat == 5u || mat == 6u || mat == 7u || mat == 12u);
+    float sid = stat ? float(ry * int(rw) + rx) : float(id);
+    float svar = stat ? hash11(sid * 0.000731 + 0.37) * 8.9 : variation;
+    float sx = stat ? (float(rx) + 0.5) * psz : px;
+    float sy = stat ? (float(ry) + 0.5) * psz : py;
 
     // Light sources among the particles: a copper vein glows a little,
-    // lava a lot, a glowshroom (12) green with a slow breath, each
-    // mushroom (a 16 px patch) in its own phase. The light pass
-    // spreads it from here.
+    // lava a lot, a glowshroom (12) green with a slow, shallow breath,
+    // each 32 px patch in its own phase. The light pass spreads it
+    // from here.
     // A decor cell (mat 12 in a band) glows only in a glow band, in its own colour.
     bool emits = (mat == 6u || mat == 10u);
     vec3 em = (mat == 6u) ? vec3(0.55, 0.28, 0.08) : vec3(1.0, 0.45, 0.10);
@@ -98,8 +108,10 @@ void main() {
             if (band >= 16u) { emits = true; em = DECOR_PAL[band & 15u] * 0.9; }
         }
         if (emits) {
-            float phase = hash11(floor(px / 16.0) * 7.1 + floor(py / 16.0) * 13.3) * 6.2832;
-            em *= 0.72 + 0.28 * sin(rf(O_P + 36u) * 0.045 + phase);
+            // A slow, shallow breath, a 32 px patch to a phase, so a
+            // plant swells as one and the light round it does not flicker.
+            float phase = hash11(floor(sx / 32.0) * 7.1 + floor(sy / 32.0) * 13.3) * 6.2832;
+            em *= 0.90 + 0.10 * sin(rf(O_P + 36u) * 0.025 + phase);
         }
     }
     if (emits) atomicMax(buf.d[O_EM + uint(ry) * rw + uint(rx)], packUnorm4x8(vec4(em, 1.0)));
@@ -251,18 +263,18 @@ void main() {
 
     // --- Glowshroom (mat 12): pale green flesh, a lighter cap edge by the hash ---
     } else if (mat == 12u && fract(mat_f) >= 0.097) {
-        float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
-        float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
+        float h0 = hash11(svar * 127.1 + sid * 0.0013);
+        float h1 = hash11(svar * 269.5 + sid * 0.0029);
         cr = 0.42 + (h0 - 0.5) * 0.12;
         cg = 0.82 + (h1 - 0.5) * 0.12;
         cb = 0.46 + (h0 - 0.5) * 0.10;
-        float speck = step(0.85, hash11(variation * 53.3 + float(id) * 0.009)) * 0.15;
+        float speck = step(0.85, hash11(svar * 53.3 + sid * 0.009)) * 0.15;
         cr += speck; cg += speck; cb += speck;
 
     // --- Decor (mat 12 in a band): a stamp's pixel in its palette colour, a touch of jitter ---
     } else if (mat == 12u) {
         vec3 c = DECOR_PAL[uint(fract(mat_f) / 0.003) & 15u];
-        float j = (hash11(variation * 127.1 + float(id) * 0.0013) - 0.5) * 0.04;
+        float j = (hash11(svar * 127.1 + sid * 0.0013) - 0.5) * 0.04;
         cr = c.r + j; cg = c.g + j; cb = c.b + j;
 
     // --- Standard materials (sand, clay, rock, stone, hard rock, copper, bedrock) ---
@@ -285,10 +297,11 @@ void main() {
         }
 
         // Per-particle color variation: 3 independent hashes give RGB jitter.
-        // Uses variation (from fractional material) + particle ID for stable uniqueness.
-        float h0 = hash11(variation * 127.1 + float(id) * 0.0013);
-        float h1 = hash11(variation * 269.5 + float(id) * 0.0029);
-        float h2 = hash11(variation * 419.2 + float(id) * 0.0047);
+        // Uses variation (from fractional material) + particle ID for stable
+        // uniqueness; static matter the cell's stand-ins (sid, svar above).
+        float h0 = hash11(svar * 127.1 + sid * 0.0013);
+        float h1 = hash11(svar * 269.5 + sid * 0.0029);
+        float h2 = hash11(svar * 419.2 + sid * 0.0047);
         // Stone (mat 4) varies less: a lump reads as one pale thing
         // against the ground's grain. Hard rock (5) and bedrock (7) are
         // smoother still, so a seam of either reads as one slab.
@@ -298,7 +311,7 @@ void main() {
         cb += (h2 - 0.5) * var_strength;
 
         // Position-dependent noise: prevents banding when many same-material particles cluster
-        float pos_hash = hash11(px * 0.031 + py * 0.017);
+        float pos_hash = hash11(sx * 0.031 + sy * 0.017);
         cr += (pos_hash - 0.5) * 0.08;
         cg += (hash11(pos_hash * 3.7) - 0.5) * 0.08;
         cb += (hash11(pos_hash * 7.3) - 0.5) * 0.08;
@@ -313,25 +326,25 @@ void main() {
         // Hard rock: a few pale flecks, so it reads as a different stone
         // from the plain rock round it, not just a darker patch of it.
         if (mat == 5u) {
-            float fleck = step(0.94, hash11(variation * 41.7 + float(id) * 0.007)) * 0.14;
+            float fleck = step(0.94, hash11(svar * 41.7 + sid * 0.007)) * 0.14;
             cr += fleck; cg += fleck; cb += fleck * 1.1;
         }
         // Copper: warm patina with orange-tinted glints (18% chance)
         if (mat == 6u) {
-            float patina = hash11(px * 0.11 + py * 0.17 + variation);
+            float patina = hash11(sx * 0.11 + sy * 0.17 + svar);
             cr += patina * 0.12;
             cg += patina * 0.06;
-            float glint = step(0.82, hash11(variation * 53.3 + float(id) * 0.009)) * 0.25;
+            float glint = step(0.82, hash11(svar * 53.3 + sid * 0.009)) * 0.25;
             cr += glint; cg += glint * 0.7; // warm glint (less green)
         }
         // Bedrock: faint level banding, a slab laid down in sheets.
         if (mat == 7u) {
-            float band = sin(py * 0.11 + hash11(floor(py / 24.0)) * 3.0) * 0.025;
+            float band = sin(sy * 0.11 + hash11(floor(sy / 24.0)) * 3.0) * 0.025;
             cr += band; cg += band; cb += band * 1.3;
         }
 
         // Depth gradient: particles lower in the world are subtly darker (up to 20%)
-        float depth = 1.0 - (py / rf(O_P + 3u)) * 0.2;
+        float depth = 1.0 - (sy / rf(O_P + 3u)) * 0.2;
         cr *= depth;
         cg *= depth;
         cb *= depth;

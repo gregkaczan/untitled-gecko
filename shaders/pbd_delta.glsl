@@ -229,6 +229,21 @@ void main() {
         float cr = rf(slot + 4u), chl = rf(slot + 5u);
         vec2 c_a = cpos - cdir * chl;
         vec2 c_b = cpos + cdir * chl;
+        if (mode > 1.5 && yield_s >= 5.0 && !bonded) {
+            // The brush (the editor's paints, sim.gd MELT_BRUSH) on
+            // static matter: taken where it sat at the tick's start,
+            // within the radius to the cell, as the authoring map
+            // erases the same circle; never drawn into the solve by the
+            // void beside it and taken a cell or two further, as a bite
+            // erodes the ground (below). Outside, it stays put.
+            if (capsule_dist(vec2(rf(b), rf(b + 1u)), c_a, c_b) < cr) {
+                kill_particle(b);
+                buf.d[bd] = 0u;
+                atomicAdd(buf.d[O_P + 22u], 1u);
+                return;
+            }
+            continue;
+        }
         // A bite loosens the grains round it; the body's pusher wakes
         // only what it is actually in, so walking over a bed of sand
         // leaves the bed asleep.
@@ -511,6 +526,7 @@ void main() {
             float dist = length(cdiff);
             if (dist >= cr) continue;
             float melt = rf(slot + 7u);
+            if (melt > 1.5 && yield_s >= 5.0 && !bonded) continue;   // The brush took static matter above, by rest position
             if (melt > 0.0) {
                 // Melter: ground erodes at the melt rate and nothing is pushed,
                 // so the ground thins out in place instead of piling up.
