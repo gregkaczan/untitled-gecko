@@ -265,6 +265,12 @@ func _ready() -> void:
 	_marks.z_index = 60
 	_marks.visible = false
 	add_child(_marks)
+	_ghost = EditGhost.new()
+	_ghost.z_as_relative = false
+	_ghost.z_index = 61
+	_ghost.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_ghost.visible = false
+	add_child(_ghost)
 	if not sim:
 		_author = map
 	if sim:
@@ -359,7 +365,9 @@ func _ready() -> void:
 		_editing = true
 		_editor.visible = true
 		_marks.visible = true
+		_ghost.visible = true
 		_editor.refresh()
+		_label.position.x = _editor.panel_width() + 12.0
 	if OS.get_environment("GECKO_EDIT_TEST") != "":
 		# The editor's save and load, headless: paint, stamp, save, load,
 		# count the kinds, quit (tools and the memory notes).
@@ -418,10 +426,20 @@ func _reset() -> void:
 	if sim and _demo_name in ["pull", "strike", "tongue"]:
 		_lab()
 		return
-	map.generate(seed_value)
-	if _backdrop:
-		# The generated cave: the far wall only (its cells are the sim's).
-		_backdrop.build(PackedByteArray(), CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
+	if sim:
+		# The generated cave's cells on a CaveMap, kept as the authoring
+		# map, so the editor paints and saves a generated cave like a
+		# level from a file.
+		var gen := CaveMap.new()
+		gen.generate(seed_value)
+		map.generate_cells(seed_value, gen.solid)
+		if _author and _author != map:
+			_author.free()
+		_author = gen
+		if _backdrop:
+			_backdrop.build(gen.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
+	else:
+		map.generate(seed_value)
 	var spawn := _flat_spawn()
 	if _demo_name == "climb":
 		# A straight pillar to the right of the spawn: the wall test
@@ -563,6 +581,7 @@ func _physics_process(dt: float) -> void:
 			get_tree().set_deferred("paused", true)
 			_panel.set_paused(true)
 	_update_slugs(dt)
+	_autosave(dt)
 	_anim_tick(dt)
 	if sim and not _fills.is_empty():
 		# Editor paints: the erase of a tick ago has landed, the cells
@@ -575,6 +594,8 @@ func _physics_process(dt: float) -> void:
 		if gecko.glow_snuff <= 0.0:
 			glows.append([gecko.chain.head(), GLOW_COLOR.lerp(Color(0.8, 1.0, 0.6), 0.5 if gecko.glow_boost > 0.0 else 0.0),
 					GLOW_R * (1.8 if gecko.glow_boost > 0.0 else 1.0)])
+		if not _light_preview.is_empty():
+			glows.append(_light_preview)
 		for s in _slugs:
 			glows.append(s.glow())
 		glows.append_array(_lights)
@@ -604,13 +625,15 @@ func _physics_process(dt: float) -> void:
 
 
 func _edit_self_test() -> void:
-	print("EDIT: " + blank_level())
+	print("EDIT: " + blank_level("edtest"))
 	edit_paint(Vector2(600.0, 700.0), 40.0, CaveMap.CELL_ROCK)
 	edit_paint(Vector2(700.0, 790.0), 30.0, CaveMap.CELL_WATER)
 	edit_paint(Vector2(900.0, 780.0), 20.0, CaveMap.CELL_MOSS)
 	edit_paint(Vector2(1000.0, 500.0), 24.0, CaveMap.CELL_GAS)
 	edit_stamp("shroom_cluster", Vector2(1200.0, 790.0), 12.0)
 	edit_stamp("stalactite", Vector2(1300.0, 170.0), 12.0)
+	edit_stamp("stalagmite", Vector2(1350.0, 790.0), 12.0, "nearest", "", {"size": 4, "variant": 2})
+	edit_stamp("thorn", Vector2(1100.0, 790.0), 12.0, "floor", "", {"size": 2})
 	edit_stamp("vine", Vector2(1400.0, 300.0), 12.0)
 	edit_stamp("slug", Vector2(1500.0, 790.0), 12.0)
 	# A PNG stamp as one stroke, undone and redone: the decor cells go and come back.
@@ -625,22 +648,32 @@ func _edit_self_test() -> void:
 	print("EDIT: " + edit_redo())
 	var n3 := _count_kinds_from(CaveMap.CELL_DECOR)
 	print("EDIT: decor cells %d, after stamp %d, after undo %d, after redo %d, spot taken %s, entries %d" % [n0, n1, n2, n3, str(not placed), _edit_decor.size()])
-	var undo_ok := n0 == 0 and n1 > 100 and n2 == 0 and n3 == n1 and not placed and _edit_decor.size() == 2
+	var undo_ok := n0 == 0 and n1 > 100 and n2 == 0 and n3 == n1 and not placed and _edit_decor.size() == 3
 	print("EDIT: " + edit_spawn(Vector2(500.0, 780.0)))
 	print("EDIT: " + edit_exit(Rect2(1700.0, 700.0, 60.0, 60.0)))
-	print("EDIT: " + save_level("edtest"))
+	print("EDIT: " + edit_light(Vector2(600.0, 500.0), Vector2(700.0, 560.0), "torch", 20.0, 1.2, "cone"))
+	print("EDIT: " + edit_light(Vector2(300.0, 500.0), Vector2(300.0, 500.0), "glow", 12.0, 1.0))
+	print("EDIT: " + edit_light_remove(Vector2(302.0, 503.0)))
+	print("EDIT: " + save_level())
+	print("EDIT: " + write_version("auto"))
+	print("EDIT: ghost on " + edit_ghost({"name": "cluster_0", "p": Vector2(800.0, 700.0), "where": "nearest"}) + ", " + edit_ghost({"name": "thorn", "p": Vector2(900.0, 700.0), "size": 1}))
+	edit_ghost({})
 	var counts := {}
 	for v in _author.solid:
 		counts[v] = counts.get(v, 0) + 1
 	print("EDIT: kinds before load ", counts)
-	print("EDIT: " + load_level("edtest"))
+	var versions := level_versions("edtest")
+	print("EDIT: versions ", versions.size(), " ", versions.map(func(v): return "v%d %s" % [v.n, v.kind]), " entries ", level_entries().size())
+	print("EDIT: " + load_version("edtest"))
+	var files_ok: bool = versions.size() == 3 and versions[0].kind == "auto" and _version == 3
 	var counts2 := {}
 	for v in _author.solid:
 		counts2[v] = counts2.get(v, 0) + 1
 	print("EDIT: kinds after load ", counts2, " gas pockets ", _gas.size(), " slugs ", _slugs.size(), " spawn ", gecko.pos, " exit ", _exit, " decor entries ", _edit_decor.size())
-	print("EDIT TEST " + ("OK" if counts == counts2 and undo_ok and _edit_decor.size() == 2 else "DIFFERS"))
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.json"))
-	DirAccess.remove_absolute(ProjectSettings.globalize_path("res://levels/edtest.cells.png"))
+	var lights_ok: bool = _edit_lights.size() == 1 and _lights.size() == 1 and _lights[0][2] < 0.0
+	print("EDIT: lights after load ", _edit_lights, " undo_ok ", undo_ok, " files_ok ", files_ok, " lights_ok ", lights_ok)
+	print("EDIT TEST " + ("OK" if counts == counts2 and undo_ok and _edit_decor.size() == 3 and files_ok and lights_ok else "DIFFERS"))
+	_remove_level_files("edtest")
 	get_tree().quit()
 
 
@@ -657,15 +690,15 @@ func _count_kinds_from(kind: int) -> int:
 var _edit_lumps: Array = []     # Vines and lumps placed in the editor, for the saved level
 var _edit_slugs: Array = []
 var _edit_decor: Array = []     # The decor stamps placed, {name, x, y, where, flags, rect}: the brush keeps new ones clear of them, the level file lists them
-var _edit_lights: Array = []    # The lights, [x, y, kind] each (tests/scene_builder.gd LIGHTS): the level's on a reset, then the editor's; the level file lists them
-var _lights: Array = []         # The same as the light pass takes them, [position, colour, radius]
+var _edit_lights: Array = []    # The lights, [x, y, kind] or [x, y, kind, radius, strength, shape, x2, y2] each (tests/scene_builder.gd light_point): the level's on a reset, then the editor's; the level file lists them
+var _lights: Array = []         # The same as the light pass takes them, [position, colour, radius, end]
+var _light_preview: Array = []  # The editor's light on the cursor before the click, in the light pass's form, empty for none
+var _ghost_tex := {}            # Stamp name -> ImageTexture, the ghost's
 var _brush = null               # The decor brush of the stroke in hand (decor_brush.gd)
-var _marks: Node2D              # The lights drawn as rings while the editor is open
+var _marks: Node2D              # The lights drawn as marks while the editor is open
+var _ghost: Node2D              # The editor's ghost: the stamp picked, drawn where a click would set it
 var _edit_spawn := Vector2.INF
 var _edit_exit := Rect2()
-var _level_name := ""           # The level loaded or saved last: what Save writes
-var _level_cells := false       # That level is a cells file the editor wrote, so Save may overwrite it; a generated level (the clutch) takes Save as
-var _dirty := false             # Strokes since the last save or load
 var _undo: Array = []           # Strokes, oldest first: the authored cells and the editor's lists before each
 var _redo: Array = []
 var _stroke: Dictionary = {}    # The state when the button went down, until it comes up
@@ -691,6 +724,9 @@ func edit_end() -> void:
 			_undo.pop_front()
 		_redo.clear()
 		_dirty = true
+		_dirty_v = true
+		if _level_name == "":
+			_level_name = _default_level_name()
 
 
 func _edit_state() -> Dictionary:
@@ -745,6 +781,7 @@ func _edit_restore(st: Dictionary) -> void:
 		_author.repaint_all()
 	_dress_world()
 	_dirty = true
+	_dirty_v = true
 
 
 # A circle of kind at p: the live world and the authoring map alike.
@@ -763,7 +800,8 @@ func edit_paint(p: Vector2, r: float, kind: int) -> void:
 		_edit_decor = kept
 		var lit: Array = []
 		for l in _edit_lights:
-			if Vector2(float(l[0]), float(l[1])).distance_to(p) > r:
+			var lp: Array = SceneBuilder.light_point(l)
+			if _seg_dist(p, lp[0], lp[3]) > r:
 				lit.append(l)
 		if lit.size() != _edit_lights.size():
 			_edit_lights = lit
@@ -838,41 +876,47 @@ func edit_brush_end(p: Vector2) -> void:
 
 
 # A stamp at p: a decor stamp (a PNG or a table) on the surface, a
-# dripstone cone of the brush's size, a vine of the brush's length
-# times four hanging from the ceiling above, a slug on the nearest
-# surface. flags: "h" mirrors a PNG stamp, "v" flips it, "d" drapes it.
-# Returns the rect a decor stamp covers, empty for the rest.
-func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags := "") -> Rect2:
+# dripstone cone, a vine hanging from the ceiling above, a thorn bush,
+# a slug on the nearest surface. opts "size", 1 to 5, is a cone's
+# height, a vine's length or a thorn's bush (small up to 2), "variant"
+# a cone's shape; with no size the brush radius r sizes a cone (2 r)
+# and a vine (4 r). flags: "h" mirrors a PNG stamp, "v" flips it, "d"
+# drapes it. Returns the rect a decor stamp covers, empty for the rest.
+func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags := "", opts := {}) -> Rect2:
 	if _author == null:
 		return Rect2()
+	var size: int = int(opts.get("size", 0))
+	var variant: int = int(opts.get("variant", 0))
 	match name:
 		"vine":
 			var c: Vector2 = map.ceiling_above(p)
 			var top := Vector2(p.x, c.y + 2.0)
-			var id: int = map.spawn_vine(top, r * 4.0)
+			var length := vine_length(size) if size > 0 else r * 4.0
+			var id: int = map.spawn_vine(top, length)
 			if id > 0:
 				_vines[id] = {"top": top, "load": 0.0}
-			_edit_lumps.append(["vine", p.x, p.y, r * 4.0])
+			_edit_lumps.append(["vine", p.x, p.y, length])
 		"slug":
-			var s := Slug.new()
-			s.setup(map, p, 31 + _slugs.size())
-			add_child(s)
-			_slugs.append(s)
+			var sl := Slug.new()
+			sl.setup(map, p, 31 + _slugs.size())
+			add_child(sl)
+			_slugs.append(sl)
 			_edit_slugs.append([p.x, p.y])
 		"stalactite", "stalagmite":
 			var down := name == "stalactite"
 			var line: Vector2 = map.ceiling_above(p) if down else map.floor_below(p)
-			var h := maxf(r * 2.0, 8.0)
-			SceneBuilder.cone(_author, Vector2(p.x, line.y), h, down)
+			var h := cone_height(size) if size > 0 else maxf(r * 2.0, 8.0)
+			SceneBuilder.cone(_author, Vector2(p.x, line.y), h, down, variant)
 			if sim:
-				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down)
+				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down, variant)
 		_:
+			var table := stamp_table(name, size)
 			var w := edit_where(p, where)
-			var rect := SceneBuilder.stamp_rect(_author, name, p, w)
-			var cells: Array = SceneBuilder.stamp(_author, name, p, w, flags)
+			var rect := SceneBuilder.stamp_rect(_author, table, p, w)
+			var cells: Array = SceneBuilder.stamp(_author, table, p, w, flags)
 			if cells.is_empty():
 				return Rect2()
-			_edit_decor.append({"name": name, "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": rect})
+			_edit_decor.append({"name": table, "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": rect})
 			if sim:
 				# Into the live sim: each cell set is filled on the next
 				# tick (fill_circle at a cell's centre with the cell's
@@ -884,15 +928,73 @@ func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags :=
 	return Rect2()
 
 
-# A light of a kind at p (tests/scene_builder.gd LIGHTS): a glow source
-# for the light pass, drawn as a ring while editing; air painted over it
-# takes it away.
-func edit_light(p: Vector2, kind: String) -> String:
+# A cone's height and a vine's length for a stamp size, 1 to 5.
+static func cone_height(size: int) -> float:
+	return 12.0 + 12.0 * clampi(size, 1, 5)
+
+
+static func vine_length(size: int) -> float:
+	return 24.0 * clampi(size, 1, 5)
+
+
+# The table a stamp name and size pick: the thorn bush is small up to 2.
+static func stamp_table(name: String, size: int) -> String:
+	if name == "thorn" and size > 0 and size <= 2:
+		return "thorn_s"
+	return name
+
+
+# A light from a to b (tests/scene_builder.gd LIGHTS, light_point): a
+# point at a, a strip of light along the segment to b, or a cone from
+# the source a to the aim b; the radius in px, the strength a factor on
+# the kind's colour. Drawn as a mark while editing; air painted over it
+# or the editor's right button takes it away.
+func edit_light(a: Vector2, b: Vector2, kind: String, radius: float, strength: float, shape := "point") -> String:
 	if not SceneBuilder.LIGHTS.has(kind):
 		return "no light " + kind
-	_edit_lights.append([p.x, p.y, kind])
+	if shape == "point":
+		b = a
+	_edit_lights.append([a.x, a.y, kind, radius, strength, shape, b.x, b.y])
 	_relight()
-	return "%s light at %d, %d" % [kind, int(p.x), int(p.y)]
+	if shape == "point":
+		return "%s light at %d, %d, r %d" % [kind, int(a.x), int(a.y), int(radius)]
+	return "%s %s %d px long, r %d" % [kind, shape, int(a.distance_to(b)), int(radius)]
+
+
+# The light nearest p, within its radius or 10 px, taken away.
+func edit_light_remove(p: Vector2) -> String:
+	var best := -1
+	var bd := INF
+	for i in _edit_lights.size():
+		var lp: Array = SceneBuilder.light_point(_edit_lights[i])
+		var d := _seg_dist(p, lp[0], lp[3])
+		if d <= maxf(absf(lp[2]), 10.0) and d < bd:
+			bd = d
+			best = i
+	if best < 0:
+		return "no light there"
+	var gone: Array = _edit_lights[best]
+	_edit_lights.remove_at(best)
+	_relight()
+	return "%s light removed" % String(gone[2])
+
+
+# The editor's light on the cursor: seeded each tick like a placed one,
+# so the world shows it before the click. Empty for none.
+func edit_light_preview(entry: Array) -> void:
+	_light_preview = SceneBuilder.light_point(entry) if not entry.is_empty() else []
+	if _marks:
+		_marks.preview = _light_preview
+		_marks.queue_redraw()
+
+
+static func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var l2 := ab.length_squared()
+	if l2 <= 0.0:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
 
 
 # The lights as the light pass takes them, from the list, and the marks.
@@ -901,6 +1003,54 @@ func _relight() -> void:
 	if _marks:
 		_marks.lights = _lights
 		_marks.queue_redraw()
+
+
+# The editor's ghost: the stamp picked, drawn where a click would set it
+# (editor.gd). spec: name, p (the cursor), where (the anchor rule), size,
+# variant; empty hides it. Returns the surface it would go on.
+func edit_ghost(spec: Dictionary) -> String:
+	if spec.is_empty() or _author == null:
+		_ghost.items = []
+		_ghost.queue_redraw()
+		return ""
+	var name: String = spec.name
+	var p: Vector2 = spec.p
+	var size: int = int(spec.get("size", 3))
+	var items: Array = []
+	var where := ""
+	var cell := CaveMap.CELL_FULL
+	match name:
+		"stalactite", "stalagmite":
+			var down := name == "stalactite"
+			var line: Vector2 = map.ceiling_above(p) if down else map.floor_below(p)
+			var h := cone_height(size)
+			var tip := Vector2(p.x, line.y + (h if down else -h))
+			var w := h * 0.5
+			items.append(["poly", PackedVector2Array([Vector2(p.x - w * 0.5, line.y), Vector2(p.x + w * 0.5, line.y), tip]), Color(0.85, 0.78, 0.68)])
+			where = "ceiling" if down else "floor"
+		"vine":
+			var c: Vector2 = map.ceiling_above(p)
+			var top := Vector2(p.x, c.y + 2.0)
+			items.append(["line", top, top + Vector2(0.0, vine_length(size)), Color(0.75, 0.62, 0.45), 3.0])
+			where = "ceiling"
+		"slug":
+			items.append(["disc", p, 4.0, Color(0.62, 0.85, 0.42)])
+			where = "surface"
+		_:
+			var table := stamp_table(name, size)
+			where = edit_where(p, String(spec.get("where", "nearest")))
+			var png: Dictionary = SceneBuilder.png_stamps().get(table, {})
+			if not png.is_empty():
+				if not _ghost_tex.has(table):
+					_ghost_tex[table] = ImageTexture.create_from_image(png.img)
+				items.append(["tex", _ghost_tex[table], SceneBuilder.frame(_author, p, where), png.w, png.h])
+			else:
+				for c in SceneBuilder.table_cells(_author, table, p, where):
+					items.append(["cell", Rect2(c[0] * cell, c[1] * cell, cell, cell), CaveMap.THORN])
+			items.append(["box", SceneBuilder.stamp_rect(_author, table, p, where)])
+	_ghost.items = items
+	_ghost.queue_redraw()
+	return where
 
 
 # The decor list from a level's "decor" entries, [name, x, y, where, flags]
@@ -980,12 +1130,73 @@ func edit_zoom_text() -> String:
 
 
 # --- Level files ---
+#
+# A level the editor works on lives as versions: levels/<name>/vNNNN.json
+# with vNNNN.cells.png beside it, one pair a version, numbered up, the
+# json carrying saved_at and kind (auto or saved). Autosave writes an
+# auto version every AUTOSAVE_S seconds while there are strokes since
+# the last version, keeping the last AUTOSAVE_KEEP of them; Save writes
+# a saved version, kept for good, and the head pair levels/<name>.json
+# and levels/<name>.cells.png, what the game and the suite load
+# (tests/scene_builder.gd level_files). A level generated by tools (the
+# clutch) has a head and no folder: its edits go under <name>-edit, a
+# generated cave's under cave<seed>.
 
-# The levels in levels/, by name.
+const AUTOSAVE_S := 60.0
+const AUTOSAVE_KEEP := 10
+const LEVELS := "res://levels/"
+
+var _level_name := ""           # The level the strokes belong to: what the versions are written under
+var _dirty := false             # Strokes since the last saved version or load
+var _dirty_v := false           # Strokes since the last version of any kind: what autosave waits for
+var _version := 0               # The last version written or loaded, 0 for none
+var _version_kind := ""         # Its kind, auto or saved
+var _version_at := 0.0          # When it was written or loaded, seconds on the clock
+var _autosave_t := 0.0
+
+
+# The levels in levels/, by name: the heads.
 func level_names() -> Array:
 	var out: Array = []
 	for path in SceneBuilder.level_files():
 		out.append(String(path).get_file().trim_suffix(".json"))
+	return out
+
+
+# Every level for the Load dialog: a folder of versions, or a head with
+# none (generated by tools, read only). [{name, versions, generated}],
+# the edited ones first.
+func level_entries() -> Array:
+	var out: Array = []
+	var seen := {}
+	var dir := DirAccess.open(LEVELS)
+	if dir == null:
+		return out
+	var folders: Array = Array(dir.get_directories())
+	folders.sort()
+	for f in folders:
+		var n := level_versions(String(f)).size()
+		if n > 0:
+			out.append({"name": String(f), "versions": n, "generated": false})
+			seen[String(f)] = true
+	for name in level_names():
+		if not seen.has(name):
+			out.append({"name": name, "versions": 0, "generated": true})
+	return out
+
+
+# A level's versions, the latest first: [{n, file, kind, saved_at}].
+func level_versions(name: String) -> Array:
+	var out: Array = []
+	var dir := DirAccess.open(LEVELS + name)
+	if dir == null:
+		return out
+	for f in dir.get_files():
+		if f.begins_with("v") and f.ends_with(".json"):
+			var data = JSON.parse_string(FileAccess.get_file_as_string(LEVELS + name + "/" + f))
+			if data is Dictionary:
+				out.append({"n": int(String(f).substr(1, 4)), "file": String(f), "kind": String(data.get("kind", "saved")), "saved_at": String(data.get("saved_at", ""))})
+	out.sort_custom(func(a, b) -> bool: return a.n > b.n)
 	return out
 
 
@@ -995,6 +1206,11 @@ func level_name() -> String:
 
 func level_dirty() -> bool:
 	return _dirty
+
+
+# The last version written or loaded: [n, kind, seconds ago], n 0 for none.
+func level_version_info() -> Array:
+	return [_version, _version_kind, (Time.get_ticks_msec() / 1000.0 - _version_at) if _version > 0 else 0.0]
 
 
 # Whether Save may write levels/<name>.json: a new name, or a level the
@@ -1010,18 +1226,21 @@ func level_writable(name: String) -> bool:
 	return false
 
 
-# Writes levels/<name>.cells.png (the authored cells) and levels/<name>.json:
-# a base of those cells and one scene on it with the spawn, the exit, the
-# vines and lumps, the slugs and the decor list. The game and the suite
-# load it like the clutch (tests/scene_builder.gd level_files).
-func save_level(name: String) -> String:
-	if _author == null or name == "":
-		return "nothing to save"
-	if not level_writable(name):
-		return name + " is generated (tools): save as another name"
-	var dir := "res://levels/"
-	var png := dir + name + ".cells.png"
-	_author.save_cells_png(ProjectSettings.globalize_path(png))
+# The name the strokes go under when the level has none: cave<seed> for
+# a generated cave, <scene>-edit for a scene from a file that tools wrote.
+func _default_level_name() -> String:
+	if _scene.is_empty():
+		return "cave%d" % seed_value
+	if _scene_i >= 0:
+		var n := String(_scene_all.get("scenes", {}).keys()[_scene_i])
+		return n if level_writable(n) else n + "-edit"
+	return "edit"
+
+
+# The level as a file: a base of the cells png and one scene on it with
+# the spawn, the exit, the vines and lumps, the slugs, the decor and the
+# lights. The game and the suite load it like the clutch.
+func _level_dict(name: String, png: String) -> Dictionary:
 	var spawn: Array = ["at", _edit_spawn.x, _edit_spawn.y, 0, -1] if _edit_spawn != Vector2.INF else _scene.get("spawn", ["floor", 960, 540])
 	var lumps: Array = []
 	lumps.append_array(_scene.get("lumps", []))
@@ -1036,20 +1255,107 @@ func save_level(name: String) -> String:
 	var ex := _edit_exit if _edit_exit.has_area() else _exit
 	if ex.has_area():
 		sc["exit"] = [ex.position.x, ex.position.y, ex.size.x, ex.size.y]
-	var level := {"bases": {name: [["blank"], ["cells", png]]}, "scripts": {}, "scenes": {name: sc}}
-	var f := FileAccess.open(dir + name + ".json", FileAccess.WRITE)
+	return {"bases": {name: [["blank"], ["cells", png]]}, "scripts": {}, "scenes": {name: sc}}
+
+
+# A version of the level in hand: the next number under levels/<name>/,
+# the cells png and the json. A saved one rewrites the head pair too and
+# clears the dirty flag; an auto one prunes the autos before it past
+# AUTOSAVE_KEEP.
+func write_version(kind: String) -> String:
+	if _author == null:
+		return "nothing to save"
+	if _level_name == "":
+		_level_name = _default_level_name()
+	var name := _level_name
+	var dir := LEVELS + name + "/"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	var n := 1
+	var versions := level_versions(name)
+	if not versions.is_empty():
+		n = int(versions[0].n) + 1
+	var stem := dir + "v%04d" % n
+	if not _write_pair(name, stem, kind):
+		return "cannot write " + stem + ".json"
+	if kind == "saved":
+		if not _write_pair(name, LEVELS + name, kind):
+			return "cannot write the head " + LEVELS + name + ".json"
+		_dirty = false
+		_scene_all = {}
+	else:
+		var autos := 0
+		for v in level_versions(name):
+			if v.kind == "auto":
+				autos += 1
+				if autos > AUTOSAVE_KEEP:
+					DirAccess.remove_absolute(ProjectSettings.globalize_path(dir + v.file))
+					DirAccess.remove_absolute(ProjectSettings.globalize_path(dir + String(v.file).trim_suffix(".json") + ".cells.png"))
+	_dirty_v = false
+	_autosave_t = 0.0
+	_version = n
+	_version_kind = kind
+	_version_at = Time.get_ticks_msec() / 1000.0
+	return "%s v%d of %s" % ["saved" if kind == "saved" else "auto-saved", n, name]
+
+
+func _write_pair(name: String, stem: String, kind: String) -> bool:
+	var png := stem + ".cells.png"
+	_author.save_cells_png(ProjectSettings.globalize_path(png))
+	var level := _level_dict(name, png)
+	level["saved_at"] = Time.get_datetime_string_from_system(false, true)
+	level["kind"] = kind
+	var f := FileAccess.open(stem + ".json", FileAccess.WRITE)
 	if f == null:
-		return "cannot write " + dir + name + ".json"
+		return false
 	f.store_string(JSON.stringify(level, " "))
 	f.close()
+	return true
+
+
+# Save: a saved version and the head, under the name given or the one in hand.
+func save_level(name := "") -> String:
+	if name != "":
+		_level_name = name
+	return write_version("saved")
+
+
+# Autosave: an auto version once AUTOSAVE_S have passed with strokes
+# since the last version.
+func _autosave(dt: float) -> void:
+	if not _dirty_v:
+		return
+	_autosave_t += dt
+	if _autosave_t >= AUTOSAVE_S:
+		_editor.call("say", write_version("auto"))
+
+
+# Loads a version of a level: its json as the scene (the cells png of
+# that version), built like the clutch. file "" takes the latest, and
+# the head when the level has no versions.
+func load_version(name: String, file := "") -> String:
+	if file == "":
+		var versions := level_versions(name)
+		if versions.is_empty():
+			return load_level(name)
+		file = String(versions[0].file)
+	var data = JSON.parse_string(FileAccess.get_file_as_string(LEVELS + name + "/" + file))
+	if not (data is Dictionary) or not data.get("scenes", {}).has(name):
+		return "cannot read " + file
+	_scene = data.scenes[name]
+	_scene_bases = data.get("bases", {})
+	_scene_i = -1
+	_demo_step = -1
+	gecko.input_override = null
+	_edit_clear()
 	_level_name = name
-	_level_cells = true
-	_dirty = false
-	_scene_all = {}
-	return "saved " + name
+	_version = int(file.substr(1, 4))
+	_version_kind = String(data.get("kind", "saved"))
+	_version_at = Time.get_ticks_msec() / 1000.0
+	_reset()
+	return "loaded %s v%d" % [name, _version]
 
 
-# Loads levels/<name>.json as the scene and builds it.
+# Loads levels/<name>.json, the head, as the scene and builds it.
 func load_level(name: String) -> String:
 	_scene_all = {}
 	_ensure_scenes()
@@ -1062,13 +1368,15 @@ func load_level(name: String) -> String:
 	_demo_step = -1
 	gecko.input_override = null
 	_edit_clear()
-	_level_name = name
-	_level_cells = level_writable(name)
+	_level_name = name if level_writable(name) else name + "-edit"
+	_version = 0
+	_version_kind = ""
 	_reset()
 	return "loaded " + name
 
 
-# An empty rock world to paint in: a blank scene with a room to stand in.
+# An empty rock world to paint in: a blank scene with a room to stand
+# in, under the name given, its first version written at once.
 func blank_level(name := "") -> String:
 	_scene = {"base": "room", "terrain": [], "spawn": ["floor", 960, 700], "lumps": [], "slugs": []}
 	_scene_bases = {"room": [["blank"], ["room", 0, 160, 1920, 640]]}
@@ -1077,9 +1385,24 @@ func blank_level(name := "") -> String:
 	gecko.input_override = null
 	_edit_clear()
 	_level_name = name
-	_level_cells = true
+	_version = 0
+	_version_kind = ""
 	_reset()
-	return "new level " + name if name != "" else "blank"
+	if name != "":
+		return "new level %s: %s" % [name, write_version("saved")]
+	return "blank"
+
+
+# A level's files gone: the head pair and the versions (the self test).
+func _remove_level_files(name: String) -> void:
+	var g := ProjectSettings.globalize_path(LEVELS)
+	DirAccess.remove_absolute(g + name + ".json")
+	DirAccess.remove_absolute(g + name + ".cells.png")
+	var dir := DirAccess.open(LEVELS + name)
+	if dir:
+		for f in dir.get_files():
+			DirAccess.remove_absolute(g + name + "/" + f)
+		DirAccess.remove_absolute(g + name)
 
 
 func _edit_clear() -> void:
@@ -1093,6 +1416,7 @@ func _edit_clear() -> void:
 	_redo.clear()
 	_stroke = {}
 	_dirty = false
+	_dirty_v = false
 
 
 # --- The gecko's sprite animations (the debug panel's Curl and Wake) ---
@@ -1539,7 +1863,7 @@ func _process(_dt: float) -> void:
 	if not over_panel and Input.is_action_pressed("drop_sand"):
 		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
 	if Input.is_action_just_pressed("regenerate"):
-		if _in_level():
+		if not _scene.is_empty():
 			_reset()
 		else:
 			seed_value += 1
@@ -1557,9 +1881,13 @@ func _process(_dt: float) -> void:
 		_editing = not _editing
 		_editor.visible = _editing
 		_marks.visible = _editing
+		_ghost.visible = _editing
+		_label.position.x = (_editor.panel_width() + 12.0) if _editing else 12.0
 		if _editing:
 			_editor.refresh()
 		else:
+			edit_ghost({})
+			edit_light_preview([])
 			edit_home()
 	if Input.is_action_just_pressed("debug_toggle"):
 		_set_debug(not _debug)
@@ -1622,8 +1950,84 @@ func _author_hist() -> Dictionary:
 # them).
 class LightMarks extends Node2D:
 	var lights: Array = []
+	var preview: Array = []   # The editor's light on the cursor, faint
 
 	func _draw() -> void:
 		for l in lights:
-			draw_arc(l[0], l[2], 0.0, TAU, 32, l[1], 1.0)
-			draw_circle(l[0], 2.0, l[1])
+			_mark(l, 1.0)
+		if not preview.is_empty():
+			_mark(preview, 0.5)
+
+	# A point: a ring of its radius. A strip: the segment and a ring at
+	# each end. A cone: the wedge from the source to the aim.
+	func _mark(l: Array, alpha: float) -> void:
+		var col: Color = l[1]
+		col.a = alpha
+		var a: Vector2 = l[0]
+		var b: Vector2 = l[3] if l.size() > 3 else a
+		var r: float = l[2]
+		if r < 0.0:
+			var d: Vector2 = (b - a).normalized()
+			var n := Vector2(-d.y, d.x) * -r
+			draw_line(a, b + n, col, 1.0)
+			draw_line(a, b - n, col, 1.0)
+			draw_line(b + n, b - n, col, 1.0)
+			draw_circle(a, 2.0, col)
+			return
+		draw_arc(a, r, 0.0, TAU, 32, col, 1.0)
+		draw_circle(a, 2.0, col)
+		if b != a:
+			draw_arc(b, r, 0.0, TAU, 32, col, 1.0)
+			draw_line(a, b, col, 1.0)
+
+
+# The editor's ghost (edit_ghost): the stamp picked drawn at half alpha
+# where a click would set it, a dashed box round a decor stamp. Items:
+# ["tex", texture, frame, w, h] a PNG stamp laid on the surface's frame
+# (tests/scene_builder.gd frame: the base cell, the axis along the
+# surface and the axis up off it), ["cell", rect, colour], ["poly",
+# points, colour], ["line", a, b, colour, width], ["disc", at, r,
+# colour], ["box", rect].
+class EditGhost extends Node2D:
+	var items: Array = []
+
+	func _draw() -> void:
+		var cell := CaveMap.CELL_FULL
+		for it in items:
+			match it[0]:
+				"tex":
+					var fr: Array = it[2]
+					var along: Vector2i = fr[1]
+					var up: Vector2i = fr[2]
+					var w: int = it[3]
+					var h: int = it[4]
+					var bx := Vector2(along) * cell
+					var by := -Vector2(up) * cell
+					var first: Vector2i = fr[0] + along * (-(w / 2)) + up * h   # The cell of the image's first pixel
+					var corner := Vector2(1.0 if (bx.x < 0.0 or by.x < 0.0) else 0.0, 1.0 if (bx.y < 0.0 or by.y < 0.0) else 0.0)
+					draw_set_transform_matrix(Transform2D(bx, by, (Vector2(first) + corner) * cell))
+					draw_texture_rect(it[1], Rect2(0.0, 0.0, w, h), false, Color(1.0, 1.0, 1.0, 0.55))
+					draw_set_transform_matrix(Transform2D())
+				"cell":
+					var c: Color = it[2]
+					c.a = 0.55
+					draw_rect(it[1], c)
+				"poly":
+					var c: Color = it[2]
+					c.a = 0.55
+					draw_colored_polygon(it[1], c)
+				"line":
+					var c: Color = it[3]
+					c.a = 0.55
+					draw_line(it[1], it[2], c, it[4])
+				"disc":
+					var c: Color = it[3]
+					c.a = 0.55
+					draw_circle(it[1], it[2], c)
+				"box":
+					var r: Rect2 = it[1]
+					var c := Color(0.94, 0.93, 0.9, 0.7)
+					draw_dashed_line(r.position, Vector2(r.end.x, r.position.y), c, 1.0, 3.0)
+					draw_dashed_line(Vector2(r.end.x, r.position.y), r.end, c, 1.0, 3.0)
+					draw_dashed_line(r.end, Vector2(r.position.x, r.end.y), c, 1.0, 3.0)
+					draw_dashed_line(Vector2(r.position.x, r.end.y), r.position, c, 1.0, 3.0)

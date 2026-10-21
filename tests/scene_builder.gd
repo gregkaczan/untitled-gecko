@@ -320,8 +320,10 @@ static func _column(map: Node2D, x: float, y0: float, y1: float, w: float, seed_
 # colour nearest the pixel; the pale greens of a shroom group glow). Read
 # from the files themselves, once, so no import is needed and the
 # headless suite sees them too.
-const GLOW_GROUPS := ["cluster", "tall_a", "tall_b", "shroom_s"]
-const GLOW_COLOURS := [11, 12]
+# The groups whose stamps glow, and the palette colours that do in each:
+# the pale greens of a shroom group; the light grey and the white of the
+# white moss, so its spikes emit a white light and read in the dark.
+const GLOW_GROUPS := {"cluster": [11, 12], "tall_a": [11, 12], "tall_b": [11, 12], "shroom_s": [11, 12], "moss": [9, 14]}
 static var _png_stamps := {}
 static var _png_loaded := false
 
@@ -355,7 +357,7 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 	var h := img.get_height()
 	var cells := PackedInt32Array()
 	var feet := PackedInt32Array()   # The columns whose art reaches the bottom row: what stands on the ground (decor_brush.gd)
-	var glows := stamp_group(name) in GLOW_GROUPS
+	var glow_cols: Array = GLOW_GROUPS.get(stamp_group(name), [])
 	var pal: Array[Color] = CaveMapScript.DECOR_PALETTE
 	for y in h:
 		for x in w:
@@ -371,7 +373,7 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 					best = i
 			cells.append(x)
 			cells.append(y)
-			cells.append(CaveMapScript.decor_kind(best, glows and best in GLOW_COLOURS))
+			cells.append(CaveMapScript.decor_kind(best, best in glow_cols))
 			if y == h - 1:
 				feet.append(x)
 	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img}
@@ -414,8 +416,28 @@ static func stamp(map: Node2D, name: String, at: Vector2, where: String, flags :
 	return _stamp(map, name, at, where, flags)
 
 
-static func cone(map: Node2D, at: Vector2, h: float, down: bool) -> void:
-	_cones(map, at.x - 2.0, at.x + 2.0, at.y, 1, int(at.x) + int(at.y), h, h, 1.0 if down else -1.0)
+static func cone(map: Node2D, at: Vector2, h: float, down: bool, variant := 0) -> void:
+	_cones(map, at.x - 2.0, at.x + 2.0, at.y, 1, int(at.x) + int(at.y) + variant * 7919, h, h, 1.0 if down else -1.0)
+
+
+# The cells a table stamp would set at `at`, [x, y, kind] each, nothing
+# set: the editor's ghost.
+static func table_cells(map: Node2D, name: String, at: Vector2, where: String) -> Array:
+	var out: Array = []
+	if not DECOR.has(name):
+		return out
+	var fr := frame(map, at, where)
+	var base: Vector2i = fr[0]
+	var along: Vector2i = fr[1]
+	var up_v: Vector2i = fr[2]
+	var s := maxi(int(round(4.0 / map.CELL)), 1)
+	for c in DECOR[name]:
+		for j in s:
+			for i in s:
+				var p: Vector2i = base + along * (int(c[0]) * s + i) + up_v * (int(c[1]) * s + j)
+				if not map.is_solid(p.x, p.y) and not map.is_water(p.x, p.y):
+					out.append([p.x, p.y, int(c[2])])
+	return out
 
 
 # The base cell of a stamp at `at` (on the surface under the stamp's
@@ -566,9 +588,9 @@ static func _kind(map: Node2D, name: String) -> int:
 # The slugs' start points: ["slugs"] entries [x, y] put on the nearest
 # surface by slug.gd itself.
 # The lights a level can hold (the editor's Lights section, a scene's
-# "lights" list of [x, y, kind]): glow sources for the sim's light pass
-# (sim.gd set_glows), each a colour and the radius in px it is seeded
-# at, the spread carrying it on from there.
+# "lights" list, light_point): glow sources for the sim's light pass
+# (sim.gd set_glows), each kind a colour and the radius in px it is
+# seeded at when the entry gives none, the spread carrying it on.
 const LIGHTS := {
 	"ember": [Color(1.0, 0.45, 0.2), 8.0],
 	"torch": [Color(1.0, 0.8, 0.5), 16.0],
@@ -578,13 +600,27 @@ const LIGHTS := {
 }
 
 
-# A scene's lights as the light pass takes them, [position, colour, radius] each.
+# A scene's lights as the light pass takes them: [position, colour,
+# radius, end] each, the radius negative for a cone (sim.gd set_glows).
+# An entry is [x, y, kind] (the kind's radius, strength 1, a point) or
+# [x, y, kind, radius, strength, shape, x2, y2]: shape point, strip (a
+# segment of light from x, y to x2, y2) or cone (from the source at x,
+# y to the aim at x2, y2, the light spreading to the radius there).
 static func light_points(scene: Dictionary) -> Array:
 	var out: Array = []
 	for l in scene.get("lights", []):
-		var k: Array = LIGHTS.get(String(l[2]), LIGHTS["torch"])
-		out.append([Vector2(float(l[0]), float(l[1])), k[0], float(k[1])])
+		out.append(light_point(l))
 	return out
+
+
+static func light_point(l: Array) -> Array:
+	var k: Array = LIGHTS.get(String(l[2]), LIGHTS["torch"])
+	var p := Vector2(float(l[0]), float(l[1]))
+	var radius: float = float(l[3]) if l.size() > 3 else float(k[1])
+	var strength: float = float(l[4]) if l.size() > 4 else 1.0
+	var shape: String = String(l[5]) if l.size() > 5 else "point"
+	var p2 := Vector2(float(l[6]), float(l[7])) if l.size() > 7 and shape != "point" else p
+	return [p, k[0] * strength, -radius if shape == "cone" else radius, p2]
 
 
 static func slug_points(scene: Dictionary) -> Array:

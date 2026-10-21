@@ -553,15 +553,30 @@ on), `notch_climb` (the same bites on bare rock), `crumble_wall`,
 
 ## The map editor
 
-F2 opens the editor (`editor.gd`), a panel down the left (it scrolls):
-paints (every cell kind); decor (one icon a group of `decor/stamps/`,
-its name on hover, the group's variants under it); stamps (the table
-glowshrooms and thorns, a stalactite or stalagmite of the brush's
-size, a vine of four times the brush's length, a slug); lights (a
-glow source of a kind, set by a click); the spawn point and the exit
-(dragged); the brush
-size ([ and ] too); undo and redo (Ctrl+Z, Ctrl+Y); and the files. The
-left button paints, the right erases (and drops the decor it covers).
+F2 opens the editor (`editor.gd`), a panel down the left (it scrolls),
+its sections cards: paints (every cell kind as a box in its colour,
+the brush under them, [ and ] or the wheel sizing it); decor (one icon
+a group of `decor/stamps/`, its name on hover, the group's variants
+beside it, and under them the stamps: a stalactite, a stalagmite, a
+vine, a thorn bush and a slug); lights (five colours, three shapes,
+the radius and strength as dials); the file (the level's name and
+version, New, Load, Save). Undo and redo sit in the header (Ctrl+Z,
+Ctrl+Y). The left button paints or lays, the right erases (and drops
+the decor and lights it covers). Esc drops the pick; ? shows the cheat
+sheet of all of it. The wheel is the tool's dial (the brush, the
+variant, a light's radius) and Ctrl+wheel zooms. Status lines show as
+a toast over the world.
+
+The ghost: whatever is picked rides the cursor, drawn at half alpha
+where a click would set it (`main.gd edit_ghost`): a decor stamp on
+the surface the anchor rule finds, in a dashed box, a cone of its
+height, a vine of its length, with a tag naming it, its variant and
+the surface. The wheel cycles the group's variants and pins the brush
+to the one shown ("any", first in the cycle, gives the rules back).
+The stamps have sizes, 1 to 5 on the up and down arrows (a cone's
+height 24 to 72 px, a vine's length 24 to 120 px, the thorn bush small
+up to 2), and the cones four shapes on the wheel; a click sets the
+ghost as shown.
 
 The decor brush (`decor_brush.gd`): dragged along a surface it lays a
 run of the group picked, edge to edge plus the spacing slider, the
@@ -575,27 +590,42 @@ plants) is a scatter: whole takes and parts at random, each slot
 taking the first variant whose feet (the columns of the art that reach
 its bottom row) find level ground within a cell, a single mushroom
 where a cluster would not stand, the stamp set down on its lowest foot
-when nothing fits level. "Mirror at random" flips half of them (a
+when nothing fits level. "Mirror" flips half of them at random (a
 mirrored end serves as the other end), "Anchor" chooses the surface
-(nearest, floor, ceiling, wall left, wall right), the variants grid
-pins the brush to one variant ("any" gives the rules back); "Free"
-places the variant picked (or a whole take) once per click, wherever,
-overlapping or not. A click with no drag lays one whole take. Every
-placed stamp is kept with its rect, so a run passes stamps in its
-way, and saved in the level file's "decor" list, from which a loaded
-level seeds the list again. `godot --headless --path . -s
-tests/brush_test.gd` drags the brush over grounds of its own (flat, a
-slope, bumps, steps, a pit, a ceiling, a wall, backwards) and checks
+(nearest, floor, ceiling, wall left, wall right), the wheel or the
+variants row pins the brush to one variant ("any" gives the rules
+back); "Free" places the variant picked (or a whole take) once per
+click, wherever, overlapping or not. A click with no drag lays one
+whole take. Every placed stamp is kept with its rect, so a run passes
+stamps in its way, and saved in the level file's "decor" list, from
+which a loaded level seeds the list again. `godot --headless --path .
+-s tests/brush_test.gd` drags the brush over grounds of its own (flat,
+a slope, bumps, steps, a pit, a ceiling, a wall, backwards) and checks
 the rules: no overlaps, every foot on solid, the runs' roles and
 spacing, the drag spanned, the same seed laying the same run; it
 draws each case to `runs/brush/<case>.png` (`BRUSH_DEBUG=1` prints
 the runs).
 
-Lights: a click sets a glow source of the kind picked (ember, torch,
-crystal, glow, moon) for the sim's light pass, drawn as a ring in its
-colour while the editor is open; air painted over one takes it. They
-go in the level file's "lights" list, and a level's own come back as
-the editor's on a reset.
+Lights: ember, torch, crystal, glow, moon (`tests/scene_builder.gd`
+LIGHTS, a colour each) in three shapes: a point (a click), a cone
+(press at the source, drag to the aim, release: two cells wide at the
+source, the radius wide at the aim, fading toward it) and a strip
+(press, drag along a surface, release: the segment lit along its
+length). The light picked is seeded at the cursor before the click, so
+the world shows it; the wheel sets the radius (4 to 64 px) and
+Shift+wheel the strength (0.2 to 2, a factor on the colour: past 1 the
+seed saturates and reaches further). The right button takes the
+nearest light away; air painted over one takes it too. Every light is
+drawn as a mark in its colour while the editor is open: a ring, a
+segment with rings, a wedge. They go in the level file's "lights" list
+as [x, y, kind, radius, strength, shape, x2, y2] ([x, y, kind] still
+loads: the kind's radius, a point), and a level's own come back as the
+editor's on a reset. The sim's light pass takes ten glows a tick
+(`sim.gd` MAX_GLOWS, 8 floats each in `light_seed.glsl`: the ends, the
+colour, the radius, negative for a cone), the gecko's and the preview
+first, then the slugs', then the level's. The white moss glows on its
+own: its light grey and white (`GLOW_GROUPS`) are laid as glowing
+decor cells, so its spikes read in the dark.
 
 Undo: a stroke (button down to up) is one step, a copy of the authored
 cells and the editor's lists before it (40 kept); undo puts the cells
@@ -603,15 +633,30 @@ back and rebuilds the live world from them (the sim's particles made
 anew, the vines, slugs and exit set again), the gecko staying where it
 is.
 
-Files: the list of `levels/*.json`; Load builds the one selected (or
-named), New starts a blank room under the name typed, Save writes the
-current level's name, Save as the name typed. A level with strokes
-since its save asks for a second press before Load or New drops them;
-a star after the name in the title marks it. The clutch, generated by
-`tools/gen_clutch.py`, refuses Save and takes Save as, so the
-generator stays the source. `GECKO_EDIT=1` opens the editor at start.
+Files: a level the editor works on lives as versions,
+`levels/<name>/vNNNN.json` with `vNNNN.cells.png` beside it (one pixel
+a cell, its kind in the red channel, exact), the json carrying
+`saved_at` and `kind`. Autosave writes an auto version every minute
+while there are strokes since the last version, keeping the last ten;
+Save writes a saved version, kept for good, and the head pair
+`levels/<name>.json` and `levels/<name>.cells.png`, what the game and
+the suite load (Tab cycles the heads, the suite runs any with scripts,
+so a painted level is a level). A level with no name yet gets one on
+its first stroke: cave<seed> in a generated cave, <scene>-edit in a
+scene from a file that tools wrote (the clutch keeps its generator as
+the source). New opens a dialog for a name and makes a blank room under
+it, its first version written; the dialog says what strokes are
+dropped, no second press. Load opens a dialog with the levels on the
+left (the folders of versions, then the heads with none, read only)
+and the level's versions on the right, the latest first and
+preselected. A star after the name in the header marks strokes since
+the last saved version; the file card shows the version and how long
+ago it was written. R restarts the scene in hand, a loaded level
+included. `GECKO_EDIT=1` opens the editor at start;
+`GECKO_EDIT_PICK=decor:<group> | stamp:<name> | light:<kind> | cheat:1
+| load:1` makes a pick for a recording.
 
-The camera: the wheel zooms about the cursor, without a limit either
+The camera: Ctrl+wheel zooms about the cursor, without a limit either
 way (the camera's whole-pixel grid follows the zoom, and a view wider
 than the world centres on it), the middle button pans, Home brings it
 back to the gecko at the game's zoom, as leaving the editor does.
@@ -619,16 +664,14 @@ back to the gecko at the game's zoom, as leaving the editor does.
 Every edit goes to the live world (the particle sim: an erase this tick
 and a fill the next, once the readback shows the cells empty; a stamp's
 cells filled one by one; or the bitmap) and to an authoring cell map,
-the CPU map the sim was built from, kept for this. Save writes
-`levels/<name>.cells.png` (one pixel a cell, its kind in the red
-channel, exact) and `levels/<name>.json`: a base of those cells and one
-scene on it with the spawn, the exit, the vines and lumps, the slugs,
-the decor list and the lights. Every `levels/*.json` loads like the
-clutch (Tab
-cycles them, the suite runs any with scripts), so a painted level is a
-level. Painted gas pockets are found from the cells. `GECKO_EDIT_TEST=1`
-runs a headless round trip: paint, stamps, a PNG stamp undone and
-redone, save and load.
+the CPU map the sim was built from (a generated cave's as well, made on
+a CaveMap and handed to the sim), kept for this. A version's json is a
+base of its cells png and one scene on it with the spawn, the exit, the
+vines and lumps, the slugs, the decor list and the lights. Painted gas
+pockets are found from the cells. `GECKO_EDIT_TEST=1` runs a headless
+round trip: paint, stamps with sizes, a PNG stamp undone and redone, a
+cone light set and a point light removed, a saved and an auto version
+written, the latest loaded and compared.
 
 ## Controls
 

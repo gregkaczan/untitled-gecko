@@ -83,7 +83,7 @@ const O_C4 := O_LN + RENDER_W * RENDER_H         # 22809998, the same folded 2x2
 const TOTAL_UINTS := O_C4 + (RENDER_W / 2) * (RENDER_H / 2)
 const CT_CRUMB := 256                            # Added to a crumb's class in the O_LN copy: a speck the senses read as air and the body loosens
 const LIGHT_PASSES := 19                         # Cells the light travels per tick; odd, see above
-const MAX_GLOWS := 13                            # Glow sources (the gecko, the slugs, the level's lights) the seed takes: 6 floats each from [16], under the currents at [96]
+const MAX_GLOWS := 10                            # Glow sources (the gecko, the slugs, the level's lights) the seed takes: 8 floats each from [16], x y r g b radius x2 y2, under the currents at [96]
 const LIGHT_DECAY := 0.8                         # Of last tick's light kept before this tick's spread: a moved glow leaves a short trail
 # Passage per cell. Beyond one tick's passes the light is carried on
 # from the decayed field, so the fall-off there is the passage times
@@ -251,20 +251,26 @@ func set_daylight(rect: Rect2, color: Color) -> void:
 	_light.encode_float(10 * 4, color.b)
 
 
-# The glows this tick: up to MAX_GLOWS of [position, colour, radius],
+# The glows this tick: up to MAX_GLOWS of [position, colour, radius]
+# or [position, colour, radius, end]: a point, a strip of light along
+# the segment to the end, or with a negative radius a cone from the
+# position to the end (light_seed.glsl),
 # the gecko's head, the slugs and the level's lights. Set before tick().
 func set_glows(glows: Array) -> void:
 	var n := mini(glows.size(), MAX_GLOWS)
 	_light.encode_float(1 * 4, float(n))
 	for i in n:
 		var g: Array = glows[i]
-		var b := (16 + i * 6) * 4
+		var b := (16 + i * 8) * 4
+		var p2: Vector2 = g[3] if g.size() > 3 else g[0]
 		_light.encode_float(b, g[0].x)
 		_light.encode_float(b + 4, g[0].y)
 		_light.encode_float(b + 8, g[1].r)
 		_light.encode_float(b + 12, g[1].g)
 		_light.encode_float(b + 16, g[1].b)
 		_light.encode_float(b + 20, g[2])
+		_light.encode_float(b + 24, p2.x)
+		_light.encode_float(b + 28, p2.y)
 
 
 func _draw() -> void:

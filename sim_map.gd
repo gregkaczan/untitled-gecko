@@ -44,6 +44,13 @@ func generate(seed_value: int) -> void:
 	sim.tick()
 
 
+# The generated cave from cells generated on a CaveMap (the same
+# generator sim.build runs), so the caller keeps the map for the editor.
+func generate_cells(seed_value: int, kinds: PackedByteArray) -> void:
+	sim.build(seed_value, kinds)
+	sim.tick()
+
+
 # Rebuilds the particles from a cell map (a test scene built on a CaveMap).
 func build_cells(kinds: PackedByteArray) -> void:
 	sim.build(0, kinds)

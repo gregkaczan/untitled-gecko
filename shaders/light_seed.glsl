@@ -2,7 +2,8 @@
 // light decayed (so a glow that moves on leaves a short trail and
 // nothing else), the emission the particles wrote (copper, lava),
 // daylight on the open cells of the exit's rect, and the glows (the
-// gecko's, a slug's) within their radius. light_spread.glsl then
+// gecko's, a slug's, the level's lights: points, strips and cones)
+// within their radius. light_spread.glsl then
 // carries it from cell to cell. Written into the B half; the spread's
 // first pass reads it from there.
 #[compute]
@@ -17,7 +18,7 @@ const uint O_LA = 19181070u;   // light, two uints per cell (RG and B as 16-bit)
 const uint O_LB = 20217870u;   // light, the spread's other half
 const uint O_EM = 21254670u;   // emission per cell, packed RGB8, written by the particles (render_write.glsl)
 const uint O_LO = 21773070u;   // the light as RGB8 per cell, for the overlay texture (light_out.glsl, read back by sim.gd)
-const uint O_LP = 22291470u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 6 floats each: x y r g b radius
+const uint O_LP = 22291470u;   // light parameters (sim.gd): [0] decay of last tick's light, [1] glow count, [4..7] daylight rect x0 y0 x1 y1, [8..10] daylight colour, [11..14] passage of air, water, loose grains, solid; from [16] the glows, 8 floats each: x y r g b radius x2 y2 (a strip to x2 y2, a cone when the radius is negative)
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -47,13 +48,33 @@ void main() {
     if (open && c.x >= rf(O_LP + 4u) && c.x < rf(O_LP + 6u) && c.y >= rf(O_LP + 5u) && c.y < rf(O_LP + 7u)) {
         l = max(l, vec3(rf(O_LP + 8u), rf(O_LP + 9u), rf(O_LP + 10u)));
     }
-    uint n = min(uint(rf(O_LP + 1u)), 13u);
+    // The glows, 8 floats each: x y r g b radius x2 y2. A point when the
+    // ends match, else a strip of light along the segment; a negative
+    // radius makes a cone from the source (x, y) to the aim (x2, y2),
+    // two cells wide at the source and the radius wide at the aim,
+    // fading toward it, the spread carrying it on from there.
+    uint n = min(uint(rf(O_LP + 1u)), 10u);
     for (uint i = 0u; i < n; i++) {
-        uint s = O_LP + 16u + i * 6u;
+        uint s = O_LP + 16u + i * 8u;
         float rad = rf(s + 5u);
-        float dist = length(c - vec2(rf(s), rf(s + 1u)));
-        if (dist < rad) {
-            l = max(l, vec3(rf(s + 2u), rf(s + 3u), rf(s + 4u)) * (1.0 - 0.5 * dist / rad));
+        vec2 a = vec2(rf(s), rf(s + 1u));
+        vec2 b = vec2(rf(s + 6u), rf(s + 7u));
+        vec3 col = vec3(rf(s + 2u), rf(s + 3u), rf(s + 4u));
+        vec2 ab = b - a;
+        float len2 = dot(ab, ab);
+        if (rad > 0.0) {
+            float t = len2 > 0.0 ? clamp(dot(c - a, ab) / len2, 0.0, 1.0) : 0.0;
+            float dist = length(c - (a + ab * t));
+            if (dist < rad) l = max(l, col * (1.0 - 0.5 * dist / rad));
+        } else if (len2 > 0.0) {
+            float spread = -rad;
+            float len = sqrt(len2);
+            float t = dot(c - a, ab) / len2;
+            if (t >= 0.0 && t <= 1.0) {
+                float perp = abs((c.x - a.x) * ab.y - (c.y - a.y) * ab.x) / len;
+                float limit = mix(2.0 * psz, spread, t);
+                if (perp < limit) l = max(l, col * (1.0 - 0.5 * perp / limit) * (1.0 - 0.6 * t));
+            }
         }
     }
     put(O_LB, id, l);
