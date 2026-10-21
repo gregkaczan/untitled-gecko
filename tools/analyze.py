@@ -32,6 +32,7 @@ WALK_STEP = 130.0 / 60.0   # px per tick at walk speed
 DRAW_JUMP = 4.0            # drawn body centre, px per tick while clinging (walk is 2.2; a corner sweep reaches 3.5)
 BODY_JUMP = 3.5            # physics centre (informational)
 HEAD_JUMP = 6.5            # px per tick of the head in the drawn body frame: its set speed is 6, and the frame turning adds a little
+CHAIN_JUMP = 10.5          # px per tick of any drawn body point, in the world: the body lies along the base's track behind a straight neck, so a point moves at most as fast as the head (6) and the base (2.2) together, plus its sag easing (2); a snap was 65 to 130
 UP_FLIP = 0.35             # rad in one tick outside a committed grab
 UP_OSC_MIN = 0.035         # rad, an up increment that counts for oscillation
 UP_OSC_N = 4               # alternations within UP_OSC_WIN ticks
@@ -60,7 +61,7 @@ CAM_STEADY = 0.6           # world px: the body's step may change this much and 
 SHAKE_MIN = 1.0            # screen px: a reversal of the drawn body's screen motion smaller than this is nothing
 CREEP_WIN = 12             # frames the body has been still before a moving camera counts as creeping
 
-SCORED = ["draw_jump", "head_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
+SCORED = ["draw_jump", "head_jump", "chain_jump", "dance", "up_flip", "up_osc", "state_flicker", "stall",
           "foot_toggle", "foot_slide", "foot_jump", "sink", "float", "cam_jerk", "shake", "tube_full"]
 INFO = ["body_jump", "stuck", "cam_creep", "settle"]
 
@@ -124,8 +125,24 @@ def parse(path):
                 "cw": float(d.get("cw", "-1")), "sqin": d.get("sqin", "0") == "1", "tube": int(d.get("tube", "0")),
                 "set": d.get("set", "0") == "1", "rev": int(d.get("rev", "0")), "sw": d.get("sw", "0") == "1",
                 "hb": float(d.get("hb", "0")), "lift": float(d.get("lift", "0")),
+                "chain": chain_points(d),
             })
     return ticks
+
+
+def chain_points(d):
+    """The drawn body's points in the world, from the trace's cp field
+    (along/across/radius/thinned per point, in the body's frame)."""
+    pos = vec(d["pos"])
+    up = vec(d["up"])
+    t = (-up[1], up[0])
+    pts = []
+    for e in d.get("cp", "").split(";"):
+        if not e:
+            continue
+        al, ac = (float(x) for x in e.split("/")[:2])
+        pts.append((pos[0] + t[0] * al + up[0] * ac, pos[1] + t[1] * al + up[1] * ac))
+    return pts
 
 
 def dist(a, b):
@@ -237,6 +254,13 @@ def metrics(ticks, frames=()):
                 dh = dist(head_rel(a), head_rel(b))
                 if dh > HEAD_JUMP:
                     ev["head_jump"].append((t, round(dh, 2)))
+            # The drawn body's points, in the world, with no grace for a
+            # turn: a turn-around must not snap the body either (the tail
+            # moved 130 px in a tick on a facing flip, 2026-10-21).
+            if a["chain"] and b["chain"]:
+                dc = max((dist(pa, pb), k) for k, (pa, pb) in enumerate(zip(a["chain"], b["chain"])))
+                if dc[0] > CHAIN_JUMP:
+                    ev["chain_jump"].append((t, round(dc[0], 2), "point %d" % dc[1]))
             # A switch between a floor and its ceiling turns up round by
             # design (gecko.gd _switch_surface).
             if not a["grab"] and not b["grab"] and not b["sw"]:
@@ -468,7 +492,7 @@ def analyze(runs_dir, baseline_path=None):
     total = len(results)
     passing = sum(1 for r in results.values() if r["pass"])
     cols = SCORED + INFO
-    short = {"draw_jump": "draw", "head_jump": "head", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
+    short = {"draw_jump": "draw", "head_jump": "head", "chain_jump": "chain", "dance": "dance", "up_flip": "upflip", "up_osc": "uposc",
              "state_flicker": "state", "stall": "stall", "foot_toggle": "ftog", "foot_slide": "fslide",
              "foot_jump": "fjump", "sink": "sink", "float": "float", "cam_jerk": "cjerk", "shake": "shake",
              "tube_full": "tube", "body_jump": "body*", "stuck": "stuck*", "cam_creep": "creep*", "settle": "settle*"}

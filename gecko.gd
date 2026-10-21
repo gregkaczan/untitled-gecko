@@ -98,12 +98,15 @@ const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may c
 const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick)
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
-const MAX_BEND_FOLD := 1.4        # The bend allowed when the only clear way is back along the passage: the body doubled over itself in a tunnel too narrow to turn in
-const MAX_BEND_SQUEEZE := 1.0     # The bend in a squeeze: a turn-around there folds the body double inside the passage (there is no room for the wide U, and laid wider it rose through the wall)
-const MAX_BEND := 0.6             # Most a drawn body link bends from the one before (radians): a U-turn this gentle has a radius of 13 px, wider than the body, so a turn-around lays the body in a U, not a loop over itself (at 1.0 every facing flip knotted it for a few ticks, a tunnel turn-around for forty)
+const MAX_BEND := 0.6             # Most a link of the airborne body bends from the one before (radians); clinging, the body lies along the head's path instead (_lay_body)
+const PATH_KEEP := 100.0          # Px of the base's track kept behind it: the body's length (72) and a little over
+const PATH_LOOK := 3.0            # Px of the track's end its direction is read over, so a sideways step of a fraction of a pixel does not pass for a turn
+const PATH_MIN_SEG := 0.5         # A base move shorter than this moves the track's end rather than adding a point to it
+const SAG_STEP := 2.0             # Px a tick a body point's offset off the track (its sag onto the surface, its push off rock) may change...
+const SAG_K := 0.2                # ...or this fraction of the offset left, if more: the body landing from the air settles onto its lay in a quarter second
+const LINK_SLACK := 1.5           # Px a drawn link may stretch past LINK: the sag toward the surface pulled the neck's first point 15 px from a reared head, and the head blob parted from the body
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
 const BODY_HUG := 20.0         # How far past its radius a chain point looks for the surface
-const HUG_K := 0.5             # Fraction of the way a trailing point is pulled onto the surface per tick
 const SNOUT := 4.0             # Snout blob offset ahead of the head along the look direction
 const LOOK_LIMIT := 1.8        # Radians the head can turn off the body line to look at the mouse
 const FRONT_HIP := 1
@@ -348,6 +351,10 @@ var _switch_ticks := SWITCH_SETTLE   # Ticks since the last switch, up to SWITCH
 var _face_ticks := TURN_SETTLE       # Ticks since the facing changed, up to TURN_SETTLE
 var _facing_was := 1.0               # Last tick's facing
 var _head_far := false               # This tick the drawn head was more than HEAD_FAR from its target
+var _path := PackedVector2Array()    # The drawn head's path while clinging, oldest first: the body lies along it, a link length a point (_lay_body)
+var _fold_at := -1                   # Index into _path of the point the head turned back at: from there the path doubles back over itself and the body folds
+var _fold_len := 0.0                 # Px of the path since that turn (the trace's fd)
+var _sag := PackedVector2Array()     # Per chain point: its eased offset off the path, the sag onto the surface or the push off rock
 
 
 func _ready() -> void:
@@ -356,6 +363,8 @@ func _ready() -> void:
 	_draw_r = PackedFloat32Array(RADII)
 	_thin_on.resize(RADII.size())
 	_thin_on.fill(0)
+	_sag.resize(RADII.size())
+	_sag.fill(Vector2.ZERO)
 	var seed_env := OS.get_environment("GECKO_SEED")
 	if seed_env != "":
 		_rng.seed = int(seed_env)
@@ -417,6 +426,9 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	var fwd := _tangent()
 	look = fwd
 	chain.reset(pos + fwd * HEAD_LEAD, fwd)
+	_path.clear()
+	_fold_at = -1
+	_sag.fill(Vector2.ZERO)
 	for f in feet:
 		f.planted = false
 		f.stepping = false
@@ -603,13 +615,13 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d cf=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d us=%d cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d cf=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d fd=%.0f us=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
 		_last_probe.get("dist", -1.0), speed_along, state, int(facing), int(_chain_facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
 		_walk_bn.x, _walk_bn.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
-		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, _head_back, _lift, 1 if _settled else 0, _settle_n, _settle_i, 1 if _switched else 0, Time.get_ticks_usec() - _tick_t0, cp, fs])
+		_anim if _anim != "" else "-", _tongue_state(), tongue_tip.x, tongue_tip.y, (_sq_cw if _squeeze else -1.0), 1 if (_squeeze and _sq_in) else 0, _tube_full, _head_back, _lift, 1 if _settled else 0, _settle_n, _settle_i, 1 if _switched else 0, _fold_len, Time.get_ticks_usec() - _tick_t0, cp, fs])
 
 
 # in, out, stuck, grapple, drag, strain, back: what the tongue is doing (trace, panel).
@@ -2229,6 +2241,7 @@ func _update_chain(dt: float) -> void:
 	# along the surface but only slowly across it, so bumps in the ground
 	# do not bob the head: a chicken's head on its gyro.
 	var target: Vector2
+	var base := Vector2.ZERO
 	if clinging:
 		var t := _tangent()
 		var d := pos - _pos_s
@@ -2280,7 +2293,7 @@ func _update_chain(dt: float) -> void:
 			# own middle into the floor at the mouth.
 			want_lift = (_sq_line - _pos_s).dot(up)
 		_lift = move_toward(_lift, want_lift, LIFT_EASE)
-		var base := _pos_s + up * _lift
+		base = _pos_s + up * _lift
 		# The snout stops at rock ahead. In a passage the walls beside it are
 		# always within the body's clearance, so the test there is the
 		# squeeze's own, or the head would draw in the whole way through.
@@ -2307,25 +2320,15 @@ func _update_chain(dt: float) -> void:
 	var head := chain.head()
 	var to := target - head
 	_head_far = to.length() > HEAD_FAR
-	var dir := Vector2.ZERO
 	var new_head := head
 	if to.length() > 0.001:
 		new_head = head + to.normalized() * minf(to.length(), HEAD_SPEED * dt)
-	if to.length() > 2.0:
-		dir = to.normalized()
-		# The snout drawing back from a wall moves against the facing; that
-		# is not a turn, and laying the body behind a backward heading
-		# folds it up the wall. The body stays laid the way it faces. In a
-		# passage the head is held between the walls and its travel reads
-		# as mostly across, which would lay the body at a slant: there the
-		# heading is the passage's own.
-		if clinging and (_squeeze or dir.dot(_tangent() * _chain_facing) < -0.3):
-			dir = _tangent() * _chain_facing
-	elif clinging:
-		dir = _tangent() * _chain_facing
 	if clinging:
-		_resolve_body(new_head, dir)
+		_lay_body(new_head, base)
 		return
+	_path.clear()
+	_fold_at = -1
+	var dir := to.normalized() if to.length() > 2.0 else Vector2.ZERO
 	chain.set_head(new_head, dir)
 	for i in chain.size():
 		var r: float = chain.radii[i]
@@ -2335,16 +2338,30 @@ func _update_chain(dt: float) -> void:
 			chain.points[i] += away * (r + BODY_GAP - q.dist)
 
 
-# Lays the body behind the head along the surface, one link at a time.
-# Each link keeps the direction it trailed in last tick (so the body
-# folds into a U on a turn), bent at most MAX_BEND from the link before;
-# then the point is kept BODY_GAP off the nearest rock and the link
-# length restored, before the next link starts from it. Link by link,
-# the body turns an inside corner as an L instead of bunching up in it.
-func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
-	if dir.length() > 0.001:
-		chain.heading = dir.normalized()
-	var old := chain.points.duplicate()
+# Lays the clinging body along the track of the drawn base (the body
+# centre's seat on the surface): the neck runs straight from the head to
+# the base, and each point behind lies a link length further back along
+# where the base has been. Nothing in the body can then move faster than
+# the head or the base does (6 px a tick at most), and the body can never
+# cross itself. The base's track is kept behind it (_extend_path); the
+# base turning back on it (a facing flip) adds a leg that doubles back
+# over the track, and the body folds there, drawn doubled over itself and
+# pulled through as the gecko walks on: a turn-around seen from the side.
+# The head swinging about the base (a turn onto a wall, the snout drawing
+# back from rock) only bends or shortens the neck; laid along the head's
+# own path, the body followed every swing as if it had travelled it, and
+# folded behind a head that swung up and then walked on (2026-10-21).
+# The lay used to be re-done every tick from a heading, each link bent at
+# most so far from the one before, and a jump in the heading (the flip,
+# the head reaching its target during a turn onto a wall) re-laid the
+# whole body in one tick, the tail 65 to 130 px away; on a floor the U
+# that lay was meant to draw was squashed flat, so a turn-around flipped
+# the body end for end. Each point then sags onto the surface under it,
+# or is pushed off rock within its clearance, by an offset eased a few
+# px a tick, so a change of the nearest rock (an edge) is not a jump
+# either. In a passage a point is centred and thinned as before.
+func _lay_body(new_head: Vector2, base: Vector2) -> void:
+	chain.heading = _tangent() * _chain_facing
 	var _t_rbh := Time.get_ticks_usec()
 	var q0: Dictionary = map.nearest_solid(new_head, chain.radii[0] + BODY_GAP)
 	_pt("rb_head", _t_rbh)
@@ -2359,57 +2376,176 @@ func _resolve_body(new_head: Vector2, dir: Vector2) -> void:
 		new_head += away0 * _push_len(0, want0 - q0.dist)
 	new_head = _thin_point(0, new_head, q0)
 	chain.points[0] = new_head
-	var prev_dir := -chain.heading
-	var bend := MAX_BEND_SQUEEZE if _squeeze else MAX_BEND
+	var landing := _path.is_empty()
+	_extend_path(base)
+	var neck := base - new_head
+	var neck_len := neck.length()
+	var neck_dir := neck / neck_len if neck_len > 0.001 else -chain.heading
+	# Arc length from each track point to the base.
+	var n := _path.size()
+	var s := PackedFloat32Array()
+	s.resize(n)
+	s[n - 1] = 0.0
+	for j in range(n - 2, -1, -1):
+		s[j] = s[j + 1] + _path[j].distance_to(_path[j + 1])
+	_fold_len = s[_fold_at] if _fold_at >= 0 else 0.0
+	var j := n - 1
 	for i in range(1, chain.size()):
-		var anchor: Vector2 = chain.points[i - 1]
-		var trail: Vector2 = old[i] - anchor
-		var desired: Vector2 = trail.normalized() if trail.length() > 0.001 else prev_dir
-		var ang := prev_dir.angle_to(desired)
-		if absf(ang) > bend:
-			desired = prev_dir.rotated(signf(ang) * bend)
-		var p: Vector2 = anchor + desired * LINK
-		# A link laid into rock (the head swung round in a passage, the
-		# old trail pointing through its wall) is bent another way, the
-		# nearest clear way first and past the usual limit if nothing
-		# gentler is clear, so the body folds double along the passage
-		# rather than rising through the wall. With no clear way at all it
-		# is laid as it was and pushed off the rock below.
-		if map.solid_within(p, 2.5):
-			var ang0 := prev_dir.angle_to(desired)
-			for a in [0.2, -0.2, 0.4, -0.4, 0.6, -0.6, 0.9, -0.9, 1.2, -1.2, 1.6, -1.6, 2.0, -2.0]:
-				var cand := prev_dir.rotated(clampf(ang0 + a, -MAX_BEND_FOLD, MAX_BEND_FOLD))
-				var pc: Vector2 = anchor + cand * LINK
-				if not map.solid_within(pc, 2.5):
-					desired = cand
-					p = pc
-					break
+		var d := LINK * i
+		var p: Vector2
+		# How much of the sag onto the surface a point takes: all of it
+		# on the track, none at the head, in between along the neck,
+		# which bridges from the body on the surface to a head held up
+		# off it (a turn onto a wall rears the head 15 px above the base).
+		var neck_f := 1.0
+		if d <= neck_len:
+			p = new_head + neck_dir * d
+			neck_f = d / neck_len
+		else:
+			d -= neck_len
+			while j > 0 and s[j] < d:
+				j -= 1
+			if s[j] >= d:
+				# Between path[j] (s[j] >= d) and path[j + 1] (s[j + 1] < d).
+				var seg := s[j] - s[j + 1]
+				p = _path[j + 1].lerp(_path[j], (d - s[j + 1]) / seg) if seg > 0.001 else _path[j]
+			else:
+				# A track shorter than the body (just landed): straight on
+				# behind its start.
+				var back: Vector2 = (_path[0] - _path[1]).normalized() if n > 1 and _path[0] != _path[1] else -chain.heading
+				p = _path[0] + back * (d - s[0])
 		var r: float = chain.radii[i]
+		# The point's offset off the track carries over from the last
+		# tick and is corrected from where it left the point: a probe
+		# from the track line, 18 px over a floor, searched three times
+		# the rings of one from the sagged point near it. On landing the
+		# offset is whatever puts the point where the airborne body left
+		# it, so the body settles onto its lay from there instead of
+		# being laid between the head and the base in one tick (a point
+		# trailing 100 px up in the air after a fall moved 125 px).
+		if landing:
+			_sag[i] = chain.points[i] - p
+		var w: Vector2 = p + _sag[i]
 		var _t_rbp := Time.get_ticks_usec()
-		var q: Dictionary = map.nearest_solid(p, r + BODY_HUG)
+		var q: Dictionary = map.nearest_solid(w, r + BODY_HUG)
 		_pt("rb_probe", _t_rbp)
-		if q.found:
-			var away: Vector2 = (p - q.nearest).normalized() if q.dist > 0.01 else up
+		var _t_rbt := Time.get_ticks_usec()
+		w = _thin_point(i, w, q)
+		_pt("rb_thin", _t_rbt)
+		var w_want := w
+		if q.found and not _thin_on[i]:
+			var away: Vector2 = (w - q.nearest).normalized() if q.dist > 0.01 else up
 			# Laid higher than its clearance, like the head, by BODY_LIFT
 			# for the body and a pixel for the tail's tip, which drags
 			# along the ground behind the lifted body.
 			var want := r + BODY_GAP + lerpf(1.0, BODY_LIFT, clampf((r - 2.0) / 5.0, 0.0, 1.0))
-			var _t_rbt := Time.get_ticks_usec()
-			p = _thin_point(i, p, q)
-			_pt("rb_thin", _t_rbt)
-			if _thin_on[i]:
-				pass
-			elif q.dist < want:
-				p += away * _push_len(i, want - q.dist)
-			else:
-				p += away * (want - q.dist) * HUG_K
-			p = anchor + (p - anchor).normalized() * LINK
+			w_want = w + away * (want - q.dist)
+			if q.dist > want:
+				# A sag toward the surface (not a push off rock within the
+				# clearance, which the neck takes in full): the neck takes
+				# its share of it, between the track and the sagged spot.
+				w_want = p.lerp(w_want, neck_f)
+		elif not q.found:
+			# Nothing within reach: the point eases back onto the track.
+			w_want = p
+		w = w.move_toward(w_want, maxf(SAG_STEP, w.distance_to(w_want) * SAG_K))
+		# Never further from the point before it than a link and a little:
+		# the sag may bend the body, not break it.
+		var from_prev := w - chain.points[i - 1]
+		if from_prev.length() > LINK + LINK_SLACK:
+			w = chain.points[i - 1] + from_prev.normalized() * (LINK + LINK_SLACK)
+		_sag[i] = w - p
+		chain.points[i] = w
+
+
+# Keeps the base's track. The base going back along it (a facing flip)
+# begins a leg that doubles back over the track, and the body folds at
+# that point; coming forward again along that leg takes the leg back
+# (the body unfolds) and then goes on along the track as before. The
+# track starts straight back along the surface when the gecko lands
+# (started along the airborne body instead, it kept the tail up in the
+# air along the flight line for half a second, until the walk had used
+# that much track), and is cut to PATH_KEEP behind the base.
+func _extend_path(h: Vector2) -> void:
+	if _path.is_empty():
+		_path.append(h - chain.heading * PATH_KEEP)
+		_path.append(h)
+		_fold_at = -1
+		return
+	var last := _path.size() - 1
+	var move := h - _path[last]
+	if move.length() < 0.001:
+		return
+	var seg := _path_dir()
+	var back := -move.dot(seg)
+	if move.length() < PATH_MIN_SEG and last > 0 and (h - _path[last - 1]).dot(seg) > 0.0:
+		# A fraction of a pixel, still ahead of the point before: the end
+		# moves, no point is added (at rest the base wobbles by less).
+		_path[last] = h
+		return
+	if back > 0.0:
+		if _fold_at >= 0:
+			_pop_path(back, _fold_at)
+			if _path.size() - 1 <= _fold_at:
+				# Back at the turn: the fold is undone, and the way on from
+				# here is along the path as it was.
+				_fold_at = -1
 		else:
-			var _t_rbt2 := Time.get_ticks_usec()
-			_thin_point(i, p, q)
-			_pt("rb_thin", _t_rbt2)
-		chain.points[i] = p
-		prev_dir = (p - anchor).normalized()
+			_fold_at = last
+	_path.append(h)
+	# Cut to PATH_KEEP behind the base, the first kept segment shortened
+	# to the exact length rather than dropped whole: the track starts
+	# with one long segment when the body lands still hanging in the air
+	# (the chain's last point behind the base was 67 px from it), and
+	# dropping it at once left the tail, laid straight on past the
+	# track's start, to swing 16 px onto the floor line. A long stand
+	# with a wobbling base adds points too, so the count is capped as
+	# well.
+	var total := 0.0
+	for j in range(_path.size() - 1, 0, -1):
+		total += _path[j].distance_to(_path[j - 1])
+	var drop := 0
+	while total > PATH_KEEP and drop < _path.size() - 2:
+		var seg_len := _path[drop].distance_to(_path[drop + 1])
+		if total - seg_len >= PATH_KEEP:
+			total -= seg_len
+			drop += 1
+		else:
+			var keep := PATH_KEEP - (total - seg_len)
+			_path[drop] = _path[drop + 1] + (_path[drop] - _path[drop + 1]) * (keep / seg_len)
+			total = PATH_KEEP
+	drop = maxi(drop, _path.size() - 240)
+	if drop > 0:
+		_path = _path.slice(drop)
+		_fold_at = _fold_at - drop if _fold_at >= drop else -1
+
+
+# The direction of the path's end, read over its last PATH_LOOK px, and
+# never back past a fold: read across the turn, a 1 px leg back and the
+# path before it cancelled to a forward step, so the head coming forward
+# again was not seen to retrace the leg but added to it, and a wobbling
+# head on a climb zigzagged the path and bunched the body behind it.
+func _path_dir() -> Vector2:
+	var last := _path.size() - 1
+	var j := last
+	while j > maxi(0, _fold_at) and _path[last].distance_to(_path[j]) < PATH_LOOK:
+		j -= 1
+	var d := _path[last] - _path[j]
+	return d.normalized() if d.length() > 0.001 else chain.heading
+
+
+# Takes d px off the path's end, never past the point at index keep.
+func _pop_path(d: float, keep: int) -> void:
+	while d > 0.0 and _path.size() - 1 > keep:
+		var n := _path.size()
+		var seg_v := _path[n - 1] - _path[n - 2]
+		var seg_len := seg_v.length()
+		if seg_len <= d:
+			_path.remove_at(n - 1)
+			d -= seg_len
+		else:
+			_path[n - 1] = _path[n - 1] - seg_v * (d / seg_len)
+			d = 0.0
 
 
 # How far a point is pushed off rock within its clearance this tick: all

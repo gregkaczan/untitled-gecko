@@ -92,24 +92,43 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   level beyond it is bridged, not entered; bridging ends only after the
   gap test has failed a few ticks in a row, and at once if it has
   carried the body away from any rock.
-- The body is laid along the surface link by link behind the head, so an
-  inside corner bends it into an L instead of bunching it up. A link
-  bends at most 0.6 radians from the one before: a U-turn that gentle
-  has a radius of 13 px, wider than the body, so a turn-around lays the
-  body in a U rather than a loop over itself (at 1.0 radian every
-  facing flip knotted the body for a few ticks, a turn-around inside a
-  tunnel for forty, and the player saw it fold into loops climbing out
-  of a pool, 2026-10-21). The suite's overlap scan (a scratch script:
-  two drawn points three or more links apart closer than their radii)
-  went from 909 knotted ticks in 126 runs to 16 in 10. Inside a
-  squeeze the limit stays at 1.0 radian: a turn-around there has no
-  room for the wide U (laid wider, the body rose through the tunnel's
-  wall), so it folds double along the passage for a second, as it
-  always did. A link that would be laid into rock is bent another way
-  first, the nearest clear way, past the usual limit if nothing gentler
-  is clear. Backing out of a passage tail first was tried instead and
-  withdrawn the same day: the chain, laid forward from a head going
-  backward, bunched into waves, and the player read it as broken.
+- The drawn body lies along the track of its base (the body centre's
+  seat on the surface, `_lay_body`): the neck runs straight from the
+  head to the base, and each point behind lies a link length (8 px)
+  further back along where the base has been, so the body goes round an
+  inside corner as the base did, as an L, and nothing in it can move
+  faster than the head or the base (6 px a tick at most) or cross
+  itself. The base turning back on its track (a facing flip) adds a leg
+  that doubles back over it, and the body folds at that point, drawn
+  doubled over itself and pulled through as the gecko walks on: a
+  turn-around seen from the side; coming back along that leg unfolds
+  it. The head swinging about the base (a turn onto a wall, the snout
+  drawing back from rock) only bends or shortens the neck. Each point
+  then sags onto the surface under it, or is pushed off rock within its
+  clearance, by an offset eased 2 px a tick (a fifth of what is left,
+  if more), so a change of the nearest rock (an edge) is no jump
+  either; the neck takes only its share of the sag, none at the head,
+  so a head reared 15 px off the floor keeps its neck (sagged in full,
+  the first link stretched to 15 px and the head blob parted from the
+  body), and no drawn link may stretch more than 1.5 px past its
+  length. On landing the track starts straight back along the surface
+  and each point's offset is whatever puts it where the airborne body
+  left it, so the body settles onto its lay in a quarter second instead
+  of being laid between the head and the base in one tick; in a passage
+  a point is centred and thinned as before. Until 2026-10-21 the body was re-laid every tick
+  from the head's heading, each link bent at most so far from the one
+  before (1.0 radian, then 0.6 for a wider U that never knotted), and
+  any jump in the heading re-laid the whole body in one tick: the head
+  reaching its target during a turn onto a wall put the tail 65 px into
+  the gap it was crossing, and on a floor a facing flip, its U squashed
+  flat by the floor, mirrored the body end for end, the tail 130 px
+  away in a tick (the player's "tail whips into the gap"). The suite
+  had not caught it because no metric read the body's points; it does
+  now (`chain_jump`). Laid along the head's own path instead of the
+  base's, the body followed every swing of the head as if it had
+  travelled it, and folded behind a head that swung up onto a ledge and
+  walked on. The airborne body still trails the head freely, each link
+  bent at most 0.6 radians from the one before.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
@@ -921,6 +940,9 @@ The movement suite is the regression gate for any movement change:
 - `tools/suite.sh [filter]` runs every scene headless at fixed fps
   (about twelve seconds for the lot, `JOBS` in parallel) into `runs/`
   and scores them with `tools/analyze.py`: drawn body and head jumps,
+  any point of the drawn body moving more than 10.5 px in a tick
+  (`chain_jump`: the head's 6 and the base's 2.2 and the sag's 2; a
+  turn-around gets no grace, since the body must fold, not snap),
   back-and-forth under a held input, up flips and oscillation, state
   flicker, stalls, foot flicker and sinking, and from the per-frame
   lines the camera: a camera step that changes by 4 screen px or more
