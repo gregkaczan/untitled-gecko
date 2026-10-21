@@ -438,6 +438,14 @@ add("sand_bed", bed("sand", 700, 1200, 64) + [["erase", 1300, F, 240, 100], ["sa
 add("sand_hopper", [["fill", 820, 500, 360, 268], ["sand", 900, 548, 200, 216]],
     ["floor", 1000, 790], ["hopper"], state="cling", sim_only=True, reach=[0, 0, 800, 1080],
     note="a hopper of sand in a rock block over a 32 px pocket, a 4 px plate under it: a bite up from the pocket's floor opens the plate, the sand pours over the gecko, which burrows out to the left")
+# A pool with a bank of sand on its far side (the particle world only:
+# in the bitmap sand is rock): a jump in, a swim across, out onto the
+# sand, back down to the water's edge, then nothing. The user's gecko
+# jittered its head at a pool's edge in cave 5 once the water settled
+# (2026-10-21); grains shifting under the feet are the suspect.
+add("pool_sand_edge", [["erase", 1000, F, 400, 100], ["water", 1000, F, 400, 100]] + bed("sand", 1400, 1700, 40),
+    ["floor", 800, 700], ["swim_out_edge", "swim_out"], state="cling", sim_only=True, reach=[1300, 0, 1920, 1080],
+    note="a pool, then a bank of sand 40 px tall: swim across, out onto the sand, back to the water's edge, nothing pressed")
 add("materials", bed("sand", 300, 560, 48) + bed("clay", 640, 900, 48)
     + [["erase", 980, F, 160, 60], ["water", 980, F, 160, 60],
        ["erase", 1220, F, 160, 60], ["lava", 1220, F, 160, 60],

@@ -25038,6 +25038,113 @@
    "note": "a hopper of sand in a rock block over a 32 px pocket, a 4 px plate under it: a bite up from the pocket's floor opens the plate, the sand pours over the gecko, which burrows out to the left",
    "sim_only": true
   },
+  "pool_sand_edge": {
+   "base": "room",
+   "terrain": [
+    [
+     "erase",
+     1000,
+     800,
+     400,
+     100
+    ],
+    [
+     "water",
+     1000,
+     800,
+     400,
+     100
+    ],
+    [
+     "sand",
+     1400,
+     796,
+     300,
+     4
+    ],
+    [
+     "sand",
+     1404,
+     792,
+     292,
+     4
+    ],
+    [
+     "sand",
+     1408,
+     788,
+     284,
+     4
+    ],
+    [
+     "sand",
+     1412,
+     784,
+     276,
+     4
+    ],
+    [
+     "sand",
+     1416,
+     780,
+     268,
+     4
+    ],
+    [
+     "sand",
+     1420,
+     776,
+     260,
+     4
+    ],
+    [
+     "sand",
+     1424,
+     772,
+     252,
+     4
+    ],
+    [
+     "sand",
+     1428,
+     768,
+     244,
+     4
+    ],
+    [
+     "sand",
+     1432,
+     764,
+     236,
+     4
+    ],
+    [
+     "sand",
+     1436,
+     760,
+     228,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    800,
+    700
+   ],
+   "scripts": [
+    "swim_out_edge",
+    "swim_out"
+   ],
+   "reach": [
+    1300,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a pool, then a bank of sand 40 px tall: swim across, out onto the sand, back to the water's edge, nothing pressed",
+   "sim_only": true
+  },
   "materials": {
    "base": "room",
    "terrain": [

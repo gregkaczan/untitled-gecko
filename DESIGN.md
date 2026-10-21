@@ -93,7 +93,21 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   gap test has failed a few ticks in a row, and at once if it has
   carried the body away from any rock.
 - The body is laid along the surface link by link behind the head, so an
-  inside corner bends it into an L instead of bunching it up.
+  inside corner bends it into an L instead of bunching it up. A link
+  bends at most 0.6 radians from the one before: a U-turn that gentle
+  has a radius of 13 px, wider than the body, so a turn-around lays the
+  body in a U rather than a loop over itself (at 1.0 radian every
+  facing flip knotted the body for a few ticks, a turn-around inside a
+  tunnel for forty, and the player saw it fold into loops climbing out
+  of a pool, 2026-10-21). The suite's overlap scan (a scratch script:
+  two drawn points three or more links apart closer than their radii)
+  went from 909 knotted ticks in 126 runs to 16 in 10. Inside a
+  passage, or wedged between rock on both sides, the drawn body does
+  not follow a reversed walk round: it backs out tail first, the head
+  still pointing in, and the head swings round once the body is out
+  (the chain's own facing, cf in the trace). Swung round inside, it
+  folded into a loop over itself, or, with the gentler bend, rose
+  through the tunnel's wall.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two

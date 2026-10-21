@@ -5,9 +5,9 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 | run | result | draw | head | dance | upflip | uposc | state | stall | ftog | fslide | fjump | sink | float | cjerk | shake | tube | body* | stuck* | creep* | settle* | travel | outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | clutch_pit:cl_pit | FAIL | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  |  | 628 | ok |
-| crumble_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 632 | ends at (1085, 481), expected x 880..1130 y 700..800 |
+| crumble_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  |  |  | 853 | ok |
 | dig_45:dig_45 | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 186 | never reaches x 0..1920 y 900..1080 |
-| moss_wall:climb_wall | FAIL |  |  |  |  |  | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  | 593 | ok |
+| moss_wall:climb_wall | FAIL |  |  |  |  |  | 1 |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 593 | ok |
 | boulder_120:boulder_big | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1385 | ok |
 | boulder_30:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1148 | ok |
 | boulder_70:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1066 | ok |
@@ -52,7 +52,7 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 | gap_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1164 | ok |
 | gap_24:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1165 | ok |
 | gap_32:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1161 | ok |
-| gap_40:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 1336 | ok |
+| gap_40:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  | 1 | 1338 | ok |
 | gap_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 1381 | ok |
 | gap_64:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1412 | ok |
 | gap_8:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1164 | ok |
@@ -148,7 +148,7 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 | switch_60:switch_up_hold | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | ok |
 | thorn_floor:walk_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 685 | ok |
 | thorn_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 926 | ok |
-| tongue_shaft_a:tap_shaft_a | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  | 1 | 220 | ok |
+| tongue_shaft_a:tap_shaft_a | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 220 | ok |
 | tongue_shaft_b:tap_shaft_b | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 237 | ok |
 | tongue_shaft_c:tap_shaft_c | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 2 |  |  | 253 | ok |
 | tongue_tunnel_fall:tap_dig_fall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 5 | 1 |  | 798 | ok |
@@ -189,7 +189,7 @@ Runs: 178, passing: 174, failing: 4. Columns are event counts; * marks informati
 - draw_jump: 1 events, worst 4.09: t86 (4.09)
 
 ### crumble_wall:climb_wall
-- outcome: ends at (1085, 481), expected x 880..1130 y 700..800
+- shake: 1 events, worst 8.0: t297 (8.0, y)
 
 ### dig_45:dig_45
 - outcome: never reaches x 0..1920 y 900..1080

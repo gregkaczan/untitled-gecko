@@ -116,7 +116,7 @@ def parse(path):
             ticks.append({
                 "tick": n, "pos": vec(d["pos"]), "draw": vec(d["draw"]), "head": vec(d["head"]),
                 "up": vec(d["up"]), "dist": float(d["dist"]), "spd": float(d["spd"]), "state": d["state"],
-                "facing": int(d["facing"]), "inp": vec(d["inp"]), "s": float(d["s"]),
+                "facing": int(d["facing"]), "cf": int(d.get("cf", d["facing"])), "inp": vec(d["inp"]), "s": float(d["s"]),
                 "blk": d["blk"] == "1", "grab": d["grab"] == "1", "bridge": d["bridge"] == "1",
                 "sq": d["sq"] == "1", "chew": d["chew"] == "1", "jump": d["jump"] == "1",
                 "n": vec(d["n"]), "bn": vec(d.get("bn", "0,0")), "sc": d.get("sc", "0") == "1",
@@ -154,7 +154,9 @@ def grace_sets(ticks):
     """Ticks to skip per reason: after a facing flip, after landing, after a jump, at spawn."""
     turn, land, jumped = set(), set(), set()
     for i in range(1, len(ticks)):
-        if ticks[i]["facing"] != ticks[i - 1]["facing"]:
+        # The head swings round when the drawn body's facing (cf) flips: at
+        # once in the open, or once a body backing out of a passage is out.
+        if ticks[i]["facing"] != ticks[i - 1]["facing"] or ticks[i]["cf"] != ticks[i - 1]["cf"]:
             turn.update(range(i, min(len(ticks), i + TURN_GRACE)))
         if ticks[i]["state"] == "cling" and ticks[i - 1]["state"] != "cling":
             land.update(range(i, min(len(ticks), i + LAND_GRACE)))

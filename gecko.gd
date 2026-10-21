@@ -98,7 +98,7 @@ const BOB_MAX := 12.0          # Largest across-surface lag the drawn body may c
 const HEAD_SPEED := 360.0      # How fast the head swings round on a turn, or draws back and forward at a wall (6 px a tick)
 const RADII := [7.0, 8.5, 8.5, 7.5, 5.5, 4.0, 3.2, 2.6, 2.2, 1.9]
 const LINK := 8.0
-const MAX_BEND := 1.0
+const MAX_BEND := 0.6             # Most a drawn body link bends from the one before (radians): a U-turn this gentle has a radius of 13 px, wider than the body, so a turn-around lays the body in a U, not a loop over itself (at 1.0 every facing flip knotted it for a few ticks, a tunnel turn-around for forty)
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
 const BODY_HUG := 20.0         # How far past its radius a chain point looks for the surface
 const HUG_K := 0.5             # Fraction of the way a trailing point is pulled onto the surface per tick
@@ -223,7 +223,8 @@ var blobs: Node2D
 var pos := Vector2.ZERO
 var vel := Vector2.ZERO
 var up := Vector2.UP
-var facing := 1.0
+var facing := 1.0              # The way the walk goes along the tangent
+var _chain_facing := 1.0       # The way the drawn body is laid: facing, except in a squeeze, where a turn of the walk backs the body out tail first and the head swings round once there is room (_cling_step)
 var speed_along := 0.0
 var clinging := false
 var no_cling := 0.0
@@ -382,6 +383,7 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	vel = Vector2.ZERO
 	up = up_dir
 	facing = 1.0
+	_chain_facing = 1.0
 	speed_along = 0.0
 	clinging = true
 	no_cling = 0.0
@@ -599,9 +601,9 @@ func _print_trace() -> void:
 	var cp := ""
 	for i in chain.size():
 		cp += "%.1f/%.1f/%.1f/%d;" % [(chain.points[i] - pos).dot(_tangent()), (chain.points[i] - pos).dot(up), _draw_r[i], _thin_on[i]]
-	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d us=%d cp=%s feet=%s" % [
+	print("t%d pos=%.2f,%.2f draw=%.2f,%.2f head=%.2f,%.2f up=%.3f,%.3f dist=%.1f spd=%.1f state=%s facing=%d cf=%d inp=%.2f,%.2f s=%.2f blk=%d grab=%d bridge=%d sq=%d chew=%d jump=%d n=%.2f,%.2f bn=%.2f,%.2f sc=%d sqz=%d ps=%d an=%s tng=%s tip=%.1f,%.1f cw=%.1f sqin=%d tube=%d hb=%.1f lift=%.1f set=%d rev=%d revi=%d sw=%d us=%d cp=%s feet=%s" % [
 		_tick, pos.x, pos.y, _pos_s.x, _pos_s.y, hd.x, hd.y, up.x, up.y,
-		_last_probe.get("dist", -1.0), speed_along, state, int(facing), _inp.x, _inp.y, _s,
+		_last_probe.get("dist", -1.0), speed_along, state, int(facing), int(_chain_facing), _inp.x, _inp.y, _s,
 		1 if _blocked else 0, 1 if _grab_n != Vector2.ZERO else 0, 1 if _bridging else 0,
 		1 if _squeezed_f else 0, 1 if chewing else 0, 1 if _jumped else 0, _n_dbg.x, _n_dbg.y,
 		_walk_bn.x, _walk_bn.y, 1 if _step_climb else 0, 1 if _squeeze else 0, 1 if _press_stop else 0,
@@ -926,6 +928,14 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	var squeezed := _squeezed()
 	_pt("squeezed", _t_squeezed)
 	_squeezed_f = squeezed
+	# The drawn body follows the walk's facing only where there is room
+	# to turn: in a passage, or wedged between rock on both sides, a
+	# reversed walk backs the body out tail first, the head still
+	# pointing in, and the head swings round once the body is out. Swung
+	# round inside, the body folded into a loop over itself, or, with the
+	# gentler bend, up through the tunnel's wall.
+	if not _squeeze and not squeezed:
+		_chain_facing = facing
 	# A press straight into the surface over a slot in it (a crack in the
 	# floor, narrower than the body is long) enters the slot nose first.
 	if not _squeeze and not _sq_enter and not chewing and _grab_n == Vector2.ZERO \
@@ -1459,11 +1469,12 @@ func _land(n: Vector2) -> void:
 	for f in feet:
 		f.planted = false
 		f.stepping = false
-		f.pos = chain.points[f.hip] + t * f.end * facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
+		f.pos = chain.points[f.hip] + t * f.end * _chain_facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
 		f.up = up
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
 	if absf(speed_along) > 1.0:
 		facing = signf(speed_along)
+	_chain_facing = facing
 	vel = Vector2.ZERO
 	feet_short = 0.0
 
@@ -2272,13 +2283,13 @@ func _update_chain(dt: float) -> void:
 		var head_clear := _sq_r if _squeeze else chain.radii[0] + BODY_GAP
 		while back > want_back:
 			var fwd_step := minf(1.0, back - want_back)
-			if map.solid_within(base + t * facing * (HEAD_LEAD - (back - fwd_step)), head_clear):
+			if map.solid_within(base + t * _chain_facing * (HEAD_LEAD - (back - fwd_step)), head_clear):
 				break
 			back -= fwd_step
-		target = base + t * facing * (HEAD_LEAD - back)
+		target = base + t * _chain_facing * (HEAD_LEAD - back)
 		while back < back_max and map.solid_within(target, head_clear):
 			back = minf(back + 2.0, back_max)
-			target = base + t * facing * (HEAD_LEAD - back)
+			target = base + t * _chain_facing * (HEAD_LEAD - back)
 		_head_back = back
 	else:
 		_pos_s = pos
@@ -2299,10 +2310,10 @@ func _update_chain(dt: float) -> void:
 		# passage the head is held between the walls and its travel reads
 		# as mostly across, which would lay the body at a slant: there the
 		# heading is the passage's own.
-		if clinging and (_squeeze or dir.dot(_tangent() * facing) < -0.3):
-			dir = _tangent() * facing
+		if clinging and (_squeeze or dir.dot(_tangent() * _chain_facing) < -0.3):
+			dir = _tangent() * _chain_facing
 	elif clinging:
-		dir = _tangent() * facing
+		dir = _tangent() * _chain_facing
 	if clinging:
 		_resolve_body(new_head, dir)
 		return
@@ -2479,6 +2490,7 @@ func _switch_surface() -> bool:
 	_flip_ticks = 0
 	_grab_n = n
 	facing = -facing
+	_chain_facing = -_chain_facing
 	# The drawn body's lift is along up: reversed with it, it eases over
 	# to the new side a pixel a tick instead of jumping 4 px across.
 	_lift = -_lift
@@ -2662,14 +2674,14 @@ func _update_feet(dt: float) -> void:
 			continue
 		if not clinging:
 			f.planted = false
-			var hang := hip - up * 6.0 + tangent * f.end * facing * 4.0
+			var hang := hip - up * 6.0 + tangent * f.end * _chain_facing * 4.0
 			if f.pos.distance_to(hang) > 20.0:
 				f.pos = hang
 			else:
 				f.pos = f.pos.lerp(hang, minf(1.0, 30.0 * dt))
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
-		var rest := hip + tangent * (f.end * facing * FOOT_SPREAD + lead) - up * RIDE_H
+		var rest := hip + tangent * (f.end * _chain_facing * FOOT_SPREAD + lead) - up * RIDE_H
 		# In a passage the hip rides close to the floor and the rest spot
 		# falls inside it: the foot wants the surface, not a cell deep in.
 		var back := 0.0
@@ -2718,7 +2730,7 @@ func _knee(f: Foot) -> Vector2:
 	# The knee rises at most half the leg's drop, so a leg folded flat
 	# in a passage keeps its knee level with the hip, inside the body.
 	var lift := minf(KNEE_OUT * k, maxf((hip - foot).dot(up), 0.0) * 0.5)
-	return (hip + foot) * 0.5 + up * lift - _tangent() * f.end * facing * KNEE_BACK * k
+	return (hip + foot) * 0.5 + up * lift - _tangent() * f.end * _chain_facing * KNEE_BACK * k
 
 
 # Where a foot is drawn. On a surface its position is a rock cell's
