@@ -24,6 +24,7 @@ var _near_tex: ImageTexture
 var _w := 0
 var _h := 0
 var _grid := 0.5
+var _seed := 0
 var _rng := RandomNumberGenerator.new()
 
 
@@ -56,8 +57,15 @@ func set_grid(g: float) -> void:
 func build(kinds: PackedByteArray, w: int, h: int, seed_v: int) -> void:
 	_w = w
 	_h = h
-	_rng.seed = seed_v
+	_seed = seed_v
 	_build_far(seed_v)
+	rebuild_near(kinds)
+
+
+# The near layer again for the cells as they are now (the editor, after
+# a stroke): the same seed, so it is what a load of these cells builds.
+func rebuild_near(kinds: PackedByteArray) -> void:
+	_rng.seed = _seed
 	_build_near(kinds)
 
 

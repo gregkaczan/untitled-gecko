@@ -1,4 +1,4 @@
-# The in-game map editor (F2): a panel down the left, the world painted
+# The in-game map editor (Tab or F2): a panel down the left, the world painted
 # with the mouse. Paints are the cell kinds (air, rock, hard rock,
 # bedrock, copper, sand, clay, water, lava, glowshroom, moss, crumbling
 # rock, gas, thorn), each a box in its colour. Decor is the stamps drawn
@@ -16,7 +16,8 @@
 # dragged from its source to its aim, a strip dragged along a surface.
 # The light picked is seeded at the cursor before the click, so the
 # world shows it, the wheel sizing its radius and Shift+wheel its
-# strength; the right button takes a light away. Everything goes
+# strength; the right button takes a light away; a check turns the
+# light pass off, the whole cave lit flat. Everything goes
 # through main.gd, which paints the live world (the particle sim or the
 # bitmap) and an authoring cell map alike, keeps every stroke for undo
 # (Ctrl+Z, Ctrl+Y), autosaves versions of the level and loads them.
@@ -65,7 +66,7 @@ const CHEAT := [
 		["MMB drag", "pan; Home: back to the gecko"],
 		["Ctrl+Z, Ctrl+Y", "undo, redo"],
 		["Esc", "drop the pick; close a dialog"],
-		["?", "this sheet; F2 leaves the editor"]]],
+		["?", "this sheet; Tab or F2 leaves the editor"]]],
 	["Paints", [
 		["LMB, RMB", "paint the kind, erase to air"],
 		["wheel, [ ]", "brush radius 4 to 48 px"]]],
@@ -84,7 +85,8 @@ const CHEAT := [
 		["Point", "click sets it"],
 		["Cone", "press at the source, drag to the aim, release"],
 		["Strip", "press, drag along the surface, release"],
-		["RMB", "takes the nearest light away"]]],
+		["RMB", "takes the nearest light away"],
+		["Lighting", "off: the whole cave lit flat, every stamp in view"]]],
 	["Files", [
 		["Save", "a saved version and the head the game loads"],
 		["autosave", "a version a minute while there are strokes, the last 10 kept"],
@@ -101,6 +103,7 @@ var _shape_group := ButtonGroup.new()
 var _paint_buttons: Array = []
 var _light_buttons: Array = []
 var _shape_buttons: Array = []
+var _lighting: CheckButton
 var _decor: ItemList
 var _variants: ItemList
 var _stamps: ItemList
@@ -193,7 +196,7 @@ func _ready() -> void:
 	head.add_child(_undo_b)
 	_redo_b = _button("Redo", func() -> void: say(_main.edit_redo()))
 	head.add_child(_redo_b)
-	_hint = _label("F2 leaves · ? keys · Ctrl+wheel zoom · MMB pan", 11, DIM)
+	_hint = _label("Tab leaves · ? keys · Ctrl+wheel zoom · MMB pan", 11, DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	col.add_child(_hint)
 
@@ -314,6 +317,14 @@ func _ready() -> void:
 	var lhint := _label("wheel radius · Shift+wheel strength · RMB removes", 11, DIM)
 	lhint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	lights.add_child(lhint)
+	# The light pass itself: off, the whole cave is lit flat, so every
+	# stamp and paint shows while dressing a dark corner.
+	_lighting = _check("Lighting (off: all lit)", _main.light_on())
+	_lighting.disabled = _main.sim == null
+	_lighting.toggled.connect(func(on: bool) -> void:
+		_main.set_light(on)
+		say("lighting " + ("on" if on else "off: the whole cave lit")))
+	lights.add_child(_lighting)
 	_refresh_light_readout()
 
 	# The file: the level's name and version, New, Load, Save.
@@ -741,6 +752,17 @@ func _dialog_open() -> bool:
 	return _new_box.visible or _load_box.visible
 
 
+# Whether a dialog has the keys (main.gd leaves Tab to it then).
+func dialog_open() -> bool:
+	return _dialog_open()
+
+
+# The light pass's check kept in step with the debug panel's (main.gd set_light).
+func set_light(on: bool) -> void:
+	if _lighting:
+		_lighting.set_pressed_no_signal(on)
+
+
 func _input(event: InputEvent) -> void:
 	if not visible or _main == null:
 		return
@@ -942,7 +964,7 @@ func panel_width() -> float:
 	return maxf(WIDTH, _panel.size.x)
 
 
-# On opening (main.gd F2) and after a save or load: the name, the title.
+# On opening (main.gd, Tab or F2) and after a save or load: the name, the title.
 # GECKO_EDIT_PICK=decor:<group> | stamp:<name> | light:<kind> makes the
 # pick and puts the cursor over the world, for a look at the ghost or
 # the light in a recording without a hand on the mouse.

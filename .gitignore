@@ -4,3 +4,6 @@
 /runs/
 /runs-sim*/
 __pycache__/
+# The level cells PNGs are read as files, not resources: Godot's import sidecars for them are noise.
+levels/*.import
+levels/**/*.import

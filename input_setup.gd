@@ -2,10 +2,11 @@
 # readable place instead of project.godot. Rain World layout: WASD, the
 # arrows or the left stick move, Space or the south face button jumps,
 # E, Shift or the west face button chews. 1 and 2 pick the gecko's pixel
-# grid: 2 px like the rock, or the default 1 px. Tab loads the next test
-# scene from tests/scenes.json, Shift+Tab goes back to the generated cave.
+# grid: 2 px like the rock, or the default 1 px. Tab or F2 opens and
+# leaves the map editor, Ctrl+Tab loads the next test scene from
+# tests/scenes.json, Shift+Tab goes back to the first cave.
 # B, C and N drop a boulder, a clump of clay or a heap of sand at the
-# cursor. In the map editor (F2) Ctrl+Z and Ctrl+Y undo and redo, Home
+# cursor. In the map editor Ctrl+Z and Ctrl+Y undo and redo, Home
 # brings the camera back, [ and ] size the brush. The mouse is
 # the gecko's tongue and chew (see gecko.gd), with the brush on Ctrl and
 # the middle button.
@@ -24,10 +25,10 @@ static func ensure_actions() -> void:
 	_add("chew", [_key(KEY_E), _key(KEY_SHIFT), _button(JOY_BUTTON_X)])
 	_add("regenerate", [_key(KEY_R)])
 	_add("debug_toggle", [_key(KEY_F1)])
-	_add("edit_toggle", [_key(KEY_F2)])
+	_add("edit_toggle", [_key(KEY_F2), _key(KEY_TAB)])
 	_add("render_coarse", [_key(KEY_1)])
 	_add("render_fine", [_key(KEY_2)])
-	_add("scene_next", [_key(KEY_TAB)])
+	_add("scene_next", [_key(KEY_TAB, false, true)])
 	_add("scene_main", [_key(KEY_TAB, true)])
 	_add("drop_boulder", [_key(KEY_B)])
 	_add("drop_clay", [_key(KEY_C)])
