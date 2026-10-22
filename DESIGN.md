@@ -729,13 +729,13 @@ What the first slice adds on top of the movement, each a first version
   or floor line, `["column", x, y0, y1, w, seed]` a stalagnate with a
   waist. In the clutch: off the hall's and the gulf's ceilings, small
   on the hall's floor, a column in the dead end.
-- Vines: `["vine", x, y, length]` in a scene's lumps hangs a chain of
-  clay cells from the first ceiling above (x, y), its top cell rock so
-  it holds, bonded like a lump, drawn green-brown. It swings, is shoved
-  aside by a walk, parts where bitten or stretched past clay's limit,
-  and can be clung to; a hang of more than 1.2 s on one (a planted
-  foot on its cells) breaks its anchor and it comes down, gecko and all
-  (`main.gd` VINE_HOLD). Particle world only.
+- Vines: `["vine", x, y, length]` in a scene's lumps hangs a vine from
+  the first ceiling above (x, y): a rope of the chain critters (below),
+  a skinned chunk on a verlet chain. It swings, is clung to and climbed,
+  parts where bitten through (the rope below falls as a lump of its
+  own). With `main.gd` VINE_TEAR on (off for now), a hang of more than
+  1.2 s on one (a planted foot on its cells) tears it from the ceiling
+  and it comes down, gecko and all (VINE_HOLD). Particle world only.
 - Backdrop (`backdrop.gd`): a far wall of darker rock noise, larger
   than the world, moving at 0.15 of the camera, under the particles;
   and a near layer of dark dripstone silhouettes hung from the cell
@@ -749,6 +749,134 @@ What the first slice adds on top of the movement, each a first version
   rides the tip to the mouth, is swallowed (the bulge runs down), and
   the gecko's glow is brighter and greener for twenty seconds. Hunting
   and lighting the way are the same act.
+
+## The chain critters
+
+Plants and creatures whose shape is a chain the CPU runs, in the
+particle world (`critters.gd`, which main.gd ticks before the sim's
+tick and after it, both before the gecko's own). Placed as lumps in a
+scene or level, or by the editor's stamps of the same names.
+
+**Skinned chunks.** A shroom and a vine are lumps of stone particles
+(sim.gd `spawn_chunk` with a skin) whose particles follow bones the
+CPU poses: each particle keeps its bone, the next bone's weight (a
+blend over the joints, so a bend does not crack the lattice) and its
+rest place; every tick `pbd_predict.glsl` puts a driven particle where
+its bones carry that rest place and the solver leaves it there (no
+density push, no rock wall, no sleep). So a shroom is cells like rock
+to the gecko (sim_map.gd `anchored`: ground, never a lump to shove or
+drag), and the bite, the chew and the strike take its particles as
+they take a lump's. The colours are stone in fraction bands
+(`render_write.glsl` SKIN_PAL, bands 8 and up glowing), the speckle
+read at the rest place so a bending stem does not shimmer. The living
+bonded particles of each bone are counted and read back; when a
+critter's count drops, its cells are read across its line for a gap,
+and a gap lets the bones beyond it go (`release_bones`): their
+particles take a chunk id of their own (their bonds to the rest break
+on the id) and are woken, and the piece falls as an ordinary lump,
+which can be shoved, dragged and swallowed. Bones are handed out until
+the next build (2048).
+
+- Shroom (`shroom.gd`): `["shroom", x, y, size 1 to 10, variant]` on
+  the floor under (x, y), drawn from the decor take `tall_b_0` (a broad
+  cap on a long bent stem, `shroom.gd` SPRITE): sizes 1 to 5 at its own
+  scale, 6 to 10 at twice it (the editor's stamp goes to 5;
+  `critters_lab` has a size 9); an odd variant mirrors it. Each pixel is a cell in its own colour (skin
+  bands 16 to 47, `sim.gd` SKIN_DECOR: the decor palette, glowing on
+  the pale greens as the decor's shrooms do), drawn without the stone's
+  grain and one particle to a cell (a lump's particle also fills the
+  cells round it; on a sprite that fattened the outline and spread the
+  pale spots); a gap a bend opens between neighbours is filled from the
+  cell halfway to each bonded particle, below a particle's own cell, so
+  no black dots show and the outline does not grow. The rig: the cap is the rows from the lowest one about
+  as wide as the widest up; the stem's centre on each row under it,
+  smoothed, is cut into six equal links, the chain's rest pose, so a
+  bent stem rests bent; a cell under the cap goes to the link nearest
+  it. Each joint is a damped spring back to its rest; the stem squashes along its length
+  as a second spring. Both are slow and damped about critically (the
+  bend about 3 rad/s, the squash about 1.1 Hz at 0.8 of critical), and
+  the gecko's push on the shroom is divided by its mass (0.5 plus a
+  sixth of its size: a size 3 weighs 1, a size 9 2), so it leans over a
+  second or so and comes back without ringing: the cap stays a floor
+  the gecko walks on. A gecko landing on the cap (a foot on its cells,
+  or the cap under the body within six ticks of the landing: the feet
+  plant later) squashes it by a quarter of the landing's speed over
+  the mass; standing, the weight holds a size 3 about 3 px low and a
+  landing sinks it to about 5; a weight off the stem's line bends it. The gecko rides the cap's move
+  (gecko.gd `carry`: the body, the feet, the drawn chain and its track
+  moved as one). A jump off the cap gains the squash's stored spring
+  (1.6 times squash times the spring's rate) and the cap's own rise,
+  along the cap's up, capped at one more jump's speed (gecko.gd
+  `jump_boost`): off a size 3, a jump at the bottom of the landing's
+  dip rises about 1.4 times as high as one off the floor, one from a
+  cap at rest about 1.2 times; the cap comes back up behind the gecko
+  without flying past. A rim of
+  the cap pressed into rock stops the bend there. Bitten through, what
+  stood above the bite breaks into lumps of their own: each link of
+  the stem one, the cap cut across into three (`sim.gd` release_bones
+  split: a chunk id a link, the cap's pieces by where each particle lay
+  across its axis at rest, `pbd_predict.glsl`; a bond holds only within
+  a chunk, so the pieces fall apart and the gecko shoves them one by
+  one). Chunk ids past 239 read as air, so a cut takes about nine. A
+  cap bitten away leaves a stem.
+- Vine (`vine.gd`): a rope of 4 px links, its top pinned, verlet with
+  four constraint passes and a long range attachment (no point further
+  from the anchor than the rope between them), which holds a long rope
+  at its length (without it a 30-link rope never settled and crept a
+  tenth of a pixel a tick). Leaves every 10 px, alternating sides, a few
+  glowing berries. The gecko weighs 40 points (a 160 px vine), shared
+  over the seven points round the held place, so climbing does not
+  hand its mass to a point at rest (one heavy point lost the swing at
+  each hand-over, and its neighbours barely followed it sideways). It
+  clings beside the rope, and the lever of its weight off the rope's
+  line, taken about the held point, leans the rope half of the way to
+  the body hanging under the anchor (`LEAN_K`; the full lean slanted
+  the rope enough that the gecko read its column of cells as a
+  staircase and its up wobbled on the climb). A catch in flight gives
+  the held place 0.4 of the gecko's speed (`critters.gd` CATCH_K), so
+  the rope swings away with it; its jump off kicks the rope back; the
+  gecko rides the held place's move. Held, the rope is damped more
+  (`DAMP_HELD`): a swing under the gecko dies out in a couple of
+  seconds. A rope still for half a second sleeps until held or pushed.
+
+**Slime** (`slime.gd`): `["slime", x, y, radius]`, a blob of material
+14, a thick liquid in the sim (strong cohesion, viscous, never asleep,
+drawn from its own density by `render_water.glsl`, a pale gloss at its
+rim over a deeper green, faintly glowing, cell class 8). A brain per
+slime (16 at most, sim.gd `set_slime`) draws the particles within its
+reach toward its centre (35 px/s^2 a px) and along its creep (a
+velocity of 14 px/s it is drawn toward, about 8 it makes), and the sim
+bears 0.6 of their weight, so it stands as a mound; the sim counts and
+sums the particles in each reach and the brain follows its mass,
+turning back when it stalls for 2 s and now and then on its own. A bite
+eats it; a strike splashes it, and what lands inside the reach is drawn
+back in, what lands outside is an inert puddle. Fewer than 12 in reach
+and it is dead. To the gecko it is sticky: ground to stand on that the
+walk wades through as through sand, a walk on or in it at 0.35 of the
+walk, a jump out of it at 0.55 (gecko.gd `in_slime`, SLIME_SLOW,
+SLIME_JUMP); the body's pushers shove it aside.
+
+**Long slug** (`long_slug.gd`): `["longslug", x, y, length]`, a chain
+of blobs (no sim particles) on the surface nearest (x, y). A wave of
+swelling runs along it from the tail to the head and the head moves
+only while the wave passes it, so it creeps in surges, about 7 px/s;
+the body lies along the head's track, so it follows the rock's every
+bump; it turns back where blocked (the tail leading from then on: the
+track is reversed, not the head swung through the body) and now and
+then on its own. The tongue's tip touching it makes it flinch: it
+bunches, glows brighter and turns away. Too big to swallow. Drawn with
+the gecko's blobs, a faint glow at its middle.
+
+The light pass takes ten glows; past that, the gecko's own and those
+nearest it (main.gd `_nearest_glows`).
+
+**Cost** (tools/critters_test.sh's perf case, 2026-10-21, a lab with
+33 shrooms, 11 vines, 5 slimes and 7 long slugs): the critters' CPU
+tick about 0.4 ms (long slugs 30 µs each; shrooms and vines at rest
+nothing), the sim's tick within a millisecond or two of the same world
+without them (the driven particles are always awake, but there are a
+few thousand). With no critters the shaders cost nothing measurable
+(cave 5 timed against the commit before them).
 
 ## Surfaces that will not be held
 
@@ -1013,6 +1141,32 @@ the point and stops once no further ring can hold a nearer cell, and
 the tick is 0.9 ms. The squeeze itself adds about 0.3 ms a tick.
 
 ## Checking it without a hand on the keys
+
+`tools/critters_test.sh [case]` checks the chain critters in the
+particle world (it needs the GPU; a virtual display with the NVIDIA
+driver, three runs at a time, about two minutes): fifteen cases on
+the `critters_lab` scene, each its own run of `tests/critters_test.gd`,
+which takes the keys and checks numbers: a shroom at rest (counted,
+anchored, still), a landing (the dip, no bounce after it, the settle,
+the gecko riding the cap within 4 px), the boost (a jump off a cap at
+rest and one timed at the dip's bottom against one off the floor, the
+cap, the cap coming back without flying past), a
+chewed cap, a cut stem (what stood above breaks into four or more
+lumps of their own, no sand, none ground, that fall; the stump still
+ground), a shroom weighted against a pillar (bent, whole,
+no cell in the rock, a slow lean, straight again), a vine's swing (out,
+followed by its cells, settling), its cut, the gecko's hang on it
+(held, its weight leaning it over 8 px, climbing, no tear while
+VINE_TEAR is off), a catch in flight (the rope swung away over 12 px,
+slowly, the swing dead after 3 s, the gecko kept), a slime's creep (one mound
+on the floor, moving, its mass kept), a bite and a splash, a wade
+(slowed, a weak jump), a long slug (creeping, hugging the rock, the
+pulse, a turn), and the cost (the perf case against perf_base, run
+alone: the sim's tick over the same span with and without fifty more
+critters). `tools/critters_test.sh shots` saves a frame of each under
+`runs/critters/` for a look. The suite scenes `shroom_hop`,
+`slime_wade` and `vine_hang` (sim only) run the gecko's own movement on
+them.
 
 `GECKO_DEMO=climb|tunnel|swim|tongue|pull|strike|notch|crevice|traverse|dig`
 replaces the keyboard and mouse with a scripted run (see `main.gd`;

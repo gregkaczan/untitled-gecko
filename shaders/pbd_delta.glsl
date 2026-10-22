@@ -24,6 +24,11 @@ const uint O_BD = 8813070u;
 const uint BD = 20u;
 const uint NB = 8u;
 const uint NONE = 0xFFFFFFFFu;
+// Skinned chunks (sim.gd O_SK, O_BN; pbd_predict.glsl): a driven
+// particle is where its bones put it and the solver does not move it.
+const uint O_SK = 22939598u;
+const uint O_BN = 25013198u;
+const uint BN = 12u;
 // Impact kinds 0..9 are bullet kinds. 15 marks a purple ore detonation.
 const uint KIND_PURPLE = 15u;
 
@@ -181,6 +186,9 @@ void main() {
         rho0 = 2.5; cohesion = 0.15; yield_s = 0.0; fric_val = 0.0;
     } else if (mat_i == 13u) {
         rho0 = 4.0; cohesion = 0.0; yield_s = 0.0; fric_val = 0.2;
+    } else if (mat_i == 14u) {
+        // Slime: holds to itself, clings a little to what it lies on.
+        rho0 = 3.0; cohesion = 2.5; yield_s = 0.0; fric_val = 0.5;
     } else {
         rho0 = 2.5; cohesion = 0.0; yield_s = 0.0; fric_val = 0.0;
     }
@@ -195,6 +203,34 @@ void main() {
     bool bond_awake = bonded && buf.d[bd + 1u] == 1u;
     bool drill_on = rf(O_P + 15u) > 0.5;
     bool near_drill = false;
+
+    // A driven particle of a skinned chunk stays where pbd_predict put
+    // it; only a bite (a melter slot) takes it, as it takes a lump's.
+    if (bonded) {
+        uint sk = buf.d[O_SK + id * 4u];
+        if (sk > 0u && rf(O_BN + (sk - 1u) * BN + 8u) > 0.5) {
+            uint tick = uint(rf(O_P + 21u));
+            for (uint c = 0u; c < N_CAP; c++) {
+                uint slot = O_CAP + c * 8u;
+                float melt = rf(slot + 7u);
+                if (rf(slot + 6u) < 0.5 || melt <= 0.0) continue;
+                vec2 cpos = vec2(rf(slot), rf(slot + 1u));
+                vec2 cdir = vec2(rf(slot + 2u), rf(slot + 3u));
+                float chl = rf(slot + 5u);
+                if (capsule_dist(vec2(px, py), cpos - cdir * chl, cpos + cdir * chl) >= rf(slot + 4u)) continue;
+                float rate = (melt < 1.5) ? melt * ((mat_i < 8u) ? rf(O_M + mat_i * 12u + 9u) : 1.0) : 1.0;
+                uint hsh = (id * 2654435761u) ^ (tick * 2246822519u);
+                hsh = hsh * 747796405u + 2891336453u;
+                if (float(hsh >> 16u) / 65535.0 < rate) {
+                    kill_particle(b);
+                    buf.d[bd] = 0u;
+                    atomicAdd(buf.d[O_P + 22u], 1u);
+                    return;
+                }
+            }
+            return;
+        }
+    }
 
     float dpx = rf(O_P + 9u), dpy = rf(O_P + 10u);
     float d_dx = rf(O_P + 11u), d_dy = rf(O_P + 12u);
@@ -534,7 +570,7 @@ void main() {
                 // (the table's column 9: 1 for most, less for hard rock,
                 // 0 for bedrock, which no bite opens); a melt of 2 or more
                 // is the brush, which takes anything.
-                bool ground = (mat_i < 8u && mat_i != 1u) || mat_i == 12u;
+                bool ground = (mat_i < 8u && mat_i != 1u) || mat_i == 12u || mat_i == 14u;
                 if (ground) {
                     float rate = 1.0;
                     if (melt < 1.5) rate = melt * ((mat_i < 8u) ? rf(O_M + mat_i * 12u + 9u) : 1.0);
@@ -563,7 +599,7 @@ void main() {
                 // water and lava are left alone (a body that shoved the
                 // water out of itself read air at its centre and fell
                 // out of its swim every other tick).
-                if (melt < -0.5 && (yield_s >= 5.0 || bonded || mat_i == 1u || mat_i >= 8u)) continue;
+                if (melt < -0.5 && (yield_s >= 5.0 || bonded || mat_i == 1u || (mat_i >= 8u && mat_i != 14u))) continue;
                 if (mat_i == 12u) {
                     // Purple ore detonates when carved.
                     push_impact(px, py, KIND_PURPLE);

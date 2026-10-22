@@ -37,9 +37,10 @@ const PAINTS := [
 	["Lava", 6], ["Shroom", 9], ["Moss", 10], ["Crumble", 11],
 	["Gas", 12], ["Thorn", 13],
 ]
-const STAMPS := [["Stalactite", "stalactite"], ["Stalagmite", "stalagmite"], ["Vine", "vine"], ["Thorn", "thorn"], ["Slug", "slug"]]
-const STAMP_SIZES := {"stalactite": 5, "stalagmite": 5, "vine": 5, "thorn": 2, "slug": 1}
-const STAMP_VARIANTS := {"stalactite": 4, "stalagmite": 4}
+const STAMPS := [["Stalactite", "stalactite"], ["Stalagmite", "stalagmite"], ["Vine", "vine"], ["Thorn", "thorn"], ["Slug", "slug"],
+	["Shroom", "shroom"], ["Slime", "slime"], ["Long slug", "longslug"]]
+const STAMP_SIZES := {"stalactite": 5, "stalagmite": 5, "vine": 5, "thorn": 2, "slug": 1, "shroom": 5, "slime": 5, "longslug": 5}
+const STAMP_VARIANTS := {"stalactite": 4, "stalagmite": 4, "shroom": 2}
 const SHAPES := [["Point", "point"], ["Cone", "cone"], ["Strip", "strip"]]
 const ANCHORS := ["nearest", "floor", "ceiling", "wall_left", "wall_right"]
 const BRUSH_MIN := 4.0
@@ -523,7 +524,8 @@ static func _icon(img: Image) -> ImageTexture:
 
 
 # The procedural stamps' icons, drawn as pixels: a cone down, a cone
-# up, a vine with leaves, a thorn bush, a slug.
+# up, a vine with leaves, a thorn bush, a slug, a shroom that bends, a
+# slime, a long slug.
 static func _stamp_icon(name: String) -> ImageTexture:
 	var img := Image.create(ICON, ICON, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0.0, 0.0, 0.0, 0.0))
@@ -567,6 +569,33 @@ static func _stamp_icon(name: String) -> ImageTexture:
 						img.set_pixel(x, y, body)
 			_line(img, Vector2(26.0, 19.0), Vector2(29.0, 13.0), body)
 			_line(img, Vector2(29.0, 19.0), Vector2(32.0, 14.0), body)
+		"shroom":
+			var pale := Color(0.945, 0.933, 0.788)
+			var cap := Color(0.71, 0.80, 0.61)
+			for y in range(16, 33):
+				var x := 18 + int(round(2.0 * sin((y - 16) * 0.2)))
+				for k in range(-2, 2):
+					img.set_pixel(x + k, y, pale)
+			for x in range(5, 31):
+				for y in range(5, 17):
+					var dx := (x - 18.0) / 13.0
+					var dy := (y - 16.0) / 11.0
+					if dx * dx + dy * dy <= 1.0:
+						img.set_pixel(x, y, pale if (x * 7 + y * 3) % 11 == 0 else cap)
+		"slime":
+			var goo := Color(0.42, 0.82, 0.36)
+			for x in range(4, 33):
+				for y in range(14, 33):
+					var dx := (x - 18.0) / 14.0
+					var dy := (y - 32.0) / 17.0
+					if dx * dx + dy * dy <= 1.0:
+						img.set_pixel(x, y, goo.lightened(0.35) if dx * dx + dy * dy > 0.7 else goo)
+		"longslug":
+			var flesh := Color(0.86, 0.62, 0.74)
+			for x in range(2, 34):
+				var r := 1.5 + 2.5 * sin(PI * (x - 2) / 32.0) * (1.0 + 0.25 * sin(x * 0.8))
+				for y in range(int(30 - r * 2.0), 31):
+					img.set_pixel(x, y, flesh)
 	return ImageTexture.create_from_image(img)
 
 

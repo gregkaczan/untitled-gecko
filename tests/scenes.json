@@ -20268,6 +20268,164 @@
     false,
     false
    ]
+  ],
+  "hold": [
+   [
+    60.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "hop_cap": [
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     1,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    0.6,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     0,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    2.5,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "walk_wade": [
+   [
+    7.0,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    1.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     0,
+     0
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    2.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
+  ],
+  "vine_up": [
+   [
+    1.6,
+    [
+     1,
+     0
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    0.3,
+    [
+     0,
+     -1
+    ],
+    true,
+    false,
+    false
+   ],
+   [
+    4.0,
+    [
+     0,
+     -1
+    ],
+    false,
+    false,
+    false
+   ],
+   [
+    3.0,
+    [
+     0,
+     0
+    ],
+    false,
+    false,
+    false
+   ]
   ]
  },
  "scenes": {
@@ -26431,6 +26589,176 @@
    ],
    "state": "swim",
    "note": "a block 760 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
+  },
+  "critters_lab": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     850,
+     160,
+     300,
+     440
+    ],
+    [
+     "fill",
+     1630,
+     640,
+     60,
+     160
+    ]
+   ],
+   "spawn": [
+    "floor",
+    180,
+    700
+   ],
+   "scripts": [
+    "hold"
+   ],
+   "state": "cling",
+   "note": "the critters test's world: a shroom to land on and jump off (x 300), one to cut (650), a vine under a block (1000), a slime (1350), a shroom beside a pillar (1600), a long slug by the right wall (1830), a big shroom to play on (480, size 9, last so the others keep their seeds)",
+   "lumps": [
+    [
+     "shroom",
+     300,
+     790,
+     3,
+     0
+    ],
+    [
+     "shroom",
+     650,
+     790,
+     4,
+     0
+    ],
+    [
+     "vine",
+     1000,
+     620,
+     150
+    ],
+    [
+     "slime",
+     1350,
+     780,
+     12
+    ],
+    [
+     "shroom",
+     1600,
+     790,
+     3,
+     1
+    ],
+    [
+     "longslug",
+     1830,
+     790,
+     60
+    ],
+    [
+     "shroom",
+     480,
+     790,
+     9,
+     3
+    ]
+   ],
+   "sim_only": true
+  },
+  "shroom_hop": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     200,
+     700,
+     200,
+     100
+    ]
+   ],
+   "spawn": [
+    "floor",
+    350,
+    690
+   ],
+   "scripts": [
+    "hop_cap"
+   ],
+   "state": "cling",
+   "note": "a jump off a ledge 100 px up onto a shroom's cap, a wait while it bounces, a jump off it",
+   "lumps": [
+    [
+     "shroom",
+     570,
+     790,
+     4,
+     0
+    ]
+   ],
+   "sim_only": true
+  },
+  "slime_wade": {
+   "base": "room",
+   "terrain": [],
+   "spawn": [
+    "floor",
+    500,
+    700
+   ],
+   "scripts": [
+    "walk_wade"
+   ],
+   "reach": [
+    1100,
+    0,
+    1920,
+    1080
+   ],
+   "state": "cling",
+   "note": "a walk through a slime on the floor (slowed while in it), a stop, a jump out of it",
+   "lumps": [
+    [
+     "slime",
+     800,
+     780,
+     14
+    ]
+   ],
+   "sim_only": true
+  },
+  "vine_hang": {
+   "base": "room",
+   "terrain": [
+    [
+     "fill",
+     600,
+     160,
+     600,
+     440
+    ]
+   ],
+   "spawn": [
+    "floor",
+    700,
+    700
+   ],
+   "scripts": [
+    "vine_up"
+   ],
+   "state": "cling",
+   "note": "a walk to a vine hanging to just over the floor, a jump up at it: caught in the air, climbed to the ceiling in about a second (under main.gd's VINE_HOLD, so it holds) and onto the ceiling",
+   "lumps": [
+    [
+     "vine",
+     900,
+     620,
+     190
+    ]
+   ],
+   "sim_only": true
   }
  }
 }

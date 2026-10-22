@@ -8,6 +8,9 @@ const uint GW = 320u, GH = 180u, MPC = 32u, PC = 518400u;
 const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_RN = 6048136u;
 const uint O_NF = 8121736u;
 const uint O_NP = 8236936u;
+const uint O_BD = 8813070u;
+const uint O_SK = 22939598u;
+const uint O_BN = 25013198u;
 const uint O_CT = 8294670u;   // cell class per render pixel, last tick's (render_write.glsl): 2 is static solid, 4 a loose grain
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
@@ -61,6 +64,8 @@ void main() {
         visc = 0.0; fric = 0.6; yield_s = 8.0;   // glowshroom: static
     } else if (mat == 13u) {
         visc = 0.02; fric = 0.05; yield_s = 0.0;
+    } else if (mat == 14u) {
+        visc = 0.06; fric = 0.04; yield_s = 0.0;   // slime: thick, slow to slide
     } else {
         visc = 0.01; fric = 0.0; yield_s = 0.0;
     }
@@ -98,7 +103,16 @@ void main() {
     vx *= (1.0 - fric);
 
     float speed = length(vec2(vx, vy));
-    bool never_sleep = (mat == 1u) || (mat == 8u) || (mat == 9u) || (mat == 10u) || (mat == 13u);
+    bool never_sleep = (mat == 1u) || (mat == 8u) || (mat == 9u) || (mat == 10u) || (mat == 13u) || (mat == 14u);
+    // A driven particle of a skinned chunk (pbd_predict) is where its
+    // bones put it: no rock wall, no sleep snap.
+    uint sk = (mat < 8u && buf.d[O_BD + id * 20u] != 0u) ? buf.d[O_SK + id * 4u] : 0u;
+    bool driven = sk > 0u && rf(O_BN + (sk - 1u) * 12u + 8u) > 0.5;
+    if (driven) {
+        wf(b, px); wf(b + 1u, py);
+        wf(b + 2u, vx); wf(b + 3u, vy);
+        return;
+    }
     if (!never_sleep) {
         float sleep_thresh = 3.0;
         float snap_thresh = 0.5;

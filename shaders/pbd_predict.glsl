@@ -30,10 +30,32 @@ const uint N_CAP = 8u;
 const uint O_CT = 8294670u;
 const uint O_LN = 22291598u;   // cell classes with crumbs marked (cell_post.glsl), last tick's: 256 added on a crumb
 const uint O_LP = 22291470u;   // light and flow parameters (sim.gd): from [96] two currents, 8 floats each: x0 y0 x1 y1 dx dy speed on
+// Skinned chunks (sim.gd O_SK, O_BN): per particle [bone + 1, the next
+// bone's weight, rest x, rest y]; per bone [x, y, cos, sin, rest x,
+// rest y, rest cos, rest sin, drive, stretch along, pad, pad].
+const uint O_SK = 22939598u;
+const uint O_BN = 25013198u;
+const uint BN = 12u;
+// Slime brains (sim.gd O_SB): [x, y, reach, pull, drift x, drift y, drift speed, on] each.
+const uint O_SB = 25039822u;
+const uint N_SLIME = 16u;
+
 
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }    // Read float from flat uint SSBO
 void wf(uint i, float v) { buf.d[i] = floatBitsToUint(v); } // Write float to flat uint SSBO
+
+// Where bone k carries a particle laid out at rest place r: r in the
+// bone's rest frame, stretched along the bone, in its frame now.
+vec2 bone_place(uint k, vec2 r) {
+    uint o = O_BN + k * BN;
+    vec2 d = r - vec2(rf(o + 4u), rf(o + 5u));
+    float c0 = rf(o + 6u), s0 = rf(o + 7u);
+    vec2 l = vec2(c0 * d.x + s0 * d.y, -s0 * d.x + c0 * d.y);
+    l.x *= rf(o + 9u);
+    float c = rf(o + 2u), s = rf(o + 3u);
+    return vec2(rf(o), rf(o + 1u)) + vec2(c * l.x - s * l.y, s * l.x + c * l.y);
+}
 
 // Shared explosion logic: radial impulse + conversion to fire/smoke.
 // implode = true reverses the impulse (pull inward) and skips every material
@@ -197,6 +219,33 @@ void main() {
     //     the capsule slots: pull, eat, break ---
     uint bd = O_BD + id * BD;
     uint chunk = buf.d[bd];
+    // A skinned particle whose bone was let go with a chunk id of its
+    // own (sim.gd release_bones) joins that chunk: the piece cut off a
+    // stem falls as a lump of its own, its bonds to the rest broken.
+    // A bone let go split across (a shroom's cap) gives each piece of
+    // it its own id, by where the particle lay across the bone's axis
+    // at rest: the pieces fall apart as lumps of their own.
+    bool woke = false;
+    if (chunk != 0u) {
+        uint sk0 = buf.d[O_SK + id * 4u];
+        if (sk0 > 0u) {
+            uint o = O_BN + (sk0 - 1u) * BN;
+            uint nid = uint(rf(o + 10u));
+            float pieces = rf(o + 11u);
+            if (rf(o + 8u) < 0.5 && pieces > 1.5 && nid > 0u) {
+                vec2 rel = vec2(rf(O_SK + id * 4u + 2u) - rf(o + 4u), rf(O_SK + id * 4u + 3u) - rf(o + 5u));
+                float across = dot(rel, vec2(-rf(o + 7u), rf(o + 6u)));
+                nid += uint(clamp(floor(across / max(rf(o + 9u), 1.0) + pieces * 0.5), 0.0, pieces - 1.0));
+            }
+            if (rf(o + 8u) < 0.5 && nid > 0u && nid != chunk) {
+                // Woken as it goes: a lump at rest sleeps, and with
+                // nothing under it now it must fall.
+                chunk = nid;
+                buf.d[bd] = nid;
+                woke = true;
+            }
+        }
+    }
     bool bonded = chunk != 0u;
     bool mates_moving = false;
     bool pulled = false;
@@ -221,7 +270,7 @@ void main() {
             float d = length(vec2(px, py) - cpos);
             if (mode < -3.5) {
                 // A strike: every bond within reach breaks and the grains
-                // fly apart a little.
+                // fly apart a little (a wake, mode -5, is pbd_delta's).
                 if (d < cr) {
                     for (uint k = 0u; k < NB; k++) buf.d[bd + 4u + k * 2u] = NONE;
                     buf.d[bd] = 0u;
@@ -253,6 +302,70 @@ void main() {
                 pulled = true;
                 pull_vx = rf(slot + 2u) * cr;
                 pull_vy = rf(slot + 3u) * cr;
+            }
+        }
+    }
+
+    // --- A skinned chunk's particle (sim.gd O_SK) whose bone is driven
+    //     goes where its bones carry its rest place, a blend of two, at
+    //     the speed that takes it there in a tick; the solver leaves it
+    //     there (pbd_delta). A particle struck loose is no longer bonded
+    //     and falls as a grain. ---
+    bool driven = false;
+    vec2 drive_to = vec2(0.0);
+    if (bonded && chunk != 0u) {
+        uint sk = buf.d[O_SK + id * 4u];
+        if (sk > 0u) {
+            uint k = sk - 1u;
+            if (rf(O_BN + k * BN + 8u) > 0.5) {
+                vec2 r = vec2(rf(O_SK + id * 4u + 2u), rf(O_SK + id * 4u + 3u));
+                float w = rf(O_SK + id * 4u + 1u);
+                drive_to = bone_place(k, r);
+                if (w > 0.0) drive_to = mix(drive_to, bone_place(k + 1u, r), w);
+                driven = true;
+            }
+        }
+    }
+
+    // --- A slime's particle: drawn toward its brain's centre (the
+    //     nearest brain whose reach it is in) and along its drift, so
+    //     the blob holds together and creeps; out of every reach it is
+    //     an inert puddle. A strike splatters it. ---
+    float grav_k = 1.0;
+    if (mat == 14u) {
+        float best = 1e9;
+        uint bi = N_SLIME;
+        for (uint i = 0u; i < N_SLIME; i++) {
+            uint o = O_SB + i * 8u;
+            if (rf(o + 7u) < 0.5) continue;
+            float d = length(vec2(px, py) - vec2(rf(o), rf(o + 1u)));
+            if (d < rf(o + 2u) && d < best) { best = d; bi = i; }
+        }
+        if (bi < N_SLIME) {
+            // A live slime bears part of its own weight, so it stands
+            // as a mound rather than running flat.
+            grav_k = 0.3;
+            uint o = O_SB + bi * 8u;
+            vec2 to = vec2(rf(o), rf(o + 1u)) - vec2(px, py);
+            float dl = length(to);
+            float pull = rf(o + 3u);
+            if (dl > 0.5) {
+                vec2 a = to / dl * min(dl * pull, 900.0);
+                vx += a.x * dt;
+                vy += a.y * dt;
+            }
+            vec2 drift = vec2(rf(o + 4u), rf(o + 5u)) * rf(o + 6u);
+            vx += (drift.x - vx) * 0.15;
+            if (drift.y != 0.0) vy += (drift.y - vy) * 0.15;
+        }
+        for (uint c = 0u; c < N_CAP; c++) {
+            uint slot = O_CAP + c * 8u;
+            if (rf(slot + 6u) < 0.5 || rf(slot + 7u) > -3.5 || rf(slot + 7u) < -4.5) continue;
+            vec2 off = vec2(px, py) - vec2(rf(slot), rf(slot + 1u));
+            float d = length(off);
+            if (d < rf(slot + 4u) && d > 0.01) {
+                vx += off.x / d * 160.0;
+                vy += off.y / d * 160.0 - 60.0;
             }
         }
     }
@@ -290,7 +403,7 @@ void main() {
         wf(b + 7u, mat_f);
     }
 
-    bool awake = loosened || has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || is_ephemeral || mates_moving || pulled;
+    bool awake = loosened || has_velocity || near_drill || (mat == 1u) || (mat == 10u) || (mat == 13u) || (mat == 14u) || is_ephemeral || mates_moving || pulled || driven || woke;
 
     // --- Loose grains fall when undermined. The solver only moves what
     //     is awake, and a grain at rest sleeps, so a bite under a bed of
@@ -356,7 +469,7 @@ void main() {
         } else if (mat == 10u) {
             vy += dt * gravity;
         } else if (yield_s < 5.0) {
-            vy += dt * gravity;
+            vy += dt * gravity * grav_k;
         }
     }
 
@@ -384,15 +497,23 @@ void main() {
         vx = pull_vx;
         vy = pull_vy;
     }
+    if (driven) {
+        vx = (drive_to.x - px) / dt;
+        vy = (drive_to.y - py) / dt;
+    }
 
     float predx = awake ? (px + dt * vx) : px;
     float predy = awake ? (py + dt * vy) : py;
+    if (driven) {
+        predx = drive_to.x;
+        predy = drive_to.y;
+    }
 
     // --- Congestion damping (never for a chunk's particles: a lump is
     //     dense by nature, and damping its inside but not its edge
     //     would tear it apart as it moves) ---
     float cs = rf(O_P + 6u);
-    uint congest_limit = (mat == 1u || mat == 10u || is_ephemeral) ? 12u : 6u;
+    uint congest_limit = (mat == 1u || mat == 10u || mat == 14u || is_ephemeral) ? 12u : 6u;
     if (has_velocity && !bonded && (abs(vx) > 2.0 || abs(vy) > 2.0)) {
         int pcx = int(floor(predx / cs));
         int pcy = int(floor(predy / cs));

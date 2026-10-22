@@ -48,6 +48,8 @@ void main() {
         rho0 = 3.5; stiff = 1.5;
     } else if (mat_i == 13u) {
         rho0 = 4.0; stiff = 1.5;
+    } else if (mat_i == 14u) {
+        rho0 = 3.0; stiff = 1.0;   // slime
     } else {
         rho0 = 2.5; stiff = 1.5; // lava
     }

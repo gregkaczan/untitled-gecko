@@ -1,0 +1,243 @@
+# The chain creatures and plants of the particle world: shrooms that bend
+# (shroom.gd), vines that are ropes (vine.gd), slimes (slime.gd) and
+# long slugs (long_slug.gd). main.gd calls pre_tick before the sim's tick
+# and post_tick after it, both before the gecko's own tick.
+#
+# pre_tick: which of them the gecko holds (a planted foot on its cells),
+# each chain stepped with the gecko's weight on it, the gecko carried by
+# the move of what it holds (gecko.gd carry), a shroom's spring handed
+# to the gecko's next jump (jump_boost), the slimes' brains set from
+# last tick's mass, the long slugs crept and their blobs added to the
+# gecko's drawing. post_tick: the bones' counts read back, a stem or a
+# vine bitten through let go below or above the bite.
+#
+# Shrooms and vines are skinned chunks, and need the sim; the bitmap
+# world has none (add_* return false). The cost is a few microseconds a
+# chain a tick and no map queries for the plants (the long slug's head
+# makes one nearest_solid a tick); last_us has the tick's time.
+extends Node2D
+
+const Shroom = preload("res://shroom.gd")
+const Vine = preload("res://vine.gd")
+const Slime = preload("res://slime.gd")
+const LongSlug = preload("res://long_slug.gd")
+
+const LAND_WINDOW := 6         # Ticks after the gecko's landing in which a shroom under its feet takes the landing
+const JUMP_KICK := 0.15        # Of the gecko's jump speed kicked back into the held place of the vine it leaves
+const CATCH_K := 0.4           # Of the gecko's flight speed the vine's held point takes when it catches the vine: the rope swings away with it
+
+var sim: Node2D
+var map: Node2D
+var gecko: Node2D
+var shrooms: Array = []
+var vines: Array = []
+var slimes: Array = []
+var long_slugs: Array = []
+var last_us := 0               # The last pre_tick and post_tick together, µs
+var parts_us := PackedInt32Array([0, 0, 0, 0, 0])   # Of that: the shrooms, the vines, the slimes, the long slugs, the counts read after the tick
+var held: RefCounted = null    # The shroom or vine the gecko holds this tick
+var _by_chunk := {}            # Chunk id -> its shroom or vine
+var _land_speed := 0.0
+var _land_ticks := 0
+var _jumped := false
+var _air_vel := Vector2.ZERO   # The gecko's speed last tick while it flew, for a catch
+var _seed := 0
+
+
+func setup(sim_in: Node2D, map_in: Node2D, gecko_in: Node2D) -> void:
+	sim = sim_in
+	map = map_in
+	gecko = gecko_in
+	gecko.landed.connect(func(speed: float) -> void:
+		_land_speed = speed
+		_land_ticks = LAND_WINDOW)
+	gecko.jumped.connect(func() -> void: _jumped = true)
+
+
+# Everything gone (the world is rebuilt: the sim's bones and slime brains
+# start over with it).
+func clear() -> void:
+	shrooms.clear()
+	vines.clear()
+	slimes.clear()
+	long_slugs.clear()
+	_by_chunk.clear()
+	held = null
+	if map:
+		map.anchored.clear()
+		if "slime_on" in map:
+			map.slime_on = false
+	_seed = 0
+
+
+func _sim_ok() -> bool:
+	return sim != null and sim.ready_to_run
+
+
+# A shroom standing on the floor under p, size 1 to Shroom.MAX_SIZE.
+func add_shroom(p: Vector2, size: int, variant := 0) -> bool:
+	if not _sim_ok():
+		return false
+	var fl: Vector2 = map.floor_below(p)
+	var s := Shroom.new()
+	_seed += 1
+	if not s.setup(sim, map, Vector2(p.x, fl.y - 1.0), size, variant, 977 + _seed):
+		return false
+	shrooms.append(s)
+	_by_chunk[s.chunk] = s
+	return true
+
+
+# A vine hanging from the ceiling over p, length px.
+func add_vine(p: Vector2, length: float) -> bool:
+	if not _sim_ok():
+		return false
+	var c: Vector2 = map.ceiling_above(p)
+	var v := Vine.new()
+	_seed += 1
+	if not v.setup(sim, map, Vector2(p.x, c.y + 2.0), length, 311 + _seed):
+		return false
+	vines.append(v)
+	_by_chunk[v.chunk] = v
+	return true
+
+
+# A slime of radius r about p (on the air there).
+func add_slime(p: Vector2, r: float) -> bool:
+	if not _sim_ok() or slimes.size() >= sim.MAX_SLIMES:
+		return false
+	var s := Slime.new()
+	_seed += 1
+	if not s.setup(sim, p, r, slimes.size(), 523 + _seed):
+		return false
+	slimes.append(s)
+	map.slime_on = true
+	return true
+
+
+# A long slug on the surface nearest p, length px.
+func add_long_slug(p: Vector2, length: float) -> bool:
+	var s := LongSlug.new()
+	_seed += 1
+	s.setup(map, p, length, 707 + _seed)
+	long_slugs.append(s)
+	return true
+
+
+# What the gecko's planted feet stand on, among the shrooms and vines
+# (or what is under its body).
+func _held() -> RefCounted:
+	if not gecko.clinging:
+		return null
+	for f in gecko.feet:
+		if f.planted:
+			var id: int = map.anchored_at_world(f.anchor)
+			if id < 0:
+				id = map.anchored_at_world(f.pos)
+			if _by_chunk.has(id):
+				return _by_chunk[id]
+	# No foot planted on one: what is under the body (the feet plant a
+	# few ticks after a landing, and lift in turn on a walk).
+	for d in [gecko.RIDE_H + 1.0, gecko.RIDE_H + 3.0]:
+		var id: int = map.anchored_at_world(gecko.pos - gecko.up * d)
+		if _by_chunk.has(id):
+			return _by_chunk[id]
+	return null
+
+
+func pre_tick(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	var was: RefCounted = held
+	held = _held()
+	var land := 0.0
+	if _land_ticks > 0:
+		_land_ticks -= 1
+		if held != null and held is Shroom:
+			land = _land_speed
+			_land_ticks = 0
+	var carry := Vector2.ZERO
+	var t1 := Time.get_ticks_usec()
+	for s in shrooms:
+		var on: bool = s == held
+		var frames: Array = s.bone_frames() if on else []
+		s.step(dt, gecko.pos if on else Vector2.INF, land if on else 0.0)
+		if on:
+			carry = _ride(gecko.pos, frames, s.bone_frames())
+	gecko.jump_boost = held.boost() if (held != null and held is Shroom and gecko.up.dot(held.cap_up()) > 0.3) else Vector2.ZERO
+	var t2 := Time.get_ticks_usec()
+	for v in vines:
+		var at: float = v.nearest(gecko.pos) if v == held else -1.0
+		var kick := Vector2.ZERO
+		if v == held and v != was:
+			# Caught in flight: the rope takes the gecko's momentum and
+			# swings away with it (the gecko rides it, carry below).
+			kick = _air_vel * CATCH_K
+		elif _jumped and v == was:
+			# The gecko leapt off it: the rope is kicked back.
+			at = v.nearest(gecko.pos)
+			kick = -gecko.vel * JUMP_KICK
+		var d: Vector2 = v.step(dt, at, kick, gecko.pos if v == held else Vector2.INF)
+		if v == held:
+			carry = d
+	_jumped = false
+	_air_vel = Vector2.ZERO if gecko.clinging else gecko.vel
+	if carry != Vector2.ZERO:
+		gecko.carry(carry)
+	var t3 := Time.get_ticks_usec()
+	for s in slimes:
+		s.step(dt)
+	var any := false
+	for s in slimes:
+		any = any or s.alive
+	if "slime_on" in map:
+		map.slime_on = any
+	var t4 := Time.get_ticks_usec()
+	if not long_slugs.is_empty():
+		var bl: Array = gecko.extra_blobs.duplicate()
+		for s in long_slugs:
+			s.tick(dt, gecko)
+			bl.append_array(s.blobs())
+		gecko.extra_blobs = bl
+	var t5 := Time.get_ticks_usec()
+	last_us = t5 - t0
+	parts_us[0] = t2 - t1
+	parts_us[1] = t3 - t2
+	parts_us[2] = t4 - t3
+	parts_us[3] = t5 - t4
+
+
+# How the point p moved with the bone nearest it, from the old frames to
+# the new.
+func _ride(p: Vector2, old: Array, now: Array) -> Vector2:
+	var best := INF
+	var k := 0
+	for i in old.size():
+		var d: float = p.distance_squared_to((old[i] as Transform2D).origin)
+		if d < best:
+			best = d
+			k = i
+	var local: Vector2 = (old[k] as Transform2D).affine_inverse() * p
+	return (now[k] as Transform2D) * local - p
+
+
+func post_tick() -> void:
+	var t0 := Time.get_ticks_usec()
+	for s in shrooms:
+		s.check_counts()
+	for v in vines:
+		v.check_counts()
+	parts_us[4] = Time.get_ticks_usec() - t0
+	last_us += parts_us[4]
+
+
+# The glows of the long slugs, for the light pass.
+func glows() -> Array:
+	var out: Array = []
+	for s in long_slugs:
+		out.append(s.glow())
+	return out
+
+
+# The vine the gecko hangs on, for main.gd's snap; null for none.
+func held_vine() -> RefCounted:
+	return held if (held != null and held is Vine) else null

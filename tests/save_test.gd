@@ -114,6 +114,13 @@ func _run() -> void:
 	await tree.physics_frame
 	_stroke([[&"stamp", "slug", Vector2(1180.0, 860.0), "nearest", "", {}]])
 	await tree.physics_frame
+	# The chain critters: a shroom, a slime, a long slug.
+	_stroke([[&"stamp", "shroom", Vector2(1300.0, 860.0), "floor", "", {"size": 2, "variant": 1}]])
+	await tree.physics_frame
+	_stroke([[&"stamp", "slime", Vector2(1440.0, 850.0), "nearest", "", {"size": 1}]])
+	await tree.physics_frame
+	_stroke([[&"stamp", "longslug", Vector2(1500.0, 860.0), "nearest", "", {"size": 2}]])
+	await tree.physics_frame
 	# Lights of the three shapes.
 	_stroke([[&"light", Vector2(700.0, 700.0), Vector2(700.0, 700.0), "torch", 20.0, 1.0, "point"]])
 	_stroke([[&"light", Vector2(1200.0, 480.0), Vector2(1300.0, 540.0), "crystal", 24.0, 1.2, "cone"]])
@@ -142,7 +149,7 @@ func _run() -> void:
 	_check("lights", a.lights == b.lights, "lights %s\n   vs %s" % [str(a.lights), str(b.lights)])
 	_check("lumps", _rounded(a.lumps) == _rounded(b.lumps), "lumps %s\n   vs %s" % [str(a.lumps), str(b.lumps)])
 	_check("slugs", a.slugs == b.slugs, "slugs %s vs %s" % [str(a.slugs), str(b.slugs)])
-	_check("counts", a.counts == b.counts, "gas pockets, vines, slugs, lights %s vs %s" % [str(a.counts), str(b.counts)])
+	_check("counts", a.counts == b.counts, "gas pockets, vines, slugs, lights, shrooms, slimes, long slugs %s vs %s" % [str(a.counts), str(b.counts)])
 	_check("view", a.cam == b.cam, "the camera differs: %s vs %s" % [str(a.cam), str(b.cam)])
 	_check_pixels(a, b)
 	for n in _notes:
@@ -206,7 +213,8 @@ func _shot(name: String) -> Dictionary:
 	slugs.append_array(main._edit_slugs)
 	return {"img": img, "author": (main._author.solid as PackedByteArray).duplicate(), "cells": (main.sim.cells as PackedByteArray).duplicate(),
 			"decor": decor, "lights": main._edit_lights.duplicate(true), "lumps": lumps, "slugs": slugs,
-			"counts": [main._gas.size(), main._vines.size(), main._slugs.size(), main._lights.size()],
+			"counts": [main._gas.size(), main.critters.vines.size(), main._slugs.size(), main._lights.size(),
+					main.critters.shrooms.size(), main.critters.slimes.size(), main.critters.long_slugs.size()],
 			"cam": main.get_viewport().get_canvas_transform(), "panel": main._editor.panel_width()}
 
 
@@ -266,7 +274,7 @@ static func _static(c: int) -> bool:
 
 
 static func _settles(c: int) -> bool:
-	return c == 1 or c == 3 or c == 4 or c >= 16
+	return c == 1 or c == 3 or c == 4 or c == 8 or c >= 16
 
 
 # The sim's static cells (rock and its bands, decor) must be the same

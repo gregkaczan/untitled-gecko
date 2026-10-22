@@ -45,6 +45,7 @@ const GLOW_COLOR := Color(1.0, 0.82, 0.58)   # The gecko's own light, warm and s
 const GLOW_R := 14.0                         # Px round the head seeded at full glow; the spread carries it on
 const DAYLIGHT := Color(0.85, 0.92, 1.0)     # The light at the exit's crack
 const VINE_HOLD := 1.2                       # Seconds the gecko may hang on a vine before its anchor gives
+const VINE_TEAR := false                     # Off for now: a vine holds the gecko as long as it hangs (a bite through it still drops what is below)
 const BLAST_SPEED := 480.0                   # px/s a gas burst throws the gecko
 const BLAST_R := 45.0                        # The sim's blast round a burst pocket's centre
 const CaveMap = preload("res://cave_map.gd")
@@ -54,6 +55,8 @@ const SoundBank = preload("res://sound.gd")
 const Ambience = preload("res://ambience.gd")
 const Backdrop = preload("res://backdrop.gd")
 const Slug = preload("res://slug.gd")
+const Critters = preload("res://critters.gd")
+const Shroom = preload("res://shroom.gd")
 const Editor = preload("res://editor.gd")
 const DecorBrush = preload("res://decor_brush.gd")
 const Gecko = preload("res://gecko.gd")
@@ -216,7 +219,7 @@ var _exit := Rect2()           # The level's exit, empty in a scene without one
 var _sound: Node2D              # sound.gd: the one-shots on the gecko's events, the drone and the hum
 var _sound_on := OS.get_environment("GECKO_SOUND") == "1"  # Muted unless asked: GECKO_SOUND=1, or the debug panel's Sound
 var _ambience: Node2D           # ambience.gd: drips, bite dust, bubbles
-var _vines := {}                # Chunk id -> {top, load}: the vines hanging in the level and how long the gecko has hung on each
+var critters: Node2D             # critters.gd: the shrooms that bend, the vines that swing, the slimes and the long slugs
 var _backdrop: Node2D           # backdrop.gd: the far wall and the near dripstone, particle world only
 var _slugs: Array = []          # slug.gd: the glow slugs in the level
 var _gas: Array = []            # Rect2 of each sealed gas pocket still to burst (the scene's gas ops)
@@ -295,6 +298,9 @@ func _ready() -> void:
 		add_child(_backdrop)
 		_backdrop.attach_far(sim)
 	gecko.blobs = blobs
+	critters = Critters.new()
+	add_child(critters)
+	critters.setup(sim, map, gecko)
 	add_child(gecko)
 	_anim = Sprite2D.new()
 	_anim.centered = false
@@ -428,6 +434,7 @@ func _ready() -> void:
 
 func _reset() -> void:
 	_anim_stop()
+	critters.clear()
 	if not _scene.is_empty():
 		if sim:
 			# The scene is built on a CPU map and the particles are made
@@ -501,12 +508,12 @@ func _reset() -> void:
 # gas pockets and the currents. The scene's reset and the editor's
 # rebuild after an undo share it.
 func _dress_world() -> void:
-	_vines.clear()
+	critters.clear()
 	var lumps: Array = []
 	lumps.append_array(_scene.get("lumps", []))
 	lumps.append_array(_edit_lumps)
-	for v in SceneBuilder.spawn_lumps(map, {"lumps": lumps}):
-		_vines[v[0]] = {"top": v[1], "load": 0.0}
+	for c in SceneBuilder.spawn_lumps(map, {"lumps": lumps}):
+		_add_critter(c)
 	_clear_slugs()
 	var slug_pts: Array = []
 	slug_pts.append_array(_scene.get("slugs", []))
@@ -632,8 +639,10 @@ func _physics_process(dt: float) -> void:
 			glows.append(_light_preview)
 		for s in _slugs:
 			glows.append(s.glow())
+		glows.append_array(critters.glows())
 		glows.append_array(_lights)
-		sim.set_glows(glows)
+		sim.set_glows(_nearest_glows(glows))
+		critters.pre_tick(dt)
 		var t0 := Time.get_ticks_usec()
 		sim.tick()
 		_sim_us = Time.get_ticks_usec() - t0
@@ -651,7 +660,10 @@ func _physics_process(dt: float) -> void:
 			for f in _fills:
 				map.material_circle(f[0], f[1], f[2])
 			_fills.clear()
+		critters.post_tick()
 		_update_vines(dt)
+	else:
+		critters.pre_tick(dt)
 	if not _won and _exit.has_area() and _exit.has_point(gecko.pos):
 		_win()
 	if _demo_step >= 0:
@@ -941,13 +953,21 @@ func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags :=
 	var variant: int = int(opts.get("variant", 0))
 	match name:
 		"vine":
-			var c: Vector2 = map.ceiling_above(p)
-			var top := Vector2(p.x, c.y + 2.0)
 			var length := vine_length(size) if size > 0 else r * 4.0
-			var id: int = map.spawn_vine(top, length)
-			if id > 0:
-				_vines[id] = {"top": top, "load": 0.0}
+			critters.add_vine(p, length)
 			_edit_lumps.append(["vine", p.x, p.y, length])
+		"shroom":
+			var sz := size if size > 0 else 3
+			critters.add_shroom(p, sz, variant)
+			_edit_lumps.append(["shroom", p.x, p.y, float(sz), float(variant)])
+		"slime":
+			var rad := slime_radius(size) if size > 0 else 10.0
+			critters.add_slime(p, rad)
+			_edit_lumps.append(["slime", p.x, p.y, rad])
+		"longslug":
+			var ln := long_slug_length(size) if size > 0 else 40.0
+			critters.add_long_slug(p, ln)
+			_edit_lumps.append(["longslug", p.x, p.y, ln])
 		"slug":
 			var sl := Slug.new()
 			sl.setup(map, p, 31 + _slugs.size())
@@ -987,6 +1007,42 @@ static func cone_height(size: int) -> float:
 
 static func vine_length(size: int) -> float:
 	return 24.0 * clampi(size, 1, 5)
+
+
+static func slime_radius(size: int) -> float:
+	return 5.0 + 3.0 * clampi(size, 1, 5)
+
+
+static func long_slug_length(size: int) -> float:
+	return 20.0 + 14.0 * clampi(size, 1, 5)
+
+
+# A critter from the scene's lumps (tests/scene_builder.gd spawn_lumps):
+# [kind, position, size, variant].
+func _add_critter(c: Array) -> void:
+	match String(c[0]):
+		"vine":
+			critters.add_vine(c[1], c[2])
+		"shroom":
+			critters.add_shroom(c[1], int(c[2]), int(c[3]))
+		"slime":
+			critters.add_slime(c[1], c[2])
+		"longslug":
+			critters.add_long_slug(c[1], c[2])
+
+
+# The light pass takes MAX_GLOWS: past that the gecko's own and those
+# nearest it.
+func _nearest_glows(glows: Array) -> Array:
+	if glows.size() <= Sim.MAX_GLOWS or glows.is_empty():
+		return glows
+	var first: Array = glows[0]
+	var rest := glows.slice(1)
+	var at: Vector2 = gecko.pos
+	rest.sort_custom(func(a: Array, b: Array) -> bool: return at.distance_squared_to(a[0]) < at.distance_squared_to(b[0]))
+	var out: Array = [first]
+	out.append_array(rest.slice(0, Sim.MAX_GLOWS - 1))
+	return out
 
 
 # The table a stamp name and size pick: the thorn bush is small up to 2.
@@ -1087,6 +1143,24 @@ func edit_ghost(spec: Dictionary) -> String:
 			where = "ceiling"
 		"slug":
 			items.append(["disc", p, 4.0, Color(0.62, 0.85, 0.42)])
+			where = "surface"
+		"shroom":
+			# The sprite's size (shroom.gd sprite_for): a stem of most of
+			# its height, a cap of its width.
+			var fl: Vector2 = map.floor_below(p)
+			var pick: Array = Shroom.sprite_for(size, int(spec.get("variant", 0)))
+			var st: Dictionary = SceneBuilder.png_stamps().get(pick[0], {"w": 16, "h": 20})
+			var cw: float = sim.PIXEL_SZ * pick[1] if sim else 2.0 * pick[1]
+			var h: float = st.h * cw
+			items.append(["line", Vector2(p.x, fl.y), Vector2(p.x, fl.y - h * 0.6), Color(0.94, 0.93, 0.79), 4.0])
+			items.append(["disc", Vector2(p.x, fl.y - h * 0.8), st.w * cw * 0.5, Color(0.71, 0.80, 0.61)])
+			where = "floor"
+		"slime":
+			items.append(["disc", p, slime_radius(size), Color(0.42, 0.82, 0.36)])
+			where = "surface"
+		"longslug":
+			var ln := long_slug_length(size)
+			items.append(["line", p - Vector2(ln * 0.5, 0.0), p + Vector2(ln * 0.5, 0.0), Color(0.86, 0.62, 0.74), 6.0])
 			where = "surface"
 		_:
 			var table := stamp_table(name, size)
@@ -1692,25 +1766,16 @@ func _clear_slugs() -> void:
 
 
 # A vine the gecko hangs on (a planted foot on its cells) takes the
-# load for VINE_HOLD, then its anchor's bonds are broken and it comes
+# load for VINE_HOLD (when VINE_TEAR is on), then its anchor's bonds are broken and it comes
 # down, gecko and all; the load eases off a vine let go of.
 func _update_vines(dt: float) -> void:
-	if _vines.is_empty():
-		return
-	var held := -1
-	if gecko.clinging:
-		for f in gecko.feet:
-			if f.planted:
-				var id: int = map.chunk_at_world(f.pos)
-				if _vines.has(id):
-					held = id
-					break
-	for id in _vines.keys():
-		var v: Dictionary = _vines[id]
-		v.load = v.load + dt if id == held else maxf(v.load - dt * 2.0, 0.0)
-		if v.load >= VINE_HOLD:
-			map.break_circle(v.top, 7.0)
-			_vines.erase(id)
+	var held: RefCounted = critters.held_vine()
+	for v in critters.vines:
+		if v.gone:
+			continue
+		v.hang = v.hang + dt if v == held else maxf(v.hang - dt * 2.0, 0.0)
+		if VINE_TEAR and v.hang >= VINE_HOLD:
+			v.tear()
 
 
 # The camera, after the gecko's tick (its ticked signal). Out of the
@@ -1963,6 +2028,8 @@ func _process(_dt: float) -> void:
 			Engine.get_frames_per_second(), _dt * 1000.0, _frame_peak, _gecko_us / 1000.0, _gecko_peak / 1000.0]
 		if sim:
 			text += "   sim tick %.2f ms (worst %.2f)   readback %.2f ms (worst %.2f)" % [_sim_us / 1000.0, _sim_peak / 1000.0, _read_us / 1000.0, _read_peak / 1000.0]
+		if critters.last_us > 0:
+			text += "   critters %.2f ms" % (critters.last_us / 1000.0)
 		_fps_label.text = text
 		_fps_t = 0.0
 		_frame_peak = 0.0

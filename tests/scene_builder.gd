@@ -630,23 +630,24 @@ static func slug_points(scene: Dictionary) -> Array:
 	return out
 
 
-# Returns the vines spawned, [chunk id, anchor] each, for main.gd's
-# snap rule; a vine is ["vine", x, y, length]: hanging from the first
-# ceiling above (x, y), length px.
+# Spawns the lumps and heaps and returns the critters among them for
+# main.gd (critters.gd), [kind, position, size, variant] each: a vine is
+# ["vine", x, y, length], hanging from the first ceiling above (x, y),
+# length px; a shroom ["shroom", x, y, size 1 to 5, variant], on the
+# floor under (x, y); a slime ["slime", x, y, radius]; a long slug
+# ["longslug", x, y, length] on the surface nearest (x, y).
 static func spawn_lumps(map: Node2D, scene: Dictionary) -> Array:
-	var vines: Array = []
+	var critters: Array = []
 	for lump in scene.get("lumps", []):
 		var p := Vector2(lump[1], lump[2])
 		var r := float(lump[3])
 		match String(lump[0]):
 			"sand":
 				map.spawn_sand(p, r)
-			"vine":
-				var c: Vector2 = map.ceiling_above(p)
-				var top := Vector2(p.x, c.y + 2.0)
-				var id: int = map.spawn_vine(top, r)
-				if id > 0:
-					vines.append([id, top])
+			"vine", "slime", "longslug":
+				critters.append([String(lump[0]), p, r, 0])
+			"shroom":
+				critters.append(["shroom", p, r, int(lump[4]) if lump.size() > 4 else 0])
 			"clay", "boulder":
 				var fl: Vector2 = map.floor_below(p)
 				var at := Vector2(p.x, fl.y - r - 2.0)
@@ -656,7 +657,7 @@ static func spawn_lumps(map: Node2D, scene: Dictionary) -> Array:
 					map.spawn_boulder(at, r)
 			_:
 				push_error("unknown lump " + String(lump[0]))
-	return vines
+	return critters
 
 
 # The rect the body centre enters to finish, empty for a scene without one.

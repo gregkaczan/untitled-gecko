@@ -80,6 +80,7 @@ const DECOR_PALETTE: Array[Color] = [   # The decor stamps' 16 colours (decor/pa
 var solid := PackedByteArray()
 var ignore_chunks := false     # The gecko's senses on the ground: a loose lump is not terrain, only a thing in the way (sim_map.gd; nothing to ignore here)
 var ignore_loose := false      # The walk's collision burrowing: loose grains are no wall (sim_map.gd; nothing loose here)
+var anchored := {}             # Chunk ids that are ground to the gecko, not lumps: the critters' skinned chunks (critters.gd, sim_map.gd)
 
 var _img: Image
 var _tex: ImageTexture
@@ -365,6 +366,19 @@ func chunk_at_world(_p: Vector2) -> int:
 	return -1
 
 
+func anchored_at_world(_p: Vector2) -> int:
+	return -1
+
+
+# No slime in the bitmap (sim_map.gd).
+func slime_near(_p: Vector2, _n: int) -> bool:
+	return false
+
+
+func rock_world(p: Vector2) -> bool:
+	return is_solid_world(p)
+
+
 func chunk_piece(_id: int, _p: Vector2, _limit := 400) -> PackedVector2Array:
 	return PackedVector2Array()
 
@@ -396,11 +410,6 @@ func body_capsules(_a0: Vector2, _a1: Vector2, _ra: float, _b0: Vector2, _b1: Ve
 
 func spawn_sand(_p: Vector2, _radius: float) -> void:
 	pass
-
-
-# The bitmap has no vines (scene_builder.gd spawn_lumps).
-func spawn_vine(_top: Vector2, _length: float) -> int:
-	return 0
 
 
 # The bitmap has no drops or wisps (ambience.gd).

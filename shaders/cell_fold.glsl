@@ -22,7 +22,7 @@ uint weight(uint v) {
     if (v >= 16u) return 7u;
     if (v == 6u) return 6u;
     if (v == 5u) return 5u;
-    if (v == 4u) return 4u;
+    if (v == 4u || v == 8u) return 4u;
     if (v == 3u) return 3u;
     if (v == 1u) return 2u;
     return 0u;

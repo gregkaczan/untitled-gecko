@@ -52,7 +52,7 @@ void main() {
     float k;
     if (cls == 0u) k = rf(O_LP + 11u);
     else if (cls == 1u || cls == 3u) k = rf(O_LP + 12u);
-    else if (cls == 4u) k = rf(O_LP + 13u);
+    else if (cls == 4u || cls == 8u) k = rf(O_LP + 13u);
     else k = rf(O_LP + 14u);
     vec3 n = vec3(0.0);
     if (x > 0u) n = max(n, at(src, id - 1u));

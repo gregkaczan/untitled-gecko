@@ -12,6 +12,7 @@ extends "res://cave_map.gd"
 var sim: Node2D
 var _slot := 0
 var sense_coarse := false      # The senses on the 4 px fold (sim.cells4) instead of the sim's own cells
+var slime_on := false          # A slime lives in the level (critters.gd): only then does slime_near look
 
 
 # The senses' grid: the sim's cells (2 px) or the same folded 2x2 to
@@ -85,8 +86,8 @@ func _cls_full(x: int, y: int) -> int:
 func is_solid(x: int, y: int) -> bool:
 	var c := _cls(x, y)
 	if c >= sim.CT_CHUNK:
-		return not ignore_chunks
-	if c == sim.CT_LOOSE:
+		return not ignore_chunks or anchored.has(c - sim.CT_CHUNK)
+	if c == sim.CT_LOOSE or c == sim.CT_SLIME:
 		return not ignore_loose
 	return c == sim.CT_SOLID or c == sim.CT_SLICK or c == sim.CT_CRUMBLE or c == sim.CT_THORN
 
@@ -97,7 +98,29 @@ func is_loose(x: int, y: int) -> bool:
 
 
 func loose_at_world(p: Vector2) -> bool:
-	return is_loose(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+	var c := _cls(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+	return c == sim.CT_LOOSE or c == sim.CT_SLIME
+
+
+# Slime within n cells of p (the gecko wades through it slowly and
+# jumps out of it weakly, gecko.gd).
+func slime_near(p: Vector2, n: int) -> bool:
+	if not slime_on:
+		return false
+	var cx := int(floor(p.x / CELL))
+	var cy := int(floor(p.y / CELL))
+	for y in range(cy - n, cy + n + 1):
+		for x in range(cx - n, cx + n + 1):
+			if _cls(x, y) == sim.CT_SLIME:
+				return true
+	return false
+
+
+# Static rock (the classes a particle never moves through), not a lump,
+# a skinned chunk or loose grains: what a critter's chain bends against.
+func rock_world(p: Vector2) -> bool:
+	var c := _cls_full(int(floor(p.x / sim.PIXEL_SZ)), int(floor(p.y / sim.PIXEL_SZ)))
+	return c == sim.CT_SOLID or c == sim.CT_SLICK or c == sim.CT_CRUMBLE or c == sim.CT_THORN
 
 
 func is_water(x: int, y: int) -> bool:
@@ -151,13 +174,25 @@ func clear_currents() -> void:
 
 # The chunk whose particle fills this cell of the sim's grid, or -1 for
 # the ground and air.
+# An anchored chunk (a shroom, a vine: critters.gd) is ground to the
+# gecko, never a lump to shove or drag: -1 here too.
 func chunk_at(x: int, y: int) -> int:
 	var c := _cls_full(x, y)
-	return c - sim.CT_CHUNK if c >= sim.CT_CHUNK else -1
+	if c < sim.CT_CHUNK or anchored.has(c - sim.CT_CHUNK):
+		return -1
+	return c - sim.CT_CHUNK
 
 
 func chunk_at_world(p: Vector2) -> int:
 	return chunk_at(int(floor(p.x / sim.PIXEL_SZ)), int(floor(p.y / sim.PIXEL_SZ)))
+
+
+# The anchored chunk whose cell this is, or -1.
+func anchored_at_world(p: Vector2) -> int:
+	var c := _cls_full(int(floor(p.x / sim.PIXEL_SZ)), int(floor(p.y / sim.PIXEL_SZ)))
+	if c >= sim.CT_CHUNK and anchored.has(c - sim.CT_CHUNK):
+		return c - sim.CT_CHUNK
+	return -1
 
 
 # The connected piece of chunk id round p: the centres (world px) of the
@@ -230,11 +265,6 @@ func spawn_boulder(p: Vector2, radius: float) -> int:
 
 func spawn_clay(p: Vector2, radius: float) -> int:
 	return sim.spawn_chunk_disc(p, radius, sim.MAT_CLAY)
-
-
-# A vine hanging from top, length px (sim.gd). The chunk id, 0 for none.
-func spawn_vine(top: Vector2, length: float) -> int:
-	return sim.spawn_vine(top, length)
 
 
 # Loose sand on the air within radius of p.

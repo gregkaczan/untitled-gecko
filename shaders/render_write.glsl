@@ -18,6 +18,19 @@ const uint O_CT = 8294670u;   // cell class per pixel, read back by the gecko: 0
 const uint O_BD = 8813070u;   // bond records: [chunk id, ...] per particle (see sim.gd)
 const uint O_EM = 21254670u;   // emission per cell for the light pass (light_seed.glsl): copper and lava glow
 const uint BD = 20u;
+const uint NB = 8u;
+const uint NONE = 0xFFFFFFFFu;
+const uint O_SK = 22939598u;   // skinned chunks: [bone + 1, ...] per particle (sim.gd)
+const uint O_BC = 25037774u;   // living bonded particles per bone, read back (sim.gd bone_count)
+const uint O_SB = 25039822u;   // slime brains [x, y, reach, ...] (sim.gd set_slime)
+const uint O_SS = 25039950u;   // per brain [count, sum x, sum y, pad], x and y in 1/16 px
+const uint O_SD = 25040014u;   // slime density per cell (render_water.glsl)
+// A skinned chunk's colours (critters.gd): stone (mat 4) at fraction
+// 0.09 + band * 0.0002: bands 0 to 7 a SKIN_PAL colour, 8 to 15 the same
+// glowing; 16 to 31 a DECOR_PAL colour (a shroom drawn from a decor
+// sprite), 32 to 47 the same glowing.
+const vec3 SKIN_PAL[8] = vec3[8](vec3(0.86, 0.82, 0.70), vec3(0.62, 0.55, 0.44), vec3(0.78, 0.36, 0.30), vec3(0.95, 0.72, 0.42),
+                                 vec3(0.42, 0.82, 0.62), vec3(0.20, 0.42, 0.18), vec3(0.34, 0.58, 0.24), vec3(0.62, 0.46, 0.86));
 // The decor stamps' palette (cave_map.gd DECOR_PALETTE): a mat 12 particle in a
 // fraction band under 0.097 is one of these, band & 15; a band of 16 and up glows.
 const vec3 DECOR_PAL[16] = vec3[16](vec3(0.024, 0.043, 0.016), vec3(0.114, 0.176, 0.086), vec3(0.137, 0.224, 0.118), vec3(0.212, 0.255, 0.145), vec3(0.251, 0.325, 0.180), vec3(0.588, 0.616, 0.627), vec3(0.278, 0.373, 0.220), vec3(0.388, 0.416, 0.267), vec3(0.451, 0.557, 0.369), vec3(0.839, 0.867, 0.878), vec3(0.580, 0.616, 0.455), vec3(0.631, 0.702, 0.529), vec3(0.710, 0.804, 0.608), vec3(0.804, 0.824, 0.655), vec3(0.953, 0.965, 0.957), vec3(0.945, 0.933, 0.788));
@@ -62,6 +75,26 @@ float compute_light(float px, float py) {
 
     // Take the brighter of the two light sources; floor at 0.04 to avoid pure black
     return clamp(max(surface_light, drill_light), 0.04, 1.0);
+}
+
+// A sprite shroom's particle (drawn to its own cell only) also writes
+// val, below its own cell's (the caller lowers it), into the cell
+// halfway to each particle it is bonded to: where a bend opens a gap
+// between neighbours, the gap is filled from inside the sprite, and the
+// outline does not grow.
+void art_fill(uint id, float px, float py, float psz, uint rw, uint rh, uint off, uint val) {
+    int rx = int(floor(px / psz));
+    int ry = int(floor(py / psz));
+    uint bd = O_BD + id * BD;
+    for (uint k = 0u; k < NB; k++) {
+        uint j = buf.d[bd + 4u + k * 2u];
+        if (j == NONE) continue;
+        uint bj = O_PT + j * 8u;
+        int cx = int(floor((px + rf(bj)) * 0.5 / psz));
+        int cy = int(floor((py + rf(bj + 1u)) * 0.5 / psz));
+        if ((cx == rx && cy == ry) || cx < 0 || cx >= int(rw) || cy < 0 || cy >= int(rh)) continue;
+        atomicMax(buf.d[off + uint(cy) * rw + uint(cx)], val);
+    }
 }
 
 void main() {
@@ -114,6 +147,12 @@ void main() {
             em *= 0.90 + 0.10 * sin(rf(O_P + 36u) * 0.025 + phase);
         }
     }
+    bool skin_col = (mat == 4u && fract(mat_f) >= 0.0899);
+    uint skin_band = skin_col ? min(uint((fract(mat_f) - 0.09) / 0.0002), 47u) : 0u;
+    vec3 skin_c = skin_band >= 16u ? DECOR_PAL[skin_band & 15u] : SKIN_PAL[skin_band & 7u];
+    if (skin_col && (skin_band & 8u) != 0u && skin_band < 16u) { emits = true; em = skin_c * 0.8; }
+    if (skin_col && skin_band >= 32u) { emits = true; em = skin_c * 0.9; }
+    if (mat == 14u) { emits = true; em = vec3(0.10, 0.32, 0.08); }
     if (emits) atomicMax(buf.d[O_EM + uint(ry) * rw + uint(rx)], packUnorm4x8(vec4(em, 1.0)));
 
     // Cell class for the CPU world queries. Solid beats water beats air;
@@ -132,6 +171,7 @@ void main() {
         uint cls = 0u;
         if (mat == 1u) cls = 1u;
         else if (mat == 10u) cls = 3u;
+        else if (mat == 14u) cls = 8u;
         else if (mat < 8u || mat == 12u) {
             float yield_s = (mat < 8u) ? rf(O_M + mat * 12u + 5u) : 8.0;   // 12, the glowshroom, is static
             cls = (chunk != 0u) ? 16u + chunk : ((yield_s >= 5.0) ? 2u : 4u);
@@ -147,6 +187,14 @@ void main() {
             }
         }
         if (chunk != 0u) {
+            uint sk = buf.d[O_SK + id * 4u];
+            if (sk > 0u && sk <= 2048u) atomicAdd(buf.d[O_BC + sk - 1u], 1u);
+        }
+        // A lump's particle fills the cells round it too, so a turned
+        // lump has no holes; a shroom drawn from a sprite (it bends a
+        // little, its particles stay a cell apart) only its own, so the
+        // art keeps its outline and its spots.
+        if (chunk != 0u && !(skin_col && skin_band >= 16u)) {
             for (int dy = -1; dy <= 1; dy++) {
                 for (int dx = -1; dx <= 1; dx++) {
                     int cx = rx + dx, cy = ry + dy;
@@ -157,11 +205,32 @@ void main() {
             }
         } else if (cls > 0u) {
             atomicMax(buf.d[O_CT + uint(ry) * rw + uint(rx)], cls);
+            if (chunk != 0u) art_fill(id, px, py, psz, rw, rh, O_CT, cls);
         }
     }
 
     if (mat == 1u) {
         atomicAdd(buf.d[O_WD + uint(ry) * rw + uint(rx)], 1u);
+        return;
+    }
+    if (mat == 14u) {
+        // Slime: into its own density (render_water.glsl draws it), and
+        // counted to the brain whose reach it is in, so the CPU follows
+        // the blob's mass.
+        atomicAdd(buf.d[O_SD + uint(ry) * rw + uint(rx)], 1u);
+        float best = 1e9;
+        uint bi = 16u;
+        for (uint i = 0u; i < 16u; i++) {
+            uint o = O_SB + i * 8u;
+            if (rf(o + 7u) < 0.5) continue;
+            float d = length(vec2(px, py) - vec2(rf(o), rf(o + 1u)));
+            if (d < rf(o + 2u) && d < best) { best = d; bi = i; }
+        }
+        if (bi < 16u) {
+            atomicAdd(buf.d[O_SS + bi * 4u], 1u);
+            atomicAdd(buf.d[O_SS + bi * 4u + 1u], uint(px * 16.0));
+            atomicAdd(buf.d[O_SS + bi * 4u + 2u], uint(py * 16.0));
+        }
         return;
     }
     if (mat == 10u) {
@@ -284,11 +353,10 @@ void main() {
         cr = rf(O_M + mat * 12u + 6u);
         cg = rf(O_M + mat * 12u + 7u);
         cb = rf(O_M + mat * 12u + 8u);
-        // A vine: clay spawned with its fraction in the top band
-        // (sim.gd spawn_vine), green-brown instead of clay. Rock in its
-        // bands: moss (a dark wet green), thorns (pale, bony) and
-        // crumbling rock (paler, dry).
-        if (mat == 2u && fract(mat_f) >= 0.0945) { cr = 0.30; cg = 0.52; cb = 0.22; }
+        // A skinned chunk (a shroom, a vine) in its palette colour. Rock
+        // in its bands: moss (a dark wet green), thorns (pale, bony)
+        // and crumbling rock (paler, dry).
+        if (skin_col) { cr = skin_c.r; cg = skin_c.g; cb = skin_c.b; }
         if (mat == 3u) {
             float f = fract(mat_f);
             if (f >= 0.0965) { cr = 0.20; cg = 0.42; cb = 0.20; }
@@ -305,16 +373,24 @@ void main() {
         // Stone (mat 4) varies less: a lump reads as one pale thing
         // against the ground's grain. Hard rock (5) and bedrock (7) are
         // smoother still, so a seam of either reads as one slab.
-        float var_strength = (mat == 4u) ? 0.07 : ((mat == 5u) ? 0.10 : ((mat == 7u) ? 0.04 : 0.22));
+        // A shroom drawn from a decor sprite (skin bands 16 and up) keeps
+        // the art's colours: no grain of its own, a touch of the speckle.
+        bool art = skin_col && skin_band >= 16u;
+        float var_strength = art ? 0.0 : ((mat == 4u) ? 0.07 : ((mat == 5u) ? 0.10 : ((mat == 7u) ? 0.04 : 0.22)));
         cr += (h0 - 0.5) * var_strength;
         cg += (h1 - 0.5) * var_strength;
         cb += (h2 - 0.5) * var_strength;
 
         // Position-dependent noise: prevents banding when many same-material particles cluster
-        float pos_hash = hash11(sx * 0.031 + sy * 0.017);
-        cr += (pos_hash - 0.5) * 0.08;
-        cg += (hash11(pos_hash * 3.7) - 0.5) * 0.08;
-        cb += (hash11(pos_hash * 7.3) - 0.5) * 0.08;
+        // (a skinned chunk's particle by its rest place, so a bending
+        // stem keeps its speckle instead of shimmering)
+        float nsx = skin_col ? rf(O_SK + id * 4u + 2u) : sx;
+        float nsy = skin_col ? rf(O_SK + id * 4u + 3u) : sy;
+        float pos_hash = hash11(nsx * 0.031 + nsy * 0.017);
+        float pos_k = art ? 0.02 : 0.08;
+        cr += (pos_hash - 0.5) * pos_k;
+        cg += (hash11(pos_hash * 3.7) - 0.5) * pos_k;
+        cb += (hash11(pos_hash * 7.3) - 0.5) * pos_k;
 
         // Water: extra blue shimmer for translucent look
         if (mat == 1u) {
@@ -417,7 +493,7 @@ void main() {
     // brighter colors produce higher uint values, so atomicMax naturally composites
     // the brightest (most visible) particle at each pixel — no depth buffer needed.
     uint packed = packUnorm4x8(vec4(cr, cg, cb, 1.0));
-    if (chunk != 0u) {
+    if (chunk != 0u && !(skin_col && skin_band >= 16u)) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
                 int cx = rx + dx, cy = ry + dy;
@@ -430,4 +506,5 @@ void main() {
     }
     uint pixel = uint(ry) * rw + uint(rx);
     atomicMax(buf.d[O_RN + pixel], packed);
+    if (chunk != 0u) art_fill(id, px, py, psz, rw, rh, O_RN, packUnorm4x8(vec4(cr, cg, cb, 254.0 / 255.0)));
 }

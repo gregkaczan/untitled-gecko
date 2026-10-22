@@ -72,6 +72,9 @@ const SCREE_R := 6.0
 const SLIP_NO_CLING := 0.35    # After a slip, no cling for this long: the fall is seen and the same cells are not caught again at once
 const BLAST_SNUFF := 4.0       # Seconds the glow is out after a gas burst
 const BURROW_SLOW := 0.3       # Walking speed through loose grains (a bed of sand), as a fraction of the walk
+const SLIME_SLOW := 0.35       # Walking speed on or in slime, as a fraction of the walk: it sticks to the feet
+const SLIME_JUMP := 0.55       # A jump out of slime, as a fraction of a jump
+const SLIME_REACH := 22.0      # Slime this near the body centre (px) holds it: past ride height, so a body standing on slime is held
 const PUSH_R_FRONT := 8.0      # Radius of the body's push on loose grains, head to mid-body (sim_map.gd)
 const PUSH_R_BACK := 5.0       # And mid-body to the tail's root
 const DIG_DEAD := 10.0         # A cursor closer than this to the body centre gives no dig direction
@@ -290,6 +293,8 @@ var _gape := 0.0               # Px the mouth is open
 var _gape_want := false        # This tick a piece is coming in: the mouth opens
 var _gape_chew := false        # The gape is a bite's: drawn as parted lips, not the yawn's dropped jaw
 var extra_blobs: Array = []    # Blobs drawn with the body's by the blob layer: the slugs (main.gd sets it before the tick)
+var jump_boost := Vector2.ZERO # Added to a jump made this tick: a shroom's cap springing under the feet (critters.gd sets it before the tick)
+var in_slime := false          # Slime about the body this tick: the walk and the jump are held back
 var glow_boost := 0.0          # Seconds left of the brighter glow a swallowed slug gives (main.gd reads it)
 var glow_snuff := 0.0          # Seconds left with the glow out after a gas burst
 var _heat := 0.0               # Seconds a foot has been on hot rock
@@ -502,6 +507,7 @@ func _physics_process(dt: float) -> void:
 	pulling = false
 	straining = false
 	_block_cell = null
+	in_slime = map.slime_near(pos, _cells(SLIME_REACH))
 	no_cling = maxf(no_cling - dt, 0.0)
 	_gulp = maxf(_gulp - dt, 0.0)
 	glow_boost = maxf(glow_boost - dt, 0.0)
@@ -889,6 +895,8 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 		top = minf(top, DIG_SPEED)
 	if _burrowing:
 		top = minf(top, WALK_SPEED * BURROW_SLOW)
+	if in_slime:
+		top = minf(top, WALK_SPEED * SLIME_SLOW)
 	speed_along = move_toward(speed_along, s * top, WALK_ACCEL * dt)
 	# The walk's collision sees lumps whatever the senses do.
 	var ignoring: bool = map.ignore_chunks
@@ -1418,7 +1426,7 @@ func _update_tongue(dt: float) -> void:
 
 # The tip lands: a dent in the ground, or a lump broken where it is hit.
 func _strike() -> void:
-	if map.chunk_at_world(tongue_tip) >= 0:
+	if map.chunk_at_world(tongue_tip) >= 0 or map.slime_near(tongue_tip, 1):
 		map.break_circle(tongue_tip, STRIKE_BREAK_R)
 	else:
 		map.erase_circle(tongue_tip, STRIKE_R)
@@ -1582,10 +1590,34 @@ func _jump() -> void:
 	clinging = false
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
-	vel = up * JUMP_SPEED + _tangent() * speed_along
+	vel = up * JUMP_SPEED * (SLIME_JUMP if in_slime else 1.0) + _tangent() * speed_along + jump_boost
 	speed_along = 0.0
 	no_cling = NO_CLING_TIME
 	_unplant()
+
+
+# The ground under the body moved by d (a shroom's cap dipping, a vine
+# swinging: critters.gd): the whole body, its feet and its drawn chain
+# go with it, as one, before this tick's physics.
+func carry(d: Vector2) -> void:
+	if d == Vector2.ZERO:
+		return
+	pos += d
+	_pos_s += d
+	for i in chain.points.size():
+		chain.points[i] += d
+	for i in _path.size():
+		_path[i] += d
+	for i in _settle_last.size():
+		_settle_last[i] += d
+	for f in feet:
+		f.anchor += d
+		f.pos += d
+		f.step_from += d
+		f.step_to += d
+	_bite += d
+	_sq_target += d
+	_sq_line += d
 
 
 func _unplant() -> void:

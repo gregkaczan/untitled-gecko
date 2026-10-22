@@ -80,7 +80,39 @@ const O_LP := O_LO + RENDER_W * RENDER_H         # 5573070
 const LP_SIZE := 128
 const O_LN := O_LP + LP_SIZE                     # 22291598, the cell classes with crumbs marked (cell_post.glsl): the senses' readback
 const O_C4 := O_LN + RENDER_W * RENDER_H         # 22809998, the same folded 2x2 to the 4 px grid (cell_fold.glsl)
-const TOTAL_UINTS := O_C4 + (RENDER_W / 2) * (RENDER_H / 2)
+# Skinned chunks (shrooms, vines: critters.gd): a chunk whose particles
+# follow a chain the CPU moves. Per particle [bone + 1 (0 for none),
+# the next bone's weight, rest x, rest y]; per bone [x, y, cos, sin of
+# its pose now, the same at rest, drive, the stretch along it, pad,
+# pad]: pbd_predict.glsl puts a driven particle where its bones carry
+# its rest place, a blend of two bones, and the solver leaves it there.
+# A bone not driven lets its particles go as an ordinary lump. The
+# living bonded particles of each bone are counted (render_write.glsl)
+# and read back, so the CPU sees a stem bitten through.
+const O_SK := O_C4 + (RENDER_W / 2) * (RENDER_H / 2)   # 22939598
+const SK_STRIDE := 4
+const MAX_BONES := 2048
+const BN_STRIDE := 12                                 # x, y, cos, sin, rest x, rest y, rest cos, rest sin, drive, stretch (a released bone split across: the pieces' width), release id, pieces
+const O_BN := O_SK + PARTICLE_COUNT * SK_STRIDE       # 25013198
+const O_BC := O_BN + MAX_BONES * BN_STRIDE            # 25037774, counts per bone (grid_clear.glsl zeroes them)
+# Slimes (critters.gd): a slime is a blob of material 14, a viscous
+# liquid that holds together; up to MAX_SLIMES brains, each [x, y,
+# reach, pull, drift x, drift y, drift speed, on], draw the slime's
+# particles within reach toward the brain and along its drift
+# (pbd_predict.glsl); each brain's particles are counted and summed
+# (count, x, y in 1/16 px) for the CPU to follow its mass; the slime is
+# drawn from its own density (render_water.glsl).
+const MAX_SLIMES := 16
+const SB_STRIDE := 8
+const O_SB := O_BC + MAX_BONES                        # 25039822
+const O_SS := O_SB + MAX_SLIMES * SB_STRIDE           # 25039950, [count, sum x, sum y, pad] per brain
+const O_SD := O_SS + MAX_SLIMES * 4                   # 25040014, slime density per cell
+const TOTAL_UINTS := O_SD + RENDER_W * RENDER_H
+const MAT_SLIME := 14
+const CT_SLIME := 8                              # Cell class of slime: sticky, the walk wades through it slowly
+const FRAC_SKIN := 0.0900                        # Stone (mat 4) at fraction 0.09 + band * 0.0002 is a skinned chunk's colour (render_write.glsl): bands 0 to 7 SKIN_PAL, 8 to 15 the same glowing, 16 to 31 the decor palette (SKIN_DECOR), 32 to 47 the same glowing
+const SKIN_BAND := 0.0002
+const SKIN_DECOR := 16
 const CT_CRUMB := 256                            # Added to a crumb's class in the O_LN copy: a speck the senses read as air and the body loosens
 const LIGHT_PASSES := 19                         # Cells the light travels per tick; odd, see above
 const MAX_GLOWS := 10                            # Glow sources (the gecko, the slugs, the level's lights) the seed takes: 8 floats each from [16], x y r g b radius x2 y2, under the currents at [96]
@@ -170,6 +202,14 @@ var _zero_bd := PackedByteArray()
 var _next_chunk := 1
 var _explosions: Array[Dictionary] = []
 var _dead: Array[int] = []           # Free particle slots
+var _bones := PackedFloat32Array()   # O_BN as the CPU keeps it: the critters' bone poses, uploaded every tick up to _bones_used
+var _bones_used := 0                 # Bones handed out since the build (alloc_bones); they are not handed out again until the next build
+var bone_counts := PackedByteArray() # O_BC readback: the living bonded particles of each bone, last tick
+var bone_counts_i := PackedInt32Array()   # The same as ints, for the critters' checks
+var _slimes := PackedFloat32Array()  # O_SB: the slime brains
+var _slimes_on := false
+var slime_sums := PackedByteArray()  # O_SS readback: per brain the count of its particles and the sums of their places
+var t_parts := Vector3i.ZERO         # The last tick's upload, dispatch (the GPU's work and the wait for it) and readback, µs
 var _tick := 0
 var _rng := RandomNumberGenerator.new()
 
@@ -178,6 +218,7 @@ func _ready() -> void:
 	assert(O_CT == 8294670, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
 	assert(O_BD == 8813070, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
 	assert(O_LN == 22291598 and O_C4 == 22809998, "the crumb offsets must match the literals in cell_post.glsl, cell_fold.glsl and pbd_predict.glsl")
+	assert(O_SK == 22939598 and O_BN == 25013198 and O_BC == 25037774 and O_SB == 25039822 and O_SS == 25039950 and O_SD == 25040014, "the skin and slime offsets must match the literals in pbd_predict.glsl, pbd_delta.glsl, pbd_finalize.glsl, grid_clear.glsl, render_clear.glsl, render_write.glsl and render_water.glsl")
 	assert(O_LA == 19181070 and O_EM == 21254670 and O_LO == 21773070 and O_LP == 22291470, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
@@ -194,6 +235,8 @@ func _ready() -> void:
 	_zero12.resize(12)
 	_zero4.resize(4)
 	_zero_bd.resize(BD_STRIDE * 4)
+	_bones.resize(MAX_BONES * BN_STRIDE)
+	_slimes.resize(MAX_SLIMES * SB_STRIDE)
 	_rd = RenderingServer.create_local_rendering_device()
 	for shader_name in SHADER_FILES:
 		var shader_file := load("res://shaders/%s.glsl" % shader_name) as RDShaderFile
@@ -287,6 +330,13 @@ func build(seed_value: int, kinds := PackedByteArray()) -> void:
 	_capsules.fill(0)
 	chunks.clear()
 	_next_chunk = 1
+	_bones.fill(0.0)
+	_bones_used = 0
+	bone_counts = PackedByteArray()
+	bone_counts_i = PackedInt32Array()
+	_slimes.fill(0.0)
+	_slimes_on = false
+	slime_sums = PackedByteArray()
 	var data := _create_initial_data(seed_value, kinds)
 	if _buf.is_valid():
 		_rd.buffer_update(_buf, 0, data.size(), data)
@@ -306,9 +356,18 @@ func build(seed_value: int, kinds := PackedByteArray()) -> void:
 func tick() -> void:
 	if not ready_to_run:
 		return
+	var t0 := Time.get_ticks_usec()
 	_update_params()
+	var t1 := Time.get_ticks_usec()
 	_dispatch()
+	var t2 := Time.get_ticks_usec()
 	cells = _rd.buffer_get_data(_buf, O_LN * 4, RENDER_W * RENDER_H * 4)
+	if _bones_used > 0:
+		bone_counts = _rd.buffer_get_data(_buf, O_BC * 4, _bones_used * 4)
+		bone_counts_i = bone_counts.to_int32_array()
+	if _slimes_on:
+		slime_sums = _rd.buffer_get_data(_buf, O_SS * 4, MAX_SLIMES * 16)
+	t_parts = Vector3i(t1 - t0, t2 - t1, Time.get_ticks_usec() - t2)
 	if fold_on:
 		read_fold()
 	for i in MAX_CAPSULES:
@@ -436,7 +495,7 @@ func spawn_particle(pos: Vector2, mat: int, vel := Vector2.ZERO, life := -1.0) -
 # their rest distance. The lump holds its shape, falls, can be pushed or
 # dragged as one, and comes apart where its bonds are broken. Returns
 # the chunk id, or 0 when there are no cells or not enough free slots.
-func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0) -> int:
+func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0, skin := {}, fracs := {}) -> int:
 	if not ready_to_run or list.is_empty() or _dead.size() < list.size():
 		return 0
 	var id := _next_chunk
@@ -453,8 +512,17 @@ func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0) -> int:
 		# mats overrides the material per cell (a vine's rock anchor);
 		# frac, if given, is the fraction for the rest (a look: a vine's
 		# clay sits in the top band, render_write.glsl).
+		# skin gives a cell its bones, [bone, weight of the next], and
+		# its particle follows them (skinned chunks, critters.gd); fracs
+		# a fraction of its own (a skinned chunk's colours).
 		var cm: int = mats.get(c, mat)
 		var f: float = _rng.randf_range(0.0, FRAC_MAX) * 0.1 if (frac < 0.0 or mats.has(c)) else frac
+		if fracs.has(c):
+			f = fracs[c]
+		if skin.has(c):
+			var sk := PackedFloat32Array([0.0, skin[c][1], p.x, p.y]).to_byte_array()
+			sk.encode_u32(0, int(skin[c][0]) + 1)
+			_rd.buffer_update(_buf, (O_SK + idx * SK_STRIDE) * 4, sk.size(), sk)
 		var encoded := float(cm) + f
 		var rec := PackedFloat32Array([p.x, p.y, 0.0, 0.0, p.x, p.y, 0.0, encoded])
 		_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, rec.to_byte_array())
@@ -481,26 +549,125 @@ func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0) -> int:
 	return id
 
 
-# A vine: a column of clay cells hanging from top (the first air cell
-# under a ceiling), length px long or until it meets something, its top
-# cell rock (static) so it hangs, the rest bonded in a chain that
-# swings, parts where a bite takes it or a bond is stretched past its
-# limit (clay's 1.35), and reads back as a chunk, so the gecko can
-# cling to it, shove it aside or drag it. Drawn green-brown by the
-# fraction (render_write.glsl). Returns the chunk id, 0 for none.
-func spawn_vine(top: Vector2, length: float) -> int:
-	var cx := int(floor(top.x / PIXEL_SZ))
-	var cy := int(floor(top.y / PIXEL_SZ))
-	var n := maxi(int(length / PIXEL_SZ), 2)
-	var list: Array = []
-	for k in n:
-		var y := cy + k
-		if y >= RENDER_H or (cells.size() >= RENDER_W * RENDER_H * 4 and cells.decode_u32((y * RENDER_W + cx) * 4) != 0):
-			break
-		list.append(Vector2i(cx, y))
-	if list.size() < 2:
-		return 0
-	return spawn_chunk(list, MAT_CLAY, {list[0]: MAT_ROCK}, 0.097)
+# Bones for a skinned chunk: n in a row, the index of the first, -1
+# when the table is full. They stay the caller's until the next build.
+func alloc_bones(n: int) -> int:
+	if _bones_used + n > MAX_BONES:
+		return -1
+	var base := _bones_used
+	_bones_used += n
+	return base
+
+
+# A bone's pose: where its joint is, the way it points (radians), and
+# the stretch of its particles along it (1 for none: a stem squashed
+# under a load is less). Driven, its particles are carried there on the
+# next tick.
+func set_bone(i: int, pos: Vector2, angle: float, stretch := 1.0) -> void:
+	var b := i * BN_STRIDE
+	_bones[b] = pos.x
+	_bones[b + 1] = pos.y
+	_bones[b + 2] = cos(angle)
+	_bones[b + 3] = sin(angle)
+	_bones[b + 9] = stretch
+
+
+# The pose the particles were laid out in: their rest places are read
+# in this frame.
+func set_bone_rest(i: int, pos: Vector2, angle: float) -> void:
+	var b := i * BN_STRIDE
+	_bones[b + 4] = pos.x
+	_bones[b + 5] = pos.y
+	_bones[b + 6] = cos(angle)
+	_bones[b + 7] = sin(angle)
+	_bones[b + 9] = 1.0
+
+
+# A bone let go of is an ordinary lump from then on: its particles fall,
+# roll and break as any chunk's.
+func set_bone_drive(i: int, on: bool) -> void:
+	_bones[i * BN_STRIDE + 8] = 1.0 if on else 0.0
+
+
+# Bones from to to (not included) let go: their particles become a lump
+# of their own, a new chunk id (bonds to the rest's particles break,
+# pbd_delta.glsl), that falls and can be shoved. Returns the id. With
+# split, each bone is a lump of its own instead, and the last one is
+# cut across its axis into split pieces split_w px wide (a shroom's
+# stem in its links, the cap in pieces): the pieces fall apart and are
+# shoved one by one; returns the first id. Chunk ids past 239 read as
+# air (the class byte), so a split takes few.
+func release_bones(from: int, to: int, split := 0, split_w := 0.0) -> int:
+	var first := _next_chunk
+	for i in range(from, to):
+		var n := split if (split > 1 and i == to - 1) else 1
+		if i == from or split > 0:
+			for k in n:
+				chunks[_next_chunk + k] = {"mat": MAT_STONE, "count": 0}
+			_bones[i * BN_STRIDE + 10] = float(_next_chunk)
+			_next_chunk += n
+		else:
+			_bones[i * BN_STRIDE + 10] = float(first)
+		_bones[i * BN_STRIDE + 8] = 0.0
+		_bones[i * BN_STRIDE + 11] = float(n)
+		if n > 1:
+			_bones[i * BN_STRIDE + 9] = split_w
+	return first
+
+
+# The bonded particles of bone i still alive last tick.
+func bone_count(i: int) -> int:
+	if i < 0 or i >= bone_counts_i.size():
+		return -1
+	return bone_counts_i[i]
+
+
+# A slime's brain i: its particles within reach are drawn toward pos
+# (pull per second) and drift along dir at speed. Off, they are an
+# inert puddle.
+func set_slime(i: int, pos: Vector2, reach: float, pull: float, dir: Vector2, speed: float, on: bool) -> void:
+	var b := i * SB_STRIDE
+	_slimes[b] = pos.x
+	_slimes[b + 1] = pos.y
+	_slimes[b + 2] = reach
+	_slimes[b + 3] = pull
+	_slimes[b + 4] = dir.x
+	_slimes[b + 5] = dir.y
+	_slimes[b + 6] = speed
+	_slimes[b + 7] = 1.0 if on else 0.0
+	if on:
+		_slimes_on = true
+
+
+# Brain i's particles last tick: [count, their centre].
+func slime_mass(i: int) -> Array:
+	if (i + 1) * 16 > slime_sums.size():
+		return [0, Vector2.ZERO]
+	var n := slime_sums.decode_u32(i * 16)
+	if n == 0:
+		return [0, Vector2.ZERO]
+	var sx := float(slime_sums.decode_u32(i * 16 + 4)) / 16.0
+	var sy := float(slime_sums.decode_u32(i * 16 + 8)) / 16.0
+	return [n, Vector2(sx / n, sy / n)]
+
+
+# A blob of slime on the air cells within radius of centre.
+func spawn_slime(centre: Vector2, radius: float) -> int:
+	var n := 0
+	var cx := int(floor(centre.x / PIXEL_SZ))
+	var cy := int(floor(centre.y / PIXEL_SZ))
+	var k := int(ceil(radius / PIXEL_SZ)) + 1
+	for y in range(cy - k, cy + k + 1):
+		for x in range(cx - k, cx + k + 1):
+			if x < 0 or y < 0 or x >= RENDER_W or y >= RENDER_H:
+				continue
+			if cells.size() >= RENDER_W * RENDER_H * 4 and cells.decode_u32((y * RENDER_W + x) * 4) != 0:
+				continue
+			var p := Vector2((x + 0.5) * PIXEL_SZ, (y + 0.5) * PIXEL_SZ)
+			if p.distance_to(centre) < radius:
+				spawn_particle(p + Vector2(_rng.randf_range(-0.3, 0.3), _rng.randf_range(-0.3, 0.3)), MAT_SLIME)
+				n += 1
+	return n
 
 
 # A puff: n wisps of smoke (material 9, rising, fading) about pos, each
@@ -633,6 +800,10 @@ func _update_params() -> void:
 	_rd.buffer_update(_buf, 0, 160, p)
 	_rd.buffer_update(_buf, O_CAP * 4, _capsules.size(), _capsules)
 	_rd.buffer_update(_buf, O_LP * 4, _light.size(), _light)
+	if _bones_used > 0:
+		_rd.buffer_update(_buf, O_BN * 4, _bones_used * BN_STRIDE * 4, _bones.slice(0, _bones_used * BN_STRIDE).to_byte_array())
+	if _slimes_on:
+		_rd.buffer_update(_buf, O_SB * 4, _slimes.size() * 4, _slimes.to_byte_array())
 	_rd.buffer_update(_buf, (O_P + 34) * 4, 4, _zero4)
 	_rd.buffer_update(_buf, O_FB * 4, 12, _zero12)
 

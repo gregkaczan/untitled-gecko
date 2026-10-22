@@ -13,6 +13,7 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_R
 const uint O_WD = 6566536u;
 const uint O_LD = 7084936u;
 const uint O_CD = 7603336u;
+const uint O_SD = 25040014u;   // slime density per cell (render_write.glsl)
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -60,6 +61,7 @@ void main() {
     float water_density = 0.0;
     float lava_density = 0.0;
     float clay_density = 0.0;
+    float slime_density = 0.0;
     const int R = 2;
     for (int dy = -R; dy <= R; dy++) {
         for (int dx = -R; dx <= R; dx++) {
@@ -82,6 +84,9 @@ void main() {
             }
 
             // Clay: tight 3x3 gather with sigma ~0.4 (2*0.4^2 = 0.32)
+            uint sd = buf.d[O_SD + idx];
+            if (sd > 0u) slime_density += float(sd) * exp(-dist_sq / 2.0);
+
             if (dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) {
                 uint cd = buf.d[O_CD + idx];
                 if (cd > 0u) {
@@ -95,7 +100,8 @@ void main() {
     bool has_water = (water_density >= 0.35);
     bool has_lava = (lava_density >= 0.35);
     bool has_clay = (clay_density >= 0.5);
-    if (!has_water && !has_lava && !has_clay) return;
+    bool has_slime = (slime_density >= 0.9);
+    if (!has_water && !has_lava && !has_clay && !has_slime) return;
 
     float psz = rf(O_P + 18u);
     float wx = (float(px) + 0.5) * psz;
@@ -165,6 +171,19 @@ void main() {
         cb = clamp(cb, 0.0, 1.0);
 
         atomicMax(buf.d[O_RN + id], packUnorm4x8(vec4(cr, cg, cb, 0.99)));
+    }
+
+    // --- Slime: a gloss of pale green at its rim over a deeper green
+    //     body, a few bright motes inside; drawn over the water ---
+    if (has_slime) {
+        float core = clamp((slime_density - 0.9) / 4.0, 0.0, 1.0);
+        float cr = mix(0.62, 0.22, core);
+        float cg = mix(0.95, 0.62, core);
+        float cb = mix(0.48, 0.20, core);
+        float mote = step(0.97, hash11(wx * 0.21 + wy * 0.37)) * core;
+        cr += mote * 0.25; cg += mote * 0.2; cb += mote * 0.15;
+        cr *= light; cg *= light; cb *= light;
+        atomicMax(buf.d[O_RN + id], packUnorm4x8(vec4(clamp(cr, 0.0, 1.0), clamp(cg, 0.0, 1.0), clamp(cb, 0.0, 1.0), 1.0)));
     }
 
     // --- Clay metaball (tight 3x3 gather around each particle) ---

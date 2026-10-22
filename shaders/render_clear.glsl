@@ -13,7 +13,8 @@ const uint O_WD = 6566536u;
 const uint O_LD = 7084936u;
 const uint O_CD = 7603336u;
 const uint O_CT = 8294670u;   // cell class per pixel: 0 air, 1 water, 2 static solid, 3 lava, 4 loose grain, 16 + id a chunk's cell
-const uint O_EM = 21254670u;   // emission per cell (light_seed.glsl), written by render_write.glsl
+const uint O_EM = 21254670u;
+const uint O_SD = 25040014u;   // slime density per cell (render_write.glsl, render_water.glsl)   // emission per cell (light_seed.glsl), written by render_write.glsl
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -27,4 +28,5 @@ void main() {
     buf.d[O_CD + id] = 0u;
     buf.d[O_CT + id] = 0u;
     buf.d[O_EM + id] = 0u;
+    buf.d[O_SD + id] = 0u;
 }

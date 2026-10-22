@@ -523,6 +523,32 @@ for h in (64, 200, 440, 760):
         end=[700, 860, 1600, 1010] if h <= 200 else None,
         note="a block %d px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool" % h)
 
+# 20. The chain critters (2026-10-21, particle world only): shrooms that
+# bend (skinned chunks driven by a spring chain), a vine that is a rope,
+# a slime (a material with a brain), a long slug. critters_lab is the
+# world tests/critters_test.gd checks them in (tools/critters_test.sh,
+# one case a run, the probe driving the gecko); the others are suite
+# scenes for the gecko's own movement on them (SIM=1 tools/suite.sh).
+SCRIPTS["hold"] = [step(60.0, Z)]
+SCRIPTS["hop_cap"] = [step(0.3, R), step(0.3, R, jump=True), step(0.6, R), step(1.5, Z), step(0.3, Z, jump=True), step(2.5, Z)]
+SCRIPTS["walk_wade"] = [step(7.0, R), step(1.0, Z), step(0.3, Z, jump=True), step(2.0, Z)]
+LAB = [["fill", 850, C, 300, 440], ["fill", 1630, 640, 60, 160]]
+add("critters_lab", LAB, ["floor", 180, 700], ["hold"], state="cling", sim_only=True,
+    lumps=[["shroom", 300, 790, 3, 0], ["shroom", 650, 790, 4, 0], ["vine", 1000, 620, 150],
+           ["slime", 1350, 780, 12], ["shroom", 1600, 790, 3, 1], ["longslug", 1830, 790, 60],
+           ["shroom", 480, 790, 9, 3]],
+    note="the critters test's world: a shroom to land on and jump off (x 300), one to cut (650), a vine under a block (1000), a slime (1350), a shroom beside a pillar (1600), a long slug by the right wall (1830), a big shroom to play on (480, size 9, last so the others keep their seeds)")
+add("shroom_hop", [["fill", 200, 700, 200, 100]], ["floor", 350, 690], ["hop_cap"], state="cling", sim_only=True,
+    lumps=[["shroom", 570, 790, 4, 0]],
+    note="a jump off a ledge 100 px up onto a shroom's cap, a wait while it bounces, a jump off it")
+add("slime_wade", [], ["floor", 500, 700], ["walk_wade"], state="cling", sim_only=True, reach=[1100, 0, 1920, 1080],
+    lumps=[["slime", 800, 780, 14]],
+    note="a walk through a slime on the floor (slowed while in it), a stop, a jump out of it")
+SCRIPTS["vine_up"] = [step(1.6, R), step(0.3, U, jump=True), step(4.0, U), step(3.0, Z)]
+add("vine_hang", [["fill", 600, C, 600, 440]], ["floor", 700, 700], ["vine_up"], state="cling", sim_only=True,
+    lumps=[["vine", 900, 620, 190]],
+    note="a walk to a vine hanging to just over the floor, a jump up at it: caught in the air, climbed to the ceiling in about a second (under main.gd's VINE_HOLD, so it holds) and onto the ceiling")
+
 out = {"bases": BASES, "scripts": SCRIPTS, "scenes": scenes}
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 path = os.path.join(root, "tests", "scenes.json")
