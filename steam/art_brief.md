@@ -1,0 +1,43 @@
+# Underhum: Steam capsule art brief
+
+The minimum art for a public Coming Soon page on Steam: four store capsules.
+All four are crops of two pieces, so the job is a logo and one key art
+illustration, delivered in layers.
+
+## The game
+
+A small gecko in a dark cave where every grain is simulated: sand pours,
+boulders roll, water flows. The gecko climbs walls and ceilings, chews through
+rock, swings on its tongue and squeezes through cracks. Glowing slugs and
+mushrooms light the dark. The game is pixel art: one art pixel is 4 screen
+pixels.
+
+## Deliverables
+
+1. **Logo.** The word "Underhum", one capital U. Transparent background.
+   It must stay readable at 120 x 45 px, the smallest size Steam shows.
+   A version for a dark background is enough; the art is dark.
+2. **Key art.** The gecko in the cave. Paint it big enough for every crop
+   below, and keep the layers apart: background, gecko, foreground and light,
+   logo. One layered file (PSD, Aseprite or Krita) plus flat PNGs.
+
+## The crops
+
+| Capsule | Pixels | Shape | Notes |
+|---|---|---|---|
+| Header | 920 x 430 | 2.1 : 1 | Top of the store page. Logo plus art. |
+| Main | 1232 x 706 | 1.75 : 1 | Front page features. Logo plus art. |
+| Small | 462 x 174 | 2.7 : 1 | Search lists. The logo nearly fills it. |
+| Vertical | 748 x 896 | 0.83 : 1 | Seasonal sales. Logo plus art. |
+
+A wide canvas of 3840 x 2160 or more, with the gecko near the middle and room
+above and below it, covers all four. It also covers the library art needed
+later before release (3840 x 1240 without text, 600 x 900 portrait, 920 x 430).
+
+## Steam's rules for capsules
+
+- No text except the game's title. No slogans, quotes, awards or "coming soon".
+- The logo must be readable against the background.
+- Show what the game is: the gecko, the cave, the glow.
+
+Valve's examples: https://partner.steamgames.com/doc/store/assets/standard
