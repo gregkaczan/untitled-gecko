@@ -398,6 +398,15 @@ if ! already_done DONE_APP; then
 fi
 LANDING="https://partner.steamgames.com/apps/landing/${STEAM_APP_ID:-$(_existing STEAM_APP_ID || true)}"
 
+if [[ "$(_existing DONE_BASIC || true)" != yes ]]; then
+  say "The app exists, and with it an empty store page. Only you can see it until"
+  say "Valve approves it and you post it as Coming Soon."
+  if ! confirm "Fill in the store page now?"; then
+    SKIPPED+=("the store page: run tools/steam_page.sh again to fill it in (it starts at Basic Info)")
+    finish; exit 0
+  fi
+fi
+
 # ── 8 ─────────────────────────────────────────────────────────────────────
 stage "Store page: basic info"
 if ! already_done DONE_BASIC; then
