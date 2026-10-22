@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // A Chrome window on Steamworks that Claude can read, so it can tell you what
-// to click. You log in and click; the tool only reads the page, outlines an
-// element, and (when asked) types into a field. It never clicks or submits.
+// to click. You log in and save; the tool reads the page, outlines an element,
+// types into fields and clicks through wizard steps. It never clicks a save,
+// submit, publish, upload or delete: those stay with you.
 //
 //   node tools/steam_browser.cjs start           open the window (its own profile)
 //   node tools/steam_browser.cjs read            the visible tab: headings, fields, buttons, numbered
 //   node tools/steam_browser.cjs show <n|text>   outline element n (or the first with that text) in red
 //   node tools/steam_browser.cjs fill <n> <val>  type into field n, pick an option, or tick a box, Steam's too (not saved)
+//   node tools/steam_browser.cjs click <n>       click item n (wizard steps, tag buttons; never a save)
 //   node tools/steam_browser.cjs shot [file]     screenshot of the visible tab
 //   node tools/steam_browser.cjs goto <url>      open a URL in the visible tab
 //
@@ -35,7 +37,7 @@ async function page() {
   try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`); }
   catch (e) { console.error('The Steamworks window is not open. Run: node tools/steam_browser.cjs start'); process.exit(1); }
   const pages = browser.contexts().flatMap(c => c.pages()).filter(p => !p.url().startsWith('devtools://'));
-  for (const p of pages) {
+  for (const p of [...pages].reverse()) {   // newest first: a pop-up window opens beside the old one, both visible
     if (await p.evaluate(() => document.visibilityState === 'visible').catch(() => false)) return p;
   }
   if (!pages.length) { console.error('No tab open.'); process.exit(1); }
@@ -67,7 +69,8 @@ function scan() {
   const els = document.querySelectorAll('input,select,textarea,button,a[href],[role=button],[onclick],.btn_medium,.btnv6_blue_hoverfade');
   const seen = new Set();
   for (const el of els) {
-    if (seen.has(el) || !vis(el)) continue;
+    const shownBy = el => el.id && /checkbox|radio/.test(el.type) && document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+    if (seen.has(el) || !(vis(el) || (shownBy(el) && vis(shownBy(el))))) continue;   // hidden box, visible label
     seen.add(el);
     const tag = el.tagName.toLowerCase();
     const type = (el.type || '').toLowerCase();
@@ -169,10 +172,24 @@ async function main() {
         if ((!!box.value && box.value !== '0') !== on) window.ToggleCheckbox(el.id);
       }, /^(on|yes|1|true)$/i.test(val));
     } else if (tag.startsWith('select')) await loc.selectOption({ label: val });
-    else if (/checkbox|radio/.test(tag)) await (/^(on|yes|1|true)$/i.test(val) ? loc.check() : loc.uncheck());
+    else if (/checkbox|radio/.test(tag)) {
+      const on = /^(on|yes|1|true)$/i.test(val);
+      // clicked in the page: Steam hides or covers some boxes, which a mouse click cannot reach
+      await loc.evaluate((el, on) => { if (el.checked !== on) el.click(); }, on);
+    }
     else await loc.fill(val);
     await p.evaluate(mark, `[data-uh="${n}"]`);
     console.log(`Filled item ${n}. Nothing is saved until you click the page's own save button.`);
+  } else if (cmd === 'click') {   // wizard steps and pickers; anything that saves stays with you
+    const loc = p.locator(`[data-uh="${args[0]}"]`);
+    if (!await loc.count()) { console.log('No item ' + args[0] + '; run read again.'); process.exit(0); }
+    const text = await loc.evaluate(el => (el.innerText || el.value || '').trim());
+    if (/save|submit|publish|upload|delete|remove|release|finish|confirm|pay|purchase/i.test(text)) {
+      console.log(`Not clicking "${text}": that one is yours to click.`); process.exit(0);
+    }
+    await loc.click();
+    await p.waitForTimeout(800);   // wizard steps swap in place; let the next one draw
+    console.log(`Clicked "${text.slice(0, 60)}".`);
   } else if (cmd === 'shot') {
     const f = args[0] || path.join(os.tmpdir(), 'steamworks.png');
     await p.screenshot({ path: f });
