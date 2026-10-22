@@ -325,7 +325,10 @@ if ! already_done DONE_FEE; then
   say "once the game earns 1,000 USD on Steam."
   warn "Your first game can be released at the earliest 30 days after this payment."
   open_url "https://partner.steamgames.com/steamdirect"
-  if confirm "Pay the 100 USD fee now?"; then
+  if confirm "Do you already have an unused app credit, or an unreleased app Valve lets you reuse?"; then
+    note "Then no new fee. In stage 7, create the app from the credit, or enter the old app's ID."
+    mark_done DONE_FEE
+  elif confirm "Pay the 100 USD fee now?"; then
     step "Follow the fee step in the Steamworks onboarding and pay."
     pause "Press Enter once the payment went through."
     ask_date STEAM_FEE_PAID "Date paid (YYYY-MM-DD, e.g. $(date +%F)):"
@@ -386,6 +389,7 @@ stage "Create the app"
 if ! already_done DONE_APP; then
   open_url "https://partner.steamgames.com/"
   step "On the Steamworks home page, create a new app with your Steam Direct credit."
+  note "Reusing an old unreleased app instead? Skip creating one and enter its App ID below."
   step "Name it: Underhum"
   step "You land on the app's page. Its address ends in /apps/landing/<number>: that number is the App ID."
   while :; do
