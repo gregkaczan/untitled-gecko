@@ -29,6 +29,25 @@ grid than the game's 4 px.
    below, and keep the layers apart: background, gecko, foreground and light,
    logo. One layered file (PSD, Aseprite or Krita) plus flat PNGs.
 
+## Files
+
+- **Key art:** a layered PSD (Krita and Aseprite both save one), at least
+  3840 x 2160, sRGB, 8 bits a channel, layers named. Plus a flat PNG of the
+  whole piece and a PNG of each main layer with transparency.
+- **Logo:** vector (SVG or PDF) if it is lettered as vector; otherwise a PNG
+  at least 2560 px wide. Transparent background. One light version for dark
+  art; a dark version too if easy.
+- **Pixel art:** the native-size PNG and the Aseprite file; no scaling on
+  export, the crops are scaled by whole steps afterwards.
+- Steam's uploads themselves are PNG or JPG at the exact capsule sizes; the
+  crops are made from these files, so the artist need not deliver them.
+
+## Rights
+
+The art is used on Steam, the game, trailers and other marketing. Agree on
+that in writing before work starts. Say whether any AI tool was used: Steam's
+content survey asks.
+
 ## The crops
 
 | Capsule | Pixels | Shape | Notes |
