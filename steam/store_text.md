@@ -33,7 +33,9 @@ in it.
 > drag a stone out of the way, or catch a glowing slug and swallow it.
 >
 > **Dig your own way.** Chew tunnels through soft rock. Bite into a sand bed
-> and watch it pour. Roll a boulder into a pit and walk across it.
+> and watch it pour. Roll a boulder into a pit and walk across it. Everything
+> you chew fills your stomach, and a full gut has to settle before you can bite
+> again.
 >
 > **A cave that answers back.** Moss you slip off, rock that crumbles under
 > your feet, gas pockets that burst, currents that carry you.
