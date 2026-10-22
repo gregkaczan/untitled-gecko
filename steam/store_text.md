@@ -27,6 +27,8 @@ in it.
 > not a backdrop: every grain of sand, every stone and every drop of water is a
 > particle that falls, flows and piles up.
 >
+> Somewhere far above, something hums.
+>
 > **Every surface is a floor.** Walk up walls and along the ceiling. Squeeze
 > your body through cracks barely wider than your head. Swim, and climb out
 > dripping.
