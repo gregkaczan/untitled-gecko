@@ -1,8 +1,8 @@
 # Underhum: Steam capsule art brief
 
 The minimum art for a public Coming Soon page on Steam: four store capsules.
-All four are crops of two pieces, so the job is a logo and one key art
-illustration, delivered in layers.
+They come from two pieces, a logo and one key art illustration, each capsule
+laid out by the artist for its own shape.
 
 ## The game
 
@@ -28,6 +28,11 @@ grid than the game's 4 px.
 2. **Key art.** The gecko in the cave. Paint it big enough for every crop
    below, and keep the layers apart: background, gecko, foreground and light,
    logo. One layered file (PSD, Aseprite or Krita) plus flat PNGs.
+3. **The four capsules** in the table below, at the exact sizes, each laid
+   out for its shape: the logo placed and sized per capsule, the scene
+   rearranged where a crop would not fit (the vertical one above all).
+   Checked at 100% and at the small sizes Steam shrinks them to.
+4. Later, before release, the library set in the same way (see below).
 
 ## Files
 
@@ -39,8 +44,8 @@ grid than the game's 4 px.
   art; a dark version too if easy.
 - **Pixel art:** the native-size PNG and the Aseprite file; no scaling on
   export, the crops are scaled by whole steps afterwards.
-- Steam's uploads themselves are PNG or JPG at the exact capsule sizes; the
-  crops are made from these files, so the artist need not deliver them.
+- **Capsules:** PNG at the exact pixel sizes in the table, sRGB, no
+  transparency. Steam takes PNG or JPG; PNG keeps the edges clean.
 
 ## Rights
 
@@ -58,8 +63,10 @@ content survey asks.
 | Vertical | 748 x 896 | 0.83 : 1 | Seasonal sales. Logo plus art. |
 
 A wide canvas of 3840 x 2160 or more, with the gecko near the middle and room
-above and below it, covers all four. It also covers the library art needed
-later before release (3840 x 1240 without text, 600 x 900 portrait, 920 x 430).
+above and below it, gives material for all four. The library set needed later
+before release: 3840 x 1240 without any text, keeping the middle 860 x 380
+clear for cropping; 600 x 900 portrait; 920 x 430; and the logo alone as a
+transparent PNG 1280 wide or 720 tall.
 
 ## Steam's rules for capsules
 
