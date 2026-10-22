@@ -6,7 +6,9 @@
 # Ctrl drags the whole pose. Frames of poses run along the top, each a
 # card drawn as the chain in small with its seconds: a click picks one
 # to edit, + adds a copy after it, - takes it away, < and > move it,
-# Play runs them blended in link space (pose_anim.gd), the slider
+# Play runs a spline through them in link space (pose_anim.gd): a
+# frame's tension 0 keeps the body moving through it, 1 stops it there,
+# and its bias carries the move on past (+) or turns it early (-). The slider
 # scrubs, Reverse previews the curl. The frames are kept under poses/
 # as versions with a head the game loads (PoseAnim): New, Load and Save
 # as the map editor's, an auto version a minute while there are edits.
@@ -77,6 +79,7 @@ const CHEAT := [
 		["slider", "scrubs; a click in the world edits again"],
 		["onion skin", "the frame before in blue, after in orange"]]],
 	["View", [
+		["H", "hides the handles, rings and links, the gecko as in the game"],
 		["wheel", "zoom about the cursor"],
 		["MMB drag", "pan; Home: back to the gecko"],
 		["Pixel grid", "1 px as the game, or 2 px like the rock"]]],
@@ -165,8 +168,9 @@ var _panel: PanelContainer
 var _name_label: Label
 var _frame_title: Label
 var _dur_spin: SpinBox
-var _ease_opt: OptionButton
-var _shut_c: CheckButton
+var _tension_spin: SpinBox
+var _bias_spin: SpinBox
+var _lid_spin: SpinBox
 var _lock_c: CheckButton
 var _onion_c: CheckButton
 var _zoom_label: Label
@@ -200,6 +204,10 @@ var _reverse := false
 var _speed := 1.0
 var _onion := true
 var _lock := true              # A dragged point pulls the chain after it
+var _spine_lock := false       # The spine (points 2 to 5) stays put: drags move the head and the tail only
+var _show_handles := true      # The handles, rings and links drawn and picked (H)
+var _handles_c: CheckButton
+var _legs_kept := true         # The feet stay within PoseAnim.LEG_MAX of their hips
 var _zoom := ZOOM_DEFAULT
 var _cam := BASE               # The world point shown in the middle of the free part of the screen
 var _panning := false
@@ -424,15 +432,44 @@ func _set_dur(v: float) -> void:
 	_changed()
 
 
-func _set_ease(e: String) -> void:
-	if String(_frame().ease) == e:
+func _set_tension(v: float) -> void:
+	if absf(float(_frame().tension) - v) < 0.0005:
 		return
 	_snapshot()
-	_frame().ease = e
+	_frame().tension = v
 	_changed()
 
 
-# The tools: the frame's pose replaced, its seconds and ease kept.
+func _set_bias(v: float) -> void:
+	if absf(float(_frame().get("bias", 0.0)) - v) < 0.0005:
+		return
+	_snapshot()
+	_frame().bias = v
+	_changed()
+
+
+func _set_lid(v: float) -> void:
+	if absf(float(_frame().get("lid", PoseAnim.LID_OPEN)) - v) < 0.0005:
+		return
+	_snapshot()
+	_frame().lid = v
+	_changed()
+
+
+# The selected frame's tension and bias on every frame.
+func _flow_all() -> void:
+	var f := _frame()
+	_snapshot()
+	for g in _frames:
+		g.tension = f.tension
+		g.bias = f.get("bias", 0.0)
+	_mark()
+	_rebuild_cards()
+	_show_pose()
+	say("tension %.2f, bias %.2f on all %d frames" % [float(f.tension), float(f.get("bias", 0.0)), _frames.size()])
+
+
+# The tools: the frame's pose replaced, its seconds, tension and bias kept.
 func _tool(what: String) -> void:
 	var f := _frame()
 	_snapshot()
@@ -559,7 +596,7 @@ func _to_local(w: Vector2) -> Vector2:
 
 # The handle under a world point: {kind, i}, or empty.
 func _pick(m: Vector2) -> Dictionary:
-	if _frames.is_empty():
+	if _frames.is_empty() or not _show_handles:
 		return {}
 	var f := _frame()
 	var best := {}
@@ -631,7 +668,11 @@ func _drag_to(m: Vector2, shift: bool) -> void:
 		_drag_armed = false
 	match _drag_kind:
 		"point":
-			if shift or not _lock:
+			if _spine_lock and _drag_i >= 1 and _drag_i <= PoseAnim.SPINE_LAST:
+				say("the spine is locked (Handles)")
+			elif _spine_lock and not shift and _lock:
+				PoseAnim.follow_locked(f, _drag_i, local)
+			elif shift or not _lock:
 				var pts: PackedVector2Array = f.points
 				pts[_drag_i] = local
 				f.points = pts
@@ -655,7 +696,17 @@ func _drag_to(m: Vector2, shift: bool) -> void:
 		"body":
 			PoseAnim.moved(f, local - _drag_last)
 			_drag_last = local
+	if _legs_kept:
+		PoseAnim.keep_legs(f)
 	_changed()
+
+
+func _set_show_handles(on: bool) -> void:
+	_show_handles = on
+	_handles_c.set_pressed_no_signal(on)
+	_hover = {}
+	_overlay.queue_redraw()
+	say("handles shown" if on else "handles hidden (H shows them)")
 
 
 func _end_drag() -> void:
@@ -701,7 +752,7 @@ func _draw_overlay() -> void:
 		var h := 4.0 if x % 50 == 0 else 2.0
 		c.draw_line(BASE + Vector2(x, 0.0), BASE + Vector2(x, h), TICK_COL, w)
 	c.draw_line(BASE + Vector2(0.0, 0.0), BASE + Vector2(0.0, -80.0), TICK_COL, w)
-	if _frames.is_empty() or _shown.is_empty():
+	if _frames.is_empty() or _shown.is_empty() or not _show_handles:
 		return
 	if _onion and _handles_on:
 		if _sel > 0:
@@ -725,6 +776,8 @@ func _draw_overlay() -> void:
 	var hr := 5.0 * w
 	for i in wp.size():
 		var col := HIP_COL if (i == Gecko.FRONT_HIP or i == Gecko.BACK_HIP) else HANDLE_COL
+		if _spine_lock and i >= 1 and i <= PoseAnim.SPINE_LAST:
+			col = Color(col, 0.3)
 		if _is(_hover, "point", i):
 			col = DRAG_COL if _drag_kind != "" else HOVER_COL
 		c.draw_circle(wp[i], hr * (1.3 if _is(_hover, "point", i) else 1.0), col)
@@ -734,6 +787,8 @@ func _draw_overlay() -> void:
 		var col := FOOT_COL
 		if _is(_hover, "foot", k):
 			col = DRAG_COL if _drag_kind != "" else HOVER_COL
+			if _legs_kept:
+				c.draw_arc(wp[PoseAnim.hip_of(k)], PoseAnim.LEG_MAX, 0.0, TAU, 48, Color(FOOT_COL, 0.4), w)
 		c.draw_rect(Rect2(fw - Vector2(hr, hr), Vector2(hr, hr) * 2.0), col)
 	var eye: Vector2 = _shown.get("eye", PoseAnim.eye_for(look))
 	var ew := head + eye
@@ -855,6 +910,8 @@ func _input(event: InputEvent) -> void:
 			_add_frame()
 		KEY_M:
 			_tool("mirror")
+		KEY_H:
+			_set_show_handles(not _show_handles)
 		KEY_HOME:
 			_home()
 		KEY_Z:
@@ -1025,8 +1082,9 @@ func _refresh_frame_card() -> void:
 	var f := _frame()
 	_frame_title.text = "Frame %d of %d" % [_sel + 1, _frames.size()]
 	_dur_spin.set_value_no_signal(float(f.dur))
-	_ease_opt.select(PoseAnim.EASES.find(String(f.ease)))
-	_shut_c.set_pressed_no_signal(bool(f.get("shut", false)))
+	_tension_spin.set_value_no_signal(float(f.tension))
+	_bias_spin.set_value_no_signal(float(f.get("bias", 0.0)))
+	_lid_spin.set_value_no_signal(float(f.get("lid", PoseAnim.LID_OPEN)))
 
 
 # --- Building the panel ---
@@ -1082,26 +1140,12 @@ func _build_panel() -> void:
 	_dur_spin.add_theme_font_size_override("font_size", 12)
 	_dur_spin.value_changed.connect(_set_dur)
 	drow.add_child(_dur_spin)
-	var erow := HBoxContainer.new()
-	erow.add_theme_constant_override("separation", 8)
-	fc.add_child(erow)
-	var el := _label("Ease into the next", 11, DIM)
-	el.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	erow.add_child(el)
-	_ease_opt = OptionButton.new()
-	for e in PoseAnim.EASES:
-		_ease_opt.add_item(String(e))
-	_ease_opt.focus_mode = Control.FOCUS_NONE
-	_ease_opt.add_theme_font_size_override("font_size", 12)
-	_ease_opt.item_selected.connect(func(i: int) -> void: _set_ease(String(PoseAnim.EASES[i])))
-	erow.add_child(_ease_opt)
-	_shut_c = _check("Eye shut (asleep)", false)
-	_shut_c.toggled.connect(func(on: bool) -> void:
-		if bool(_frame().get("shut", false)) != on:
-			_snapshot()
-			_frame().shut = on
-			_changed())
-	fc.add_child(_shut_c)
+	_tension_spin = _spin_row(fc, "Tension: 0 moves through, 1 stops", 0.0, 1.0, 0.05, _set_tension)
+	_bias_spin = _spin_row(fc, "Bias: + carries on past, - turns early", -1.0, 1.0, 0.05, _set_bias)
+	var all_b := _button("Tension and bias to all frames", _flow_all)
+	all_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fc.add_child(all_b)
+	_lid_spin = _spin_row(fc, "Eye open: 0 shut (asleep), 1 open", 0.0, 1.0, 0.1, _set_lid)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 4)
@@ -1120,6 +1164,19 @@ func _build_panel() -> void:
 	_lock_c = _check("A dragged point pulls the chain (Shift: alone)", true)
 	_lock_c.toggled.connect(func(on: bool) -> void: _lock = on)
 	hc.add_child(_lock_c)
+	_handles_c = _check("Show handles (H)", true)
+	_handles_c.toggled.connect(_set_show_handles)
+	hc.add_child(_handles_c)
+	var spine_c := _check("Spine locked: only the head and the tail move", false)
+	spine_c.toggled.connect(func(on: bool) -> void:
+		_spine_lock = on
+		_overlay.queue_redraw())
+	hc.add_child(spine_c)
+	var legs_c := _check("Legs keep their reach (%d px from the hip)" % int(PoseAnim.LEG_MAX), true)
+	legs_c.toggled.connect(func(on: bool) -> void:
+		_legs_kept = on
+		_overlay.queue_redraw())
+	hc.add_child(legs_c)
 	_onion_c = _check("Onion skin: before blue, after orange", true)
 	_onion_c.toggled.connect(func(on: bool) -> void:
 		_onion = on
@@ -1264,6 +1321,26 @@ func _check(text: String, on: bool) -> CheckButton:
 	c.focus_mode = Control.FOCUS_NONE
 	c.add_theme_font_size_override("font_size", 11)
 	return c
+
+
+# A label and a spin box in a row of the box, the box returned.
+func _spin_row(box: Control, text: String, lo: float, hi: float, step: float, on_change: Callable) -> SpinBox:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	box.add_child(row)
+	var l := _label(text, 11, DIM)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	row.add_child(l)
+	var spin := SpinBox.new()
+	spin.min_value = lo
+	spin.max_value = hi
+	spin.step = step
+	spin.custom_minimum_size = Vector2(90.0, 0.0)
+	spin.add_theme_font_size_override("font_size", 12)
+	spin.value_changed.connect(on_change)
+	row.add_child(spin)
+	return spin
 
 
 func _button(text: String, on_pressed: Callable) -> Button:

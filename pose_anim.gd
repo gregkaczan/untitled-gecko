@@ -3,11 +3,17 @@
 # frame: the surface line at y = 0, up along -y, the walk's facing along
 # +x; the eye as an offset from the head (EYE_MAX at most: on the head's
 # disc), riding with the look (EYE_LOOK along it, a pixel up) until the
-# editor places it by hand; with the seconds to the next frame, an ease
-# and whether the eye is shut (asleep). Playback blends
-# frame to frame in link space, each link's angle and length (lerp_angle),
-# so a curled body unrolls through a blend instead of shrinking through
-# it as blended points would; the head and the feet blend as points. A
+# editor places it by hand; with the seconds to the next frame, a
+# tension and a bias, and how far the eye is open (lid: 0 shut to a
+# line a pixel high, 1 the open disc, the pixels between a lid half
+# down; a file's old shut flag reads as 0 or 1). Playback
+# runs a spline through the frames in link space, each link's angle and
+# length, so a curled body unrolls instead of shrinking as blended
+# points would; the head, the feet, the look and the eye run on the same
+# spline as points. The spline is a Kochanek-Bartels one: the body keeps
+# its speed through a frame of tension 0 and stops on a frame of tension
+# 1 (the old smooth ease); a bias above 0 carries the move on past the
+# frame, below 0 turns it early. A
 # link that turns more than FOLD_ANGLE between two frames (a tail tucked
 # forward along the flank, laid out behind in the next) is pulled
 # through instead of swung round: its length shrinks to nothing and
@@ -26,13 +32,20 @@ const DIR := "res://poses/"
 const WAKE := "wake"
 const N_POINTS := 10
 const N_FEET := 4
-const EASES := ["smooth", "linear", "in", "out"]
 const DUR_DEFAULT := 0.3
+const TENSION_DEFAULT := 0.0   # A new frame: the body moves through it
+const TENSION_OLD := 1.0       # A frame from before tensions (all smooth eases): the body stops on it
 const AUTOSAVE_KEEP := 10
 const FOOT_DRAWN_Y := -4.5     # A standing foot as drawn: FOOT_LIFT over its anchor on the surface line
 const EYE_LOOK := 3.5          # The eye's place along the look when it rides with it (gecko.gd _face)
 const EYE_UP := Vector2(0.0, -1.0)   # and a pixel up
 const EYE_MAX := 5.0           # Farthest the eye's centre may sit from the head's (its 4 px disc stays on the 7 px head)
+const LID_OPEN := 1.0
+const SPINE_LAST := 4          # The rump: points 1 to 4 are the spine the editor's lock holds still
+const STEP_LIFT := 3.0         # Most a foot lifts stepping along the floor between two frames
+const STEP_FLOOR := -5.0       # A foot drawn lower than this (y down) stands on the floor
+const LEG_MAX := 18.0          # Farthest a foot as drawn sits from its hip in the editor (the standing pose's legs are 15.3)
+const SHORT_LINK := 0.25      # A link under this part of its length at the other frame runs as a vector, never turning
 const FOLD_ANGLE := 2.6        # Radians (150 degrees) a link turns between two frames beyond which it is pulled through, not swung
 # The gecko at rest on a floor, read off a settled run (the suite's
 # flat:idle trace): the head 15 px ahead of the body centre and 18 up,
@@ -44,13 +57,13 @@ const STANDING_FEET := [[18.0, -4.5], [16.0, -4.5], [-22.0, -4.5], [-18.0, -4.5]
 
 
 static func standing() -> Dictionary:
-	return from_json_frame({"points": STANDING_POINTS, "feet": STANDING_FEET, "look": [1.0, 0.0], "dur": DUR_DEFAULT, "ease": "smooth"})
+	return from_json_frame({"points": STANDING_POINTS, "feet": STANDING_FEET, "look": [1.0, 0.0], "dur": DUR_DEFAULT, "tension": TENSION_DEFAULT, "lid": LID_OPEN})
 
 
 static func dup(f: Dictionary) -> Dictionary:
 	var pts: PackedVector2Array = f.points
 	var feet: PackedVector2Array = f.feet
-	return {"points": pts.duplicate(), "feet": feet.duplicate(), "look": f.look, "eye": f.get("eye", eye_for(f.look)), "eye_free": f.get("eye_free", false), "dur": f.dur, "ease": f.ease, "shut": f.get("shut", false)}
+	return {"points": pts.duplicate(), "feet": feet.duplicate(), "look": f.look, "eye": f.get("eye", eye_for(f.look)), "eye_free": f.get("eye_free", false), "dur": f.dur, "tension": f.tension, "bias": f.get("bias", 0.0), "lid": f.get("lid", LID_OPEN)}
 
 
 # Where the eye sits when it rides with the look.
@@ -72,9 +85,9 @@ static func total(frames: Array) -> float:
 	return t
 
 
-# The pose t seconds in: frame i blends to frame i + 1 over frame i's
-# seconds; the last frame holds for its seconds, or looping blends back
-# to the first. Past the end, the last frame.
+# The pose t seconds in: the spline from frame i to frame i + 1 over
+# frame i's seconds; the last frame holds for its seconds, or looping
+# runs on to the first. Past the end, the last frame.
 static func sample(frames: Array, t: float, loop := false) -> Dictionary:
 	var n := frames.size()
 	if n == 0:
@@ -90,7 +103,7 @@ static func sample(frames: Array, t: float, loop := false) -> Dictionary:
 			if i == n - 1 and not loop:
 				return dup(frames[i])
 			var k := clampf(t / d, 0.0, 1.0) if d > 0.0 else 1.0
-			return blend(frames[i], frames[(i + 1) % n], eased(k, String(frames[i].ease)))
+			return between(frames, i, k, loop)
 		t -= d
 	return dup(frames[n - 1])
 
@@ -105,55 +118,133 @@ static func frame_at(frames: Array, t: float) -> int:
 	return frames.size() - 1
 
 
-static func eased(k: float, ease: String) -> float:
-	match ease:
-		"linear":
-			return k
-		"in":
-			return k * k
-		"out":
-			return 1.0 - (1.0 - k) * (1.0 - k)
-	return k * k * (3.0 - 2.0 * k)
+# Frame i toward the next by k (0 to 1 of frame i's seconds) on the
+# spline. Each value v runs as a cubic Hermite curve from frame a to
+# frame b, its slope at either end set from the chords to the frames
+# around: v = v_a + c_in * (v_a - v_prev) + c_ab * (v_b - v_a) + c_out
+# * (v_next - v_b). Without a frame before (the start, not looping) or
+# after (the end) the slope there is nil: the body sets off from rest
+# and comes to rest. The slopes are scaled by the seconds on either
+# side, so the speed carries through a frame where a long blend meets a
+# short one. A link that folds between a and b (turns past FOLD_ANGLE),
+# or is all but gone at one end, runs as a vector instead, through
+# nothing along one line; chords across those carry no turn. A
+# foot on the floor at a and at b that moves steps (STEP_LIFT).
+static func between(frames: Array, i: int, k: float, loop := false) -> Dictionary:
+	var n := frames.size()
+	var a: Dictionary = frames[i]
+	var b: Dictionary = frames[(i + 1) % n]
+	var ip := i - 1 if i > 0 else (n - 1 if loop else -1)
+	var inx := i + 2 if i + 2 < n else ((i + 2) % n if loop else -1)
+	var p: Dictionary = frames[ip] if ip >= 0 else a
+	var q: Dictionary = frames[inx] if inx >= 0 else b
+	var d_ab := float(a.dur)
+	var w_in := 0.0
+	var w_a := 0.0
+	var w_b := 0.0
+	var w_out := 0.0
+	if ip >= 0:
+		var d_in := float(p.dur)
+		var f := 2.0 * d_ab / (d_in + d_ab) if d_in + d_ab > 0.0 else 0.0
+		var ta := 1.0 - float(a.tension)
+		var ba := float(a.get("bias", 0.0))
+		w_in = f * ta * (1.0 + ba) * 0.5
+		w_a = f * ta * (1.0 - ba) * 0.5
+	if inx >= 0:
+		var d_out := float(b.dur)
+		var f := 2.0 * d_ab / (d_ab + d_out) if d_ab + d_out > 0.0 else 0.0
+		var tb := 1.0 - float(b.tension)
+		var bb := float(b.get("bias", 0.0))
+		w_b = f * tb * (1.0 + bb) * 0.5
+		w_out = f * tb * (1.0 - bb) * 0.5
+	var k2 := k * k
+	var k3 := k2 * k
+	var h01 := 3.0 * k2 - 2.0 * k3
+	var h10 := k3 - 2.0 * k2 + k
+	var h11 := k3 - k2
+	var c_in := h10 * w_in
+	var c_ab := h01 + h10 * w_a + h11 * w_b
+	var c_out := h11 * w_out
 
-
-# a toward b by k, the chain in link space.
-static func blend(a: Dictionary, b: Dictionary, k: float) -> Dictionary:
 	var out := dup(a)
+	var pp: PackedVector2Array = p.points
 	var pa: PackedVector2Array = a.points
 	var pb: PackedVector2Array = b.points
+	var pq: PackedVector2Array = q.points
 	var pts := PackedVector2Array()
 	pts.resize(pa.size())
-	pts[0] = pa[0].lerp(pb[0], k)
-	for i in range(1, pa.size()):
-		var va := pa[i] - pa[i - 1]
-		var vb := pb[i] - pb[i - 1]
+	pts[0] = _low(pa[0] + (pa[0] - pp[0]) * c_in + (pb[0] - pa[0]) * c_ab + (pq[0] - pb[0]) * c_out, pa[0], pb[0])
+	for j in range(1, pa.size()):
+		var vp := pp[j] - pp[j - 1]
+		var va := pa[j] - pa[j - 1]
+		var vb := pb[j] - pb[j - 1]
+		var vq := pq[j] - pq[j - 1]
 		var turn := angle_difference(va.angle(), vb.angle())
-		var ang: float
-		var len := lerpf(va.length(), vb.length(), k)
-		if absf(turn) > FOLD_ANGLE:
+		var long := maxf(va.length(), vb.length())
+		if absf(turn) > FOLD_ANGLE or minf(va.length(), vb.length()) < SHORT_LINK * long:
 			# Pulled through: seen from the side, a link swinging round
-			# sideways shortens to nothing and comes back the other way.
-			ang = va.angle() if k < 0.5 else vb.angle()
-			len *= absf(cos(PI * k))
-		else:
-			ang = va.angle() + turn * k
-		pts[i] = pts[i - 1] + Vector2.from_angle(ang) * len
+			# sideways shortens to nothing and comes back the other way;
+			# or a link all but gone at one end (mid-fold), with no
+			# direction there worth turning from. The link runs as a
+			# vector on the spline, through nothing along one line, its
+			# speed carried through the frames like the rest.
+			var v := va + (va - vp) * c_in + (vb - va) * c_ab + (vq - vb) * c_out
+			pts[j] = pts[j - 1] + v.limit_length(long)
+			continue
+		var t_in := angle_difference(vp.angle(), va.angle())
+		var t_out := angle_difference(vb.angle(), vq.angle())
+		var l_in := va.length() - vp.length()
+		var l_out := vq.length() - vb.length()
+		# A chord across a fold, or from a link all but gone, has no
+		# turn to carry.
+		if absf(t_in) > FOLD_ANGLE or vp.length() < SHORT_LINK * va.length():
+			t_in = 0.0
+			l_in = 0.0
+		if absf(t_out) > FOLD_ANGLE or vq.length() < SHORT_LINK * vb.length():
+			t_out = 0.0
+			l_out = 0.0
+		var ang := va.angle() + t_in * c_in + turn * c_ab + t_out * c_out
+		var len := va.length() + l_in * c_in + (vb.length() - va.length()) * c_ab + l_out * c_out
+		# A link never longer or shorter than at either end.
+		len = clampf(len, minf(va.length(), vb.length()), long)
+		pts[j] = pts[j - 1] + Vector2.from_angle(ang) * len
 	out.points = pts
+	var fp: PackedVector2Array = p.feet
 	var fa: PackedVector2Array = a.feet
 	var fb: PackedVector2Array = b.feet
+	var fq: PackedVector2Array = q.feet
 	var feet := PackedVector2Array()
 	feet.resize(fa.size())
-	for i in fa.size():
-		feet[i] = fa[i].lerp(fb[i], k)
+	for j in fa.size():
+		feet[j] = _low(fa[j] + (fa[j] - fp[j]) * c_in + (fb[j] - fa[j]) * c_ab + (fq[j] - fb[j]) * c_out, fa[j], fb[j])
+		# A foot standing on the floor at both frames that moves between
+		# them steps: it lifts on the way instead of sliding.
+		var stride := absf(fb[j].x - fa[j].x)
+		if fa[j].y > STEP_FLOOR and fb[j].y > STEP_FLOOR and stride > 1.0:
+			feet[j].y -= minf(STEP_LIFT, stride * 0.5) * sin(PI * k)
 	out.feet = feet
+	var lp: Vector2 = p.look
 	var la: Vector2 = a.look
 	var lb: Vector2 = b.look
-	out.look = Vector2.from_angle(lerp_angle(la.angle(), lb.angle(), k))
+	var lq: Vector2 = q.look
+	out.look = Vector2.from_angle(la.angle() + angle_difference(lp.angle(), la.angle()) * c_in + angle_difference(la.angle(), lb.angle()) * c_ab + angle_difference(lb.angle(), lq.angle()) * c_out)
+	var ep: Vector2 = p.get("eye", eye_for(lp))
 	var ea: Vector2 = a.get("eye", eye_for(la))
 	var eb: Vector2 = b.get("eye", eye_for(lb))
-	out.eye = ea.lerp(eb, k)
-	out.shut = a.get("shut", false) if k < 0.5 else b.get("shut", false)
+	var eq: Vector2 = q.get("eye", eye_for(lq))
+	out.eye = (ea + (ea - ep) * c_in + (eb - ea) * c_ab + (eq - eb) * c_out).limit_length(EYE_MAX)
+	var dp := float(p.get("lid", LID_OPEN))
+	var da := float(a.get("lid", LID_OPEN))
+	var db := float(b.get("lid", LID_OPEN))
+	var dq := float(q.get("lid", LID_OPEN))
+	out.lid = clampf(da + (da - dp) * c_in + (db - da) * c_ab + (dq - db) * c_out, 0.0, 1.0)
 	return out
+
+
+# A point on the spline kept from dipping below both its ends (y down):
+# an overshoot never puts the head or a foot into the floor.
+static func _low(v: Vector2, a: Vector2, b: Vector2) -> Vector2:
+	return Vector2(v.x, minf(v.y, maxf(a.y, b.y)))
 
 
 # --- The gecko's frame ---
@@ -205,6 +296,66 @@ static func follow(f: Dictionary, i: int, to: Vector2) -> void:
 		var d := pts[j] - pts[j + 1]
 		pts[j] = pts[j + 1] + (d.normalized() if d.length() > 0.001 else Vector2.RIGHT) * lens[j + 1]
 	f.points = pts
+
+
+# The drag with the spine locked: points 1 to SPINE_LAST stay. The head
+# swings round the neck; a tail point bends the tail between the rump
+# and it (FABRIK, the rump held), the points past it following like a
+# rope. False for a spine point, which does not move.
+static func follow_locked(f: Dictionary, i: int, to: Vector2) -> bool:
+	if i >= 1 and i <= SPINE_LAST:
+		return false
+	var src: PackedVector2Array = f.points
+	var pts := src.duplicate()
+	var n := pts.size()
+	var lens := PackedFloat32Array()
+	lens.resize(n)
+	for j in range(1, n):
+		lens[j] = pts[j].distance_to(pts[j - 1])
+	if i == 0:
+		var d := to - pts[1]
+		pts[0] = pts[1] + (d.normalized() if d.length() > 0.001 else Vector2.RIGHT) * lens[1]
+		f.points = pts
+		return true
+	var root := pts[SPINE_LAST]
+	var reach := 0.0
+	for j in range(SPINE_LAST + 1, i + 1):
+		reach += lens[j]
+	if root.distance_to(to) >= reach:
+		var dir := (to - root).normalized()
+		for j in range(SPINE_LAST + 1, i + 1):
+			pts[j] = pts[j - 1] + dir * lens[j]
+	else:
+		for it in 12:
+			pts[i] = to
+			for j in range(i - 1, SPINE_LAST, -1):
+				var d := pts[j] - pts[j + 1]
+				pts[j] = pts[j + 1] + (d.normalized() if d.length() > 0.001 else Vector2.LEFT) * lens[j + 1]
+			for j in range(SPINE_LAST + 1, i + 1):
+				var d := pts[j] - pts[j - 1]
+				pts[j] = pts[j - 1] + (d.normalized() if d.length() > 0.001 else Vector2.LEFT) * lens[j]
+	for j in range(i + 1, n):
+		var d := pts[j] - pts[j - 1]
+		pts[j] = pts[j - 1] + (d.normalized() if d.length() > 0.001 else Vector2.LEFT) * lens[j]
+	f.points = pts
+	return true
+
+
+# The hip a foot hangs from: the front feet the front hip's, the back
+# feet the back one's.
+static func hip_of(foot: int) -> int:
+	return 1 if foot < 2 else 3
+
+
+# Every foot pulled in to LEG_MAX of its hip.
+static func keep_legs(f: Dictionary) -> void:
+	var pts: PackedVector2Array = f.points
+	var src: PackedVector2Array = f.feet
+	var feet := src.duplicate()
+	for k in feet.size():
+		var hip := pts[hip_of(k)]
+		feet[k] = hip + (feet[k] - hip).limit_length(LEG_MAX)
+	f.feet = feet
 
 
 # Every link set to one length from the head back, each keeping its direction.
@@ -349,9 +500,6 @@ static func from_json_frame(d: Dictionary) -> Dictionary:
 		look = Vector2(float(lk[0]), float(lk[1]))
 	if look.length() < 0.001:
 		look = Vector2.RIGHT
-	var ease := String(d.get("ease", "smooth"))
-	if not EASES.has(ease):
-		ease = "smooth"
 	look = look.normalized()
 	var eye := eye_for(look)
 	var eye_free := false
@@ -359,7 +507,8 @@ static func from_json_frame(d: Dictionary) -> Dictionary:
 	if ey is Array and ey.size() >= 2:
 		eye = Vector2(float(ey[0]), float(ey[1])).limit_length(EYE_MAX)
 		eye_free = true
-	return {"points": pts, "feet": feet, "look": look, "eye": eye, "eye_free": eye_free, "dur": maxf(float(d.get("dur", DUR_DEFAULT)), 0.0), "ease": ease, "shut": bool(d.get("shut", false))}
+	var lid := float(d.get("lid", 0.0 if bool(d.get("shut", false)) else LID_OPEN))
+	return {"points": pts, "feet": feet, "look": look, "eye": eye, "eye_free": eye_free, "dur": maxf(float(d.get("dur", DUR_DEFAULT)), 0.0), "tension": clampf(float(d.get("tension", TENSION_OLD)), 0.0, 1.0), "bias": clampf(float(d.get("bias", 0.0)), -1.0, 1.0), "lid": clampf(lid, 0.0, 1.0)}
 
 
 static func to_json(frames: Array) -> Array:
@@ -372,7 +521,7 @@ static func to_json(frames: Array) -> Array:
 		for p in f.feet:
 			feet.append([snappedf(p.x, 0.01), snappedf(p.y, 0.01)])
 		var look: Vector2 = f.look
-		var item := {"points": pts, "feet": feet, "look": [snappedf(look.x, 0.001), snappedf(look.y, 0.001)], "dur": snappedf(float(f.dur), 0.001), "ease": f.ease, "shut": bool(f.get("shut", false))}
+		var item := {"points": pts, "feet": feet, "look": [snappedf(look.x, 0.001), snappedf(look.y, 0.001)], "dur": snappedf(float(f.dur), 0.001), "tension": snappedf(float(f.tension), 0.01), "bias": snappedf(float(f.get("bias", 0.0)), 0.01), "lid": snappedf(float(f.get("lid", LID_OPEN)), 0.01)}
 		if f.get("eye_free", false):
 			var eye: Vector2 = f.eye
 			item["eye"] = [snappedf(eye.x, 0.01), snappedf(eye.y, 0.01)]

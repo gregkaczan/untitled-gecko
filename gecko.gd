@@ -263,7 +263,7 @@ var _pose_done := false        # The end reached
 var _pose_base := Vector2.ZERO # The frame the poses are set in: the surface point under the body, its up and facing when the animation began
 var _pose_up := Vector2.UP
 var _pose_facing := 1.0
-var _pose_shut := false        # The pose shown has the eye shut (asleep)
+var _pose_lid := 1.0           # How far the pose shown has the eye open: 0 shut (asleep) to 1 (PoseAnim lid)
 var _pose_eye := Vector2.ZERO  # The pose's eye as a world offset from the head (a pose places it; otherwise it rides with the look)
 var _pose_eye_on := false
 var jump_override := false
@@ -3241,7 +3241,8 @@ func _leg_blobs(list: Array, side: float, color: Color) -> void:
 # drawn over the body by the layer itself so they are as crisp as its
 # pixels: the eye, a black disc 4 px across a cell below the head's rim, and what
 # the idle animation adds. A blink or a lick shuts the eye to a 4 by 2
-# line on its lower side. A yawn lifts the snout, drops a jaw blob
+# line on its lower side. A pose's lid draws the eye as its lower 1 to 3
+# rows (asleep a 4 by 1 line) until it is open. A yawn lifts the snout, drops a jaw blob
 # (added to list) below it and opens the dark inside of the mouth
 # between them, the eye shut while it gapes. A lick runs the tongue
 # from the mouth round the snout's tip to the eye and back.
@@ -3251,7 +3252,7 @@ func _face(list: Array) -> Array:
 	var ax := _axis(up)
 	var across := ax.abs()
 	var along := Vector2.ONE - across
-	var shut := _pose_shut   # A pose asleep: the eye shut as in a blink
+	var shut := false
 	var gape := 0.0
 	var lick := 0.0
 	var ph := _anim_phase()
@@ -3283,8 +3284,12 @@ func _face(list: Array) -> Array:
 		var h := minf(gape, CHEW_MOUTH) if chew else gape
 		var size := along * 6.0 + across * (h + 1.0)
 		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
-	if shut:
-		marks.append([eye - ax - along * 2.0 - across, along * 4.0 + across * 2.0, EYE_COLOR])
+	# Rows of the eye showing under the lid, from its lower side: a
+	# blink's 2, a pose's lid 1 to 4 (4 the whole disc).
+	var rows := 2 if shut else 1 + roundi(clampf(_pose_lid, 0.0, 1.0) * 3.0)
+	if rows < 4:
+		var h := float(rows)
+		marks.append([eye - ax * (2.0 - h * 0.5) - across * (h * 0.5) - along * 2.0, along * 4.0 + across * h, EYE_COLOR])
 	else:
 		marks.append([eye + Vector2(-2.0, -2.0), 4.0, EYE_COLOR, true])
 	if lick > 0.0:
@@ -3423,7 +3428,7 @@ func stop_pose() -> void:
 		return
 	posing = false
 	_pose_done = false
-	_pose_shut = false
+	_pose_lid = 1.0
 	_pose_eye_on = false
 	_path.clear()
 	_fold_at = -1
@@ -3483,7 +3488,7 @@ func pose_apply(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float
 		f.planted = true
 		f.stepping = false
 	look = PoseAnim.dir_to_world(p.look, up_dir, facing_dir)
-	_pose_shut = bool(p.get("shut", false))
+	_pose_lid = float(p.get("lid", 1.0))
 	_pose_eye = PoseAnim.vec_to_world(p.get("eye", PoseAnim.eye_for(p.look)), up_dir, facing_dir)
 	_pose_eye_on = true
 

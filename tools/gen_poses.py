@@ -64,11 +64,11 @@ def blend(a, b, k):
     return {"points": pts, "feet": feet, "look": [math.cos(ang), math.sin(ang)]}
 
 
-def frame(points, feet, look, dur, ease="smooth", shut=False):
+def frame(points, feet, look, dur, tension=1.0, shut=False):
     L = math.hypot(*look) or 1.0
     return {"points": [[round(x, 2), round(y, 2)] for x, y in points],
             "feet": [[round(x, 2), round(y, 2)] for x, y in feet],
-            "look": [round(look[0] / L, 3), round(look[1] / L, 3)], "dur": dur, "ease": ease, "shut": shut}
+            "look": [round(look[0] / L, 3), round(look[1] / L, 3)], "dur": dur, "tension": tension, "shut": shut}
 
 
 def report(name, frames):
