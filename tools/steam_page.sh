@@ -418,7 +418,7 @@ if ! already_done DONE_BASIC; then
   step "Click 'Edit Store Page', then the Basic Info tab."
   step "Developer and publisher: $(_existing STEAM_DEVELOPER || true)"
   step "Genres: Indie, Adventure, Casual. Tags: see steam/store_text.md (up to 20)."
-  step "Supported OS: Windows and macOS (build.sh builds those two)."
+  step "Supported OS: Windows and SteamOS + Linux. Add macOS only once a Mac build is tested."
   step "Languages: English, interface. Controller support: none (the game needs a mouse)."
   note "Fields marked * must be filled before review. Save the tab."
   pause "Press Enter once Basic Info is saved."

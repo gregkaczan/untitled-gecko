@@ -42,7 +42,7 @@ in it.
 
 - Genres: Indie, Adventure, Casual.
 - Developer and publisher: your name or studio name.
-- Supported OS: Windows and macOS. `build.sh` builds those two; Linux is off.
+- Supported OS: Windows and SteamOS + Linux. The game is made and tested on Linux; turn `BUILD_LINUX` on in `build.sh`. Add macOS only once a Mac build is tested.
 - Languages: English, interface only. There is no voice.
 - Controller support: none. The game needs a mouse for the tongue and the chew.
 
