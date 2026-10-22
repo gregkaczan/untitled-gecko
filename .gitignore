@@ -7,3 +7,6 @@ __pycache__/
 # The level cells PNGs are read as files, not resources: Godot's import sidecars for them are noise.
 levels/*.import
 levels/**/*.import
+
+# Steam capture frames: large, kept out of git.
+/steam/capture/
