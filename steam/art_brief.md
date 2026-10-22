@@ -12,6 +12,14 @@ rock, swings on its tongue and squeezes through cracks. Glowing slugs and
 mushrooms light the dark. The game is pixel art: one art pixel is 4 screen
 pixels.
 
+## Style
+
+Open: painted, hand drawn or pixel art. It need not match the game's pixels.
+It should feel like the same world: a dark cave, green glow from slugs and
+mushrooms, the gecko's slim body and long tail, falling sand. A hand-drawn
+piece reads better at Steam's small sizes; pixel art should then use a finer
+grid than the game's 4 px.
+
 ## Deliverables
 
 1. **Logo.** The word "Underhum", one capital U. Transparent background.
