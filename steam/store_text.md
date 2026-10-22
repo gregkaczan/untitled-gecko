@@ -12,17 +12,18 @@ Underhum
 
 Steam shows this under the header capsule. Keep it under 300 characters.
 
-> A small gecko in a cave where every grain is simulated. Climb walls and
-> ceilings, chew through rock, swing on your tongue and squeeze through cracks
-> while sand pours, boulders roll and water finds its way down.
+> A cave gecko with a chameleon's tongue and a mole's knack for digging. Climb
+> walls and ceilings, grapple across gaps and chew through rock in a cave where
+> every grain of sand, stone and drop of water is simulated.
 
 ## About this game
 
 Paste into the Description tab. Valve does not allow links to other websites
 in it.
 
-> You are a gecko, newly hatched in the dark. The cave around you is not a
-> backdrop: every grain of sand, every stone and every drop of water is a
+> You are a cave gecko, newly hatched in the dark: sticky feet, a chameleon's
+> tongue, and jaws that chew through rock like a mole. The cave around you is
+> not a backdrop: every grain of sand, every stone and every drop of water is a
 > particle that falls, flows and piles up.
 >
 > **Every surface is a floor.** Walk up walls and along the ceiling. Squeeze
