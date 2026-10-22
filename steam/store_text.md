@@ -14,7 +14,8 @@ Steam shows this under the header capsule. Keep it under 300 characters.
 
 > A cave gecko with a chameleon's tongue and a mole's knack for digging. Climb
 > walls and ceilings, grapple across gaps and chew through rock in a cave where
-> every grain of sand, stone and drop of water is simulated.
+> every grain of sand, stone and drop of water is simulated, and make your way
+> up toward the mysterious hum.
 
 ## About this game
 
