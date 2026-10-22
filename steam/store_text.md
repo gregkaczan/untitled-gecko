@@ -48,11 +48,27 @@ in it.
 
 ## Tags
 
-Suggestions. Steam lets you pick up to 20 from its own list:
+In order: Steam weighs the first tags most. Up to 20, picked from Steam's own list.
 
-Exploration, 2D, Pixel Graphics, Physics, Destruction, Atmospheric, Cute,
-Underground, Singleplayer, Indie, Sandbox, Relaxing, Casual, Adventure,
-Nature, Cozy, Puzzle Platformer.
+1. Exploration
+2. Physics
+3. Cute
+4. Atmospheric
+5. Pixel Graphics
+6. 2D Platformer
+7. Destruction
+8. Underground
+9. Nature
+10. Relaxing
+11. Singleplayer
+12. 2D
+13. Adventure
+14. Casual
+15. Indie
+16. Sandbox
+17. Climbing, if Steam's list has it
+18. Swimming, if Steam's list has it
+19. Procedural Generation, only if the shipped caves are generated
 
 ## Content survey: generative AI
 
