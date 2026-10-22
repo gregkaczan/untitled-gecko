@@ -244,6 +244,8 @@ spec = [
     ("library_header.png", 920, 430, False),
     ("library_hero.png", 3840, 1240, False),
     ("library_logo.png", 0, 0, False),
+    ("app_icon.jpg", 184, 184, False),
+    ("shortcut_icon.png", 256, 256, False),
 ]
 bad = 0
 for name, w, h, needed in spec:
