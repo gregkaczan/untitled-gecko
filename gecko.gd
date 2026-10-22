@@ -18,6 +18,9 @@ signal ticked                  # The end of a physics tick: body, chain and blob
 # Events for the sounds and the ambience (sound.gd, ambience.gd).
 signal stepped(at: Vector2, front: bool)   # A foot planted at the end of a step: where, and whether a front foot
 signal bit(at: Vector2)        # A bite landed there
+signal chewed(at: Vector2, radius: float)   # A bite is about to take the rock in this circle (main.gd feeds the gut from it)
+signal ate(area: float, glow: bool)         # A lump of this many world px² went down, or a slug (glow)
+signal spawned                 # Put down at the start of a cave
 signal swallowed               # A piece went down
 signal tongue_shot             # The tongue left the mouth
 signal tongue_hit(at: Vector2) # The tip met something solid (stuck or struck)
@@ -184,6 +187,7 @@ const PUSH_TRIES := 30         # Ticks of shoving a lump that does not move befo
 const PEBBLE_CELLS := 24       # A lump of this many cells or fewer is stepped over, not shoved
 const BRACE_BACK := 5.0        # Snout drawn back while the gecko strains on its tongue
 const GULP_TIME := 0.5         # Seconds a swallowed piece takes to travel down the body
+const SLUG_AREA := 60.0        # World px² a swallowed slug fills the gut with
 const EAT_OPEN := 0.09         # Seconds the mouth takes to open for a piece coming in
 const EAT_AGAPE := 0.1         # Seconds it stays open after the swallow
 const EAT_CLOSE := 0.07        # Seconds it takes to close
@@ -297,6 +301,7 @@ var extra_blobs: Array = []    # Blobs drawn with the body's by the blob layer: 
 var jump_boost := Vector2.ZERO # Added to a jump made this tick: a shroom's cap springing under the feet (critters.gd sets it before the tick)
 var in_slime := false          # Slime about the body this tick: the walk and the jump are held back
 var glow_boost := 0.0          # Seconds left of the brighter glow a swallowed slug gives (main.gd reads it)
+var gut_full := false          # The gut has no room (gut.gd sets it): the jaw works but takes no bite
 var glow_snuff := 0.0          # Seconds left with the glow out after a gas burst
 var _heat := 0.0               # Seconds a foot has been on hot rock
 var _crumble_load := 0.0       # Seconds a foot has been on crumbling rock
@@ -471,6 +476,7 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 		f.up = up
 	_face_ticks = 0
 	_release_settle()
+	spawned.emit()
 
 
 var tick_us := 0               # The last tick's time in microseconds, for GECKO_TIMING (main.gd) and the fps readout
@@ -715,15 +721,20 @@ func _chew(dir: Vector2) -> void:
 	var play := CHEW_R - BODY_R - 1.0
 	var h := clampf((base + up * (CHEW_R + 3.0) - pos).dot(up), -play, play)
 	_bite = pos + up * h + dir * CHEW_REACH
+	if gut_full:
+		return
 	# Each bite lands a little off and a little different in size, so a
 	# tunnel comes out ragged like something chewed, not drilled.
 	var jitter := Vector2(randf_range(-3.0, 3.0), randf_range(-3.0, 3.0))
-	map.erase_circle(_bite + jitter, randf_range(CHEW_R - 2.5, CHEW_R + 0.5))
+	var r := randf_range(CHEW_R - 2.5, CHEW_R + 0.5)
+	chewed.emit(_bite + jitter, r)
+	map.erase_circle(_bite + jitter, r)
 	bit.emit(_bite)
 	# Wedged against its own tunnel's wall, where the bite ahead cannot
 	# reach back to a ragged bit at the shoulder: a bite round the body
 	# itself frees it.
 	if map.solid_within(pos + dir * 2.0, BODY_R):
+		chewed.emit(pos + dir * 3.0, BODY_R + 2.0)
 		map.erase_circle(pos + dir * 3.0, BODY_R + 2.0)
 
 
@@ -1376,6 +1387,7 @@ func gulp_slug() -> void:
 	_agape = EAT_AGAPE
 	glow_boost = 20.0
 	swallowed.emit()
+	ate.emit(SLUG_AREA, true)
 
 
 # Letting go: the tip flies back to the mouth before the tongue is gone.
@@ -1474,6 +1486,7 @@ func _hold_tongue() -> void:
 				map.eat_chunk(tongue_chunk, mouth, EAT_R)
 				_gulp = GULP_TIME
 				swallowed.emit()
+				ate.emit(piece.size() * 4.0, false)   # The sim's cells are 2 px
 				_agape = EAT_AGAPE
 				_release_tongue()
 				return

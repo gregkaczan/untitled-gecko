@@ -1164,6 +1164,60 @@ gas sealed beside the way, glowshroom flesh in the nooks, the decor
 brush run along the floors, ceilings and walls, cones, columns, vines,
 lumps, a slug and lights of every kind and shape.
 
+## The gut
+
+The gut (`gut.gd`) is always on screen at the bottom left, over the
+fps line: a soft stomach the chewed rock goes into. It is the first
+cost on chewing (the design doc's core loop: height is what the player
+wins and loses, and chewing straight up must cost more than finding a
+way).
+
+- A bite about to land emits `chewed(at, radius)` (gecko.gd) before the
+  erase. main.gd `_feed_gut` counts the cells it will take: solid in
+  the world now, their kind from the baked terrain (a solid cell the
+  terrain has as open is grains or a lump that moved there: sand if
+  loose, else rock), bedrock none, hard rock HARD_GIVE of its cells,
+  as the bite itself. The gut gets the area per kind.
+- A swallowed lump or slug emits `ate(area, glow)`: stone grey, or a
+  pale green slug that digests fast.
+- The area goes into the gut at AREA_SCALE (a full bite, radius 12, is
+  about 45 gut px²), split into pieces of PIECE_MIN to PIECE_MAX that
+  run down the gullet as bulges (GULP) and drop in at the throat one
+  after another.
+- Pieces are discs to the physics (gravity, bounces off each other and
+  the wall) and jagged polygons to the eye, in the material's colour
+  (rock lighter than in the world so it reads on the lining). In the
+  acid at the bottom they are lighter and slowed, and digest faster.
+  Each loses DIGEST (out of the acid) or ACID_DIGEST (in it) gut px² a
+  second, times its material's rate (sand and clay 1.5, hard rock 0.5,
+  copper 0.7, shroom and moss 3), and is gone under GONE.
+- The wall is a ring of N_WALL points, each sprung to its rest place
+  (a bean: an ellipse with the top left pressed in) and to its
+  neighbours; pieces push it out and it wobbles back, and it squeezes
+  in a slow wave while there is anything to digest. The throat point
+  is pinned.
+- The gecko's change of speed, from its moves, pulls the pieces the
+  other way (SHAKE, capped at SHAKE_MAX a tick): a jump and a landing
+  slosh them.
+- Full is the pieces' and the gullet's area at CAP_FILL of the rest
+  shape's. A full gut sets `gut_full` on the gecko and `_chew` takes no
+  bite (the jaw still works). Only a hand-played gecko is held back:
+  the suite's scripted digs run as they were tuned. The membrane
+  reddens over the last fifth.
+- Drawn on a 60 by 56 viewport shown at SCALE 4, a world art pixel at
+  the camera's zoom. Its own RNG, so the suite's seeding holds. A
+  spawn (R) empties it.
+
+As tuned: full after 14 bites of chewing straight on (about 6 s), room
+for the next bite 3.4 s after the last, empty after 38 s.
+`godot --headless --path . -s tests/gut_test.gd` checks that and,
+every tick through jumps and landings, that no piece is outside the
+wall, the wall is whole and nothing is NaN.
+
+Not built: spit (how it picks what comes out is open), weight (a heavy
+gut slowing the walk and losing the ceiling), ore digesting into a
+mutation.
+
 ## Controls
 
 WASD or arrows move, Space jumps, E or Shift chews. In a passage low

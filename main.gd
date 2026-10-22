@@ -64,6 +64,7 @@ const BlobLayer = preload("res://blob_layer.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const PoseAnim = preload("res://pose_anim.gd")
+const Gut = preload("res://gut.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
 const LEVEL := "cave5"         # The main cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0); cave 5 as edited (levels/cave5.json) for now, the clutch before
@@ -196,6 +197,7 @@ var _t_sim: Array[int] = []
 var _t_gecko: Array[int] = []
 var _t_render: Array[int] = []
 var _fps_label: Label           # Bottom left, always on: fps, the frame, the gecko's tick and the sim's tick in ms, each with its worst over the last half second (the player's frame drops)
+var _gut: Gut                   # Bottom left, always on: the stomach the chewed rock drops into (gut.gd)
 var _fps_t := 0.0               # Seconds since the readout was last refreshed
 var _frame_peak := 0.0          # Worst frame (ms) since then
 var _gecko_us := 0
@@ -329,6 +331,14 @@ func _ready() -> void:
 	_fps_label.add_theme_font_size_override("font_size", 16)
 	_fps_label.modulate = Color(1.0, 0.95, 0.7)
 	hud.add_child(_fps_label)
+	_gut = Gut.new()
+	_gut.position = Vector2(12.0, 964.0 - Gut.VIEW.y * Gut.SCALE)
+	_gut.gecko = gecko
+	_gut.process_mode = Node.PROCESS_MODE_PAUSABLE
+	hud.add_child(_gut)
+	gecko.chewed.connect(_feed_gut)
+	gecko.ate.connect(func(area: float, glow: bool) -> void: _gut.feed_lump(area, glow))
+	gecko.spawned.connect(_gut.clear)
 	# The panel keeps working while the world is paused: this node runs
 	# always and guards its own ticks, the world's nodes pause.
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -941,6 +951,32 @@ func _rebuild_world() -> void:
 
 # Where the gecko starts: the editor's spawn, the scene's, or the
 # generated cave's.
+# A bite about to land: the gut gets what it will take, by kind. The sim
+# says only whether a cell is solid; what it is comes from the baked
+# terrain, and a solid cell the terrain has as open is grains or a lump
+# that moved there. Bedrock gives nothing and hard rock HARD_GIVE of its
+# cells, as the bite does.
+func _feed_gut(at: Vector2, radius: float) -> void:
+	var step := CaveMap.CELL_FULL
+	var reach := radius + CaveMap.CARVE_PAD
+	var n := int(ceil(reach / step))
+	var counts := {}
+	for j in range(-n, n + 1):
+		for i in range(-n, n + 1):
+			var p := at + Vector2(i, j) * step
+			if p.distance_to(at) >= reach or not map.is_solid_world(p):
+				continue
+			var k: int = _baked._kind_world(p) if _baked else CaveMap.CELL_ROCK
+			if k == CaveMap.CELL_BEDROCK:
+				continue
+			if k == CaveMap.CELL_AIR or k == CaveMap.CELL_WATER or k == CaveMap.CELL_LAVA or k == CaveMap.CELL_GAS:
+				k = CaveMap.CELL_SAND if map.loose_at_world(p) else CaveMap.CELL_ROCK
+			var w := CaveMap.HARD_GIVE if k == CaveMap.CELL_HARD else 1.0
+			counts[k] = counts.get(k, 0.0) + w
+	for k in counts:
+		_gut.feed(k, counts[k] * step * step)
+
+
 func _spawn_at() -> Vector2:
 	if _edit_spawn != Vector2.INF:
 		return _edit_spawn
