@@ -131,7 +131,18 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   and each point's offset is whatever puts it where the airborne body
   left it, so the body settles onto its lay in a quarter second instead
   of being laid between the head and the base in one tick; in a passage
-  a point is centred and thinned as before. Until 2026-10-21 the body was re-laid every tick
+  a point is centred and thinned as before. Where the track itself runs
+  out into the open, with no rock within 20 px past a point's radius
+  (behind a perch on a crumb of rock, a wall's edge over open water),
+  the point hangs from the one before instead, its link turned toward
+  world down by at most 0.35 rad, and is only kept out of the clearance
+  of rock it hangs past: before 2026-10-22 a gecko perched on a crumb's
+  corner kept the straight landing track, tilted up with the frame, and
+  its tail stood up in the air for as long as it sat there. The hang is
+  decided from the track point, not the sagged one (decided from the
+  sagged one, a point at the edge of a crumb's reach hung one tick and
+  sagged at the crumb the next, a 2 px rattle). The suite's
+  `crumb_perch_*` scenes land on crumbs 4 to 12 px across. Until 2026-10-21 the body was re-laid every tick
   from the head's heading, each link bent at most so far from the one
   before (1.0 radian, then 0.6 for a wider U that never knotted), and
   any jump in the heading re-laid the whole body in one tick: the head
@@ -581,8 +592,10 @@ opens another. Ctrl+Z and Ctrl+Y undo and redo, ? lists the keys.
 ## The first cave
 
 `levels/clutch.json` (written by `tools/gen_clutch.py`) is the first
-cave, reached with Shift+Tab (the game opens in a generated cave, seed
-5, `OPEN_SEED` in main.gd; 0 there opens on the clutch instead): one
+cave. For now Shift+Tab goes to cave 5 as edited (`levels/cave5.json`,
+main.gd `LEVEL`) instead; the clutch is in the scene list (the game
+opens in a generated cave, seed 5, `OPEN_SEED` in main.gd; 0 there
+opens on `LEVEL` instead): one
 world, the sim's whole 1920x1080 buffer, played from
 a sealed pocket at the bottom left to a crack of light at the top, in
 an S: the bottom band runs right, the middle band left, the top band
@@ -777,19 +790,36 @@ on the id) and are woken, and the piece falls as an ordinary lump,
 which can be shoved, dragged and swallowed. Bones are handed out until
 the next build (2048).
 
+- Decor mushrooms bend (particle world): every stamp of the mushroom
+  groups (`tests/scene_builder.gd` SHROOM_GROUPS: cluster, tall_a,
+  tall_b, shroom_s), a level's and one the editor lays, is made a
+  shroom (below) instead of cells that stand, each of a cluster's
+  mushrooms one of its own (the sprite's parts, `png_stamps` "parts":
+  the pixels that touch, corners too; `stamp` tags each cell it sets
+  with its pixel's part). The bake (`main.gd _bake_stamp`) plans each
+  as it stamps it (`critters.gd` plan_decor) and lifts its cells out of
+  what the sim is built from; `_dress_world` makes them. The baked map
+  keeps the cells, so the surfaces stamps find are as drawn, and the
+  bitmap world draws them standing. A part under 0.7 of its pixels set (laid
+  against rock) or with no stem stays decor.
 - Shroom (`shroom.gd`): `["shroom", x, y, size 1 to 10, variant]` on
   the floor under (x, y), drawn from the decor take `tall_b_0` (a broad
   cap on a long bent stem, `shroom.gd` SPRITE): sizes 1 to 5 at its own
   scale, 6 to 10 at twice it (the editor's stamp goes to 5;
-  `critters_lab` has a size 9); an odd variant mirrors it. Each pixel is a cell in its own colour (skin
+  `critters_lab` has a size 9); an odd variant mirrors it (a decor
+  stamp is drawn from its own sprite, on its own surface: floor,
+  ceiling or wall, growing off it). Each pixel is a cell in its own colour (skin
   bands 16 to 47, `sim.gd` SKIN_DECOR: the decor palette, glowing on
   the pale greens as the decor's shrooms do), drawn without the stone's
   grain and one particle to a cell (a lump's particle also fills the
   cells round it; on a sprite that fattened the outline and spread the
   pale spots); a gap a bend opens between neighbours is filled from the
   cell halfway to each bonded particle, below a particle's own cell, so
-  no black dots show and the outline does not grow. The rig: the cap is the rows from the lowest one about
-  as wide as the widest up; the stem's centre on each row under it,
+  no black dots show and the outline does not grow. The rig (`plan`,
+  from the cells and the way the shroom grows): the cap is the rows
+  from the lowest one past the first two that is three cells wider than
+  the row under it or three quarters of the widest, out (an outlined
+  stem is most of a small cap's width); the stem's centre on each row under it,
   smoothed, is cut into six equal links, the chain's rest pose, so a
   bent stem rests bent; a cell under the cap goes to the link nearest
   it. Each joint is a damped spring back to its rest; the stem squashes along its length
@@ -945,11 +975,47 @@ beside it, and under them the stamps: a stalactite, a stalagmite, a
 vine, a thorn bush and a slug); lights (five colours, three shapes,
 the radius and strength as dials); the file (the level's name and
 version, New, Load, Save). Undo and redo sit in the header (Ctrl+Z,
-Ctrl+Y). The left button paints or lays, the right erases (and drops
-the decor and lights it covers). Esc drops the pick; ? shows the cheat
+Ctrl+Y). The left button paints or lays; the right erases to air with
+a paint, and takes away the stamp, run or light under it with decor,
+a stamp or a light picked. Esc drops the pick; ? shows the cheat
 sheet of all of it. The wheel is the tool's dial (the brush, the
 variant, a light's radius) and Ctrl+wheel zooms. Status lines show as
 a toast over the world.
+
+Terrain and entries: a level is its terrain (the paints, the cells
+png of a save, `main.gd _author`) and lists of entries: decor (a
+stamp, a dripstone cone, a run the brush laid), lumps and critters,
+slugs, lights. Nothing but a paint goes into the terrain. The live
+world is the terrain with the entries baked on (`_bake`: each stamped
+in order on what the ones before left, into `_baked`), so a stamp can
+be moved, changed or taken away at any time. A run is one entry, the
+path the cursor took and the brush's seed, laid again by the brush at
+every bake: moved, it is laid along the moved path; on changed ground
+it refits. A paint stroke that touches an entry's box bakes the world
+again at its end, so the entry finds its surface anew. Tab in makes
+the live world again from the level, whatever the play did to it
+(bites, settled water, burst gas); Tab out makes it again once more
+when the editor changed anything, so the play starts on the level as
+edited, the gecko where it stood (at the spawn if the ground is back
+over it). R in a scene with unsaved edits does the same instead of
+loading the file. A level saved before the split has its stamps in
+the cells png: a load drops every decor cell from the terrain, and the
+"decor" list is what comes back.
+
+The hand: the Tools card's Select (V or Esc, nothing picked), every entry shows its box,
+corners only, the one under the cursor whole with a tag naming it. A
+press takes it and a drag moves it, laid where it is let go: a stamp
+or a cone finds its surface from the moved point (a stamp laid on the
+nearest surface takes the nearest there), a critter or a lump moves
+its point. The wheel changes the one taken (or under the cursor): the
+next variant of a stamp's group in the same role, another pick of a
+run's rules (its seed), a cone's or a shroom's shape, a light's radius
+(Shift: strength). Up and down size it (a cone, a vine, a shroom, a
+slime, a long slug, a lump, the thorn bush small or big), H mirrors a
+stamp or turns a run's random mirroring on or off, Del or the right
+button takes it away. Each change is a stroke of its own for undo, and
+the world is baked again after it (`sim.gd` rewrites only the rows of
+particles whose cells changed, about 70 ms in all for the showcase).
 
 The ghost: whatever is picked rides the cursor, drawn at half alpha
 where a click would set it (`main.gd edit_ghost`): a decor stamp on
@@ -999,7 +1065,7 @@ length). The light picked is seeded at the cursor before the click, so
 the world shows it; the wheel sets the radius (4 to 64 px) and
 Shift+wheel the strength (0.2 to 2, a factor on the colour: past 1 the
 seed saturates and reaches further). The right button takes the
-nearest light away; air painted over one takes it too. Every light is
+nearest light away. Every light is
 drawn as a mark in its colour while the editor is open: a ring, a
 segment with rings, a wedge. They go in the level file's "lights" list
 as [x, y, kind, radius, strength, shape, x2, y2] ([x, y, kind] still
@@ -1011,11 +1077,10 @@ first, then the slugs', then the level's. The white moss glows on its
 own: its light grey and white (`GLOW_GROUPS`) are laid as glowing
 decor cells, so its spikes read in the dark.
 
-Undo: a stroke (button down to up) is one step, a copy of the authored
-cells and the editor's lists before it (40 kept); undo puts the cells
-back and rebuilds the live world from them (the sim's particles made
-anew, the vines, slugs and exit set again), the gecko staying where it
-is.
+Undo: a stroke (button down to up) is one step, a copy of the terrain
+and the editor's lists before it (40 kept); undo puts them back and
+bakes the live world again (the sim's particles made anew, the vines,
+slugs and exit set again), the gecko staying where it is.
 
 Files: a level the editor works on lives as versions,
 `levels/<name>/vNNNN.json` with `vNNNN.cells.png` beside it (one pixel
@@ -1036,7 +1101,7 @@ and the level's versions on the right, the latest first and
 preselected. A star after the name in the header marks strokes since
 the last saved version; the file card shows the version and how long
 ago it was written. R restarts the scene in hand, a loaded level
-included. `GECKO_EDIT=1` opens the editor at start;
+included (with unsaved edits, the level in hand). `GECKO_EDIT=1` opens the editor at start;
 `GECKO_EDIT_PICK=decor:<group> | stamp:<name> | light:<kind> | cheat:1
 | load:1` makes a pick for a recording.
 
@@ -1048,9 +1113,9 @@ back to the gecko at the game's zoom, as leaving the editor does.
 Every edit goes to the live world (the particle sim: a melt in the
 next tick and the fill spawned right after it, so the fill is not
 melted with the rest; a stamp's cells filled one by one; or the
-bitmap) and to an authoring cell map, the CPU map the sim was built
-from (a generated cave's as well, made on a CaveMap and handed to the
-sim), kept for this. The live world and the map agree to the cell: a
+bitmap) and to the level: a paint to the terrain, a CPU map (a
+generated cave's as well, made on a CaveMap and handed to the sim),
+the rest to the entries, baked as they are laid. The live world and the level agree to the cell: a
 paint of a kind melts CARVE_PAD less than a bite, so it takes exactly
 the circle it fills; the brush's melt takes static matter by where it
 sat at the tick's start (`pbd_delta.glsl`), not drawn into the hole by
@@ -1059,24 +1124,29 @@ static particles sit on their cells' centres (`sim.gd`); static
 matter's grain hangs on its cell, not its particle (`render_write.glsl`),
 so a cell painted, saved and loaded is drawn the same to the pixel; the
 backdrop's dripstone silhouettes are made again after every stroke
-that changed cells. A version's json is a base of its cells png and
+that changed the terrain or the decor. A version's json is a base of its cells png (the terrain alone) and
 one scene on it with the spawn, the exit, the vines and lumps, the
-slugs, the decor list and the lights; a generated cave writes its own
+slugs, the decor list (a stamp `[name, x, y, where, flags, anchor]`,
+a cone `{"cone", x, y, h, variant, size}`, a run `{"run": names, path,
+where, spacing, mirror, pin, seed}`, points on a quarter px so the
+json holds them exactly) and the lights; a generated cave writes its own
 spawn and the lumps it scattered, so a load of it starts where it
 started. Painted gas pockets are found from the cells. A play-test's
 bites and the game's own brush touch the live world only: a save
 holds the cells as authored. `GECKO_EDIT_TEST=1` runs a headless round
 trip: paint, stamps with sizes, a PNG stamp undone and redone, a cone
 light set and a point light removed, a saved and an auto version
-written, the latest loaded and compared. `tools/save_test.sh` runs
+written, the latest loaded and compared (the terrain and the baked
+map), a stamp moved and taken away. `tools/save_test.sh` runs
 `tests/save_test.gd` in the particle world on a virtual display (the
 GPU's Vulkan driver, `SAVE_ICD` for another): the generated cave
 edited through the editor's calls, paints of every kind, decor by the
 brush and set free, cones, a vine, a slug and lights of the three
 shapes, the view shot, the level saved and loaded, the view shot again
 and compared pixel for pixel outside what settles (water, lava, loose
-grains, lumps and vines, grown four cells), with the authored cells,
-the sim's static cells and the lists compared too; the shots and a
+grains, lumps and vines, grown four cells), with the terrain (and that
+it holds no decor cell), the baked map, the sim's static cells and the
+lists compared too; the shots and a
 diff land in `runs/save/`. `GECKO_PROBE=res://path.gd` runs any script
 inside the game with `main` set, as the test is run; `tests/look_probe.gd`
 with `GECKO_LOOK=<level>` shoots a level whole and in close-ups to
@@ -1144,7 +1214,7 @@ the tick is 0.9 ms. The squeeze itself adds about 0.3 ms a tick.
 
 `tools/critters_test.sh [case]` checks the chain critters in the
 particle world (it needs the GPU; a virtual display with the NVIDIA
-driver, three runs at a time, about two minutes): fifteen cases on
+driver, three runs at a time, about two minutes): sixteen cases on
 the `critters_lab` scene, each its own run of `tests/critters_test.gd`,
 which takes the keys and checks numbers: a shroom at rest (counted,
 anchored, still), a landing (the dip, no bounce after it, the settle,
@@ -1154,7 +1224,10 @@ cap, the cap coming back without flying past), a
 chewed cap, a cut stem (what stood above breaks into four or more
 lumps of their own, no sand, none ground, that fall; the stump still
 ground), a shroom weighted against a pillar (bent, whole,
-no cell in the rock, a slow lean, straight again), a vine's swing (out,
+no cell in the rock, a slow lean, straight again), the decor's
+mushrooms (each kind stamped by the editor a shroom, a cluster three,
+no standing cell left, one bending under a weight, cave 5's made on
+load), a vine's swing (out,
 followed by its cells, settling), its cut, the gecko's hang on it
 (held, its weight leaning it over 8 px, climbing, no tear while
 VINE_TEAR is off), a catch in flight (the rope swung away over 12 px,

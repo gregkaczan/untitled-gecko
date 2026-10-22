@@ -121,12 +121,17 @@ static func total_seconds(steps: Array) -> float:
 	return t
 
 
-static func build(map: Node2D, scene: Dictionary, bases: Dictionary) -> void:
+# The terrain of a scene on map. no_decor leaves the decor ops out: the
+# particle world keeps the terrain apart and stamps the decor on it as
+# entries the editor can move (main.gd _bake).
+static func build(map: Node2D, scene: Dictionary, bases: Dictionary, no_decor := false) -> void:
 	var ops: Array = []
 	if scene.has("base"):
 		ops.append_array(bases.get(scene.base, []))
 	ops.append_array(scene.get("terrain", []))
 	for op in ops:
+		if no_decor and String(op[0]) == "decor":
+			continue
 		_apply(map, op)
 	map.repaint_all()
 
@@ -376,7 +381,56 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 			cells.append(CaveMapScript.decor_kind(best, best in glow_cols))
 			if y == h - 1:
 				feet.append(x)
-	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img}
+	# Its parts: the pixels that touch, corners too (a cluster's single
+	# mushrooms, as tools/decor_split.py cuts them), a part a pixel, and
+	# the pixels in each.
+	var at := {}
+	for k in range(0, cells.size(), 3):
+		at[Vector2i(cells[k], cells[k + 1])] = k / 3
+	var parts := PackedInt32Array()
+	parts.resize(cells.size() / 3)
+	parts.fill(-1)
+	var part_n: Array = []
+	for k in parts.size():
+		if parts[k] >= 0:
+			continue
+		var id := part_n.size()
+		var n := 0
+		var q: Array = [k]
+		parts[k] = id
+		while not q.is_empty():
+			var i: int = q.pop_back()
+			n += 1
+			for dy in [-1, 0, 1]:
+				for dx in [-1, 0, 1]:
+					var j: int = at.get(Vector2i(cells[i * 3] + dx, cells[i * 3 + 1] + dy), -1)
+					if j >= 0 and parts[j] < 0:
+						parts[j] = id
+						q.append(j)
+		part_n.append(n)
+	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img, "parts": parts, "part_n": part_n}
+
+
+# The decor mushrooms (their groups): in the particle world each is a
+# shroom that bends (main.gd _sim_kinds, critters.gd plan_decor), not
+# cells that stand.
+const SHROOM_GROUPS := ["cluster", "tall_a", "tall_b", "shroom_s"]
+
+
+static func is_shroom_stamp(name: String) -> bool:
+	return png_stamps().has(name) and stamp_group(name) in SHROOM_GROUPS
+
+
+# The way a stamp on this surface grows off it, in cells (frame's up).
+static func frame_up(where: String) -> Vector2i:
+	match where:
+		"ceiling":
+			return Vector2i(0, 1)
+		"wall_right":
+			return Vector2i(-1, 0)
+		"wall_left":
+			return Vector2i(1, 0)
+	return Vector2i(0, -1)
 
 
 # A stamp's group: its name without the take number and the piece
@@ -518,7 +572,8 @@ static func stamp_rect(map: Node2D, name: String, at: Vector2, where: String) ->
 # a column with no surface that near is left out. A DECOR table is on
 # the 4 px grid: each entry fills a block of s by s cells on a finer
 # one, so a stamp keeps its size in px. Only air cells are set. Returns
-# the cells set, [x, y, kind] each.
+# the cells set, [x, y, kind] each (a PNG's with its pixel's part, a
+# fourth: one of a cluster's mushrooms, png_stamps "parts").
 const DRAPE := 3
 static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags := "") -> Array:
 	var out: Array = []
@@ -550,7 +605,7 @@ static func _stamp(map: Node2D, name: String, at: Vector2, where: String, flags 
 			var p: Vector2i = bases[px] + up_v * (h - py)
 			if not map.is_solid(p.x, p.y) and not map.is_water(p.x, p.y):
 				map.set_cell_world(Vector2((p.x + 0.5) * cell, (p.y + 0.5) * cell), cells[i + 2])
-				out.append([p.x, p.y, cells[i + 2]])
+				out.append([p.x, p.y, cells[i + 2], png.parts[i / 3]])
 		return out
 	if not DECOR.has(name):
 		push_error("unknown decor " + name)

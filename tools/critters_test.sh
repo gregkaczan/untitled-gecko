@@ -15,7 +15,7 @@ export GODOT="${GODOT:-$HOME/.local/bin/godot}"
 export CRIT_ICD="${CRIT_ICD:-/usr/share/vulkan/icd.d/nvidia_icd.json}"
 export ONSCREEN="${ONSCREEN:-0}"
 filter="${1:-.}"
-all="shroom_rest shroom_land shroom_boost shroom_chew shroom_cut shroom_rock vine_swing vine_cut vine_climb vine_catch slime_creep slime_bite slime_wade longslug perf"
+all="shroom_rest shroom_land shroom_boost shroom_chew shroom_cut shroom_rock decor vine_swing vine_cut vine_climb vine_catch slime_creep slime_bite slime_wade longslug perf"
 # shots is not part of the test: only when asked for by name.
 cases="$all"
 [[ "$filter" == shots ]] && cases=shots

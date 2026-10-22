@@ -523,6 +523,14 @@ for h in (64, 200, 440, 760):
         end=[700, 860, 1600, 1010] if h <= 200 else None,
         note="a block %d px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool" % h)
 
+# A rock crumb hanging in the open, a few px across, landed on from a
+# jump off the drop_64 block (2026-10-22: the user saw the tail stay up
+# in the air along the flight after a landing on one).
+for w, x in ((4, 820), (8, 816), (12, 812), (8, 790), (8, 850)):
+    add("crumb_perch_%d_%d" % (w, x), TALL + [["fill", 200, 896, 500, 64], ["fill", x, 868, w, w]], ["floor", 560, 856], ["leap_still"],
+        base="solid", state="cling",
+        note="a %d px crumb of rock in the air at x %d, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight" % (w, x))
+
 # 20. The chain critters (2026-10-21, particle world only): shrooms that
 # bend (skinned chunks driven by a spring chain), a vine that is a rope,
 # a slime (a material with a brain), a long slug. critters_lab is the

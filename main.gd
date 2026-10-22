@@ -1,7 +1,7 @@
 # Scene driver for the gecko game: a generated cave (seed OPEN_SEED)
 # built in the particle sim, or in the bitmap stand-in with
-# GECKO_WORLD=bitmap; the first cave (levels/clutch.json, the scene named
-# LEVEL, Shift+Tab) with its loose lumps and its exit, which pulls the
+# GECKO_WORLD=bitmap; the main cave (the scene named LEVEL, levels/cave5.json
+# for now, Shift+Tab) with its loose lumps and its exit, which pulls the
 # camera back over the whole cave when the gecko gets there; one gecko; a
 # mouse brush for carving (Ctrl+right erases, middle fills, wheel sizes),
 # R to start the cave again (a fresh chamber when in a generated one),
@@ -66,7 +66,7 @@ const DebugPanel = preload("res://debug_panel.gd")
 const PoseAnim = preload("res://pose_anim.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
-const LEVEL := "clutch"        # The first cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0)
+const LEVEL := "cave5"         # The main cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0); cave 5 as edited (levels/cave5.json) for now, the clutch before
 const OPEN_SEED := 5           # The game opens in the generated cave with this seed; 0 opens on LEVEL instead
 const OPEN_DEBUG := true       # A hand-played run (no GECKO_SCENE or GECKO_DEMO) starts in debug mode, as after F1
 const OPEN_OVERLAY := false    # The panel's Overlay check at the start: the gecko's overlay (up, probe, feet, bite)
@@ -227,7 +227,7 @@ var _editor: CanvasLayer        # editor.gd: the map editor's panel (Tab or F2)
 var _editing := false
 var _cam_grid := CAM_GRID       # The camera's grid, 1 / zoom: CAM_GRID at the game's zoom, finer or coarser once the editor zooms
 var _edit_cam := false          # The editor zoomed or panned: the camera stays put, no follow, until Home
-var _author: CaveMap            # The cells as authored: the bitmap map itself, or the CPU map the sim was built from, kept for the editor
+var _author: CaveMap            # The terrain as authored, the paints alone: the bitmap map itself, or a CPU map the sim's world is baked from (_bake), kept for the editor
 var _gen_spawn := Vector2.ZERO  # The generated cave's spawn (its flattest floor) and the lumps scattered on it, [kind, x, y, r] each: a save of the cave keeps them
 var _gen_lumps: Array = []
 var _fills: Array = []          # Editor paints waiting for the sim's erase to land: [p, r, kind]
@@ -292,6 +292,7 @@ func _ready() -> void:
 	add_child(_ghost)
 	if not sim:
 		_author = map
+		_baked = map
 	if sim:
 		_backdrop = Backdrop.new()
 		_backdrop.set_grid(CAM_GRID)
@@ -392,12 +393,7 @@ func _ready() -> void:
 		play_anim(OS.get_environment("GECKO_ANIM"))   # A look at an animation without a hand on the panel
 	if OS.get_environment("GECKO_EDIT") != "":
 		# Straight into the map editor (a look at its panel without a hand on Tab).
-		_editing = true
-		_editor.visible = true
-		_marks.visible = true
-		_ghost.visible = true
-		_editor.refresh()
-		_label.position.x = _editor.panel_width() + 12.0
+		_set_editing(true)
 	if OS.get_environment("GECKO_EDIT_TEST") != "":
 		# The editor's save and load, headless: paint, stamp, save, load,
 		# count the kinds, quit (tools and the memory notes).
@@ -436,22 +432,30 @@ func _reset() -> void:
 	_anim_stop()
 	critters.clear()
 	if not _scene.is_empty():
+		# The scene's lists are the level in hand: the editor moves and
+		# saves them.
+		_edit_lights = (_scene.get("lights", []) as Array).duplicate(true)
+		_edit_lumps = (_scene.get("lumps", []) as Array).duplicate(true)
+		_edit_slugs = (_scene.get("slugs", []) as Array).duplicate(true)
 		if sim:
-			# The scene is built on a CPU map and the particles are made
-			# from it, as the generated cave's are.
+			# The terrain is built on a CPU map, kept as the authoring map
+			# (what Save writes), and the particles are made from it with
+			# the decor baked on (_bake), as the generated cave's are.
 			var gen := CaveMap.new()
-			SceneBuilder.build(gen, _scene, _scene_bases)
-			map.build_cells(gen.solid)
-			_backdrop.build(gen.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
-			# Kept as the authoring map for the editor (what Save writes).
+			SceneBuilder.build(gen, _scene, _scene_bases, true)
+			_strip_decor(gen)
 			if _author and _author != map:
 				_author.free()
 			_author = gen
+			_build_seed = 0
+			_edit_decor = _decor_entries(SceneBuilder.ops_of(_scene, _scene_bases, "decor").map(func(op: Array) -> Array: return op.slice(1)))
+			_edit_decor.append_array(_decor_entries(_scene.get("decor", [])))
+			map.generate_cells(_build_seed, _bake())
+			_backdrop.build(_baked.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
 		else:
 			SceneBuilder.build(map, _scene, _scene_bases)
-		_edit_lights = (_scene.get("lights", []) as Array).duplicate(true)
+			_edit_decor = _decor_entries(_scene.get("decor", []))
 		_dress_world()
-		_edit_decor = _decor_entries(_scene.get("decor", []))
 		var sp := SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H)
 		gecko.spawn(sp.pos, sp.up)
 		_camera_home()
@@ -469,6 +473,10 @@ func _reset() -> void:
 	if sim and _demo_name in ["pull", "strike", "tongue"]:
 		_lab()
 		return
+	_edit_decor.clear()
+	_edit_lights.clear()
+	_edit_slugs.clear()
+	_relight()
 	if sim:
 		# The generated cave's cells on a CaveMap, kept as the authoring
 		# map, so the editor paints and saves a generated cave like a
@@ -479,6 +487,8 @@ func _reset() -> void:
 		if _author and _author != map:
 			_author.free()
 		_author = gen
+		_build_seed = seed_value
+		_bake()
 		if _backdrop:
 			_backdrop.build(gen.solid, CaveMap.W_FULL, CaveMap.H_FULL, seed_value)
 	else:
@@ -499,6 +509,9 @@ func _reset() -> void:
 			map.erase_circle(Vector2(spawn.x + 90.0, spawn.y + 6.0 + i * 8.0), 22.0 - i * 2.0)
 	if sim and _demo_name == "":
 		_scatter_chunks(spawn)
+	# The scattered lumps are the level's lumps now: the editor's rebuild
+	# spawns them again and Save writes them.
+	_edit_lumps = _gen_lumps.duplicate(true)
 	gecko.spawn(spawn - Vector2(0.0, Gecko.RIDE_H))
 	_cam_reset()
 
@@ -509,17 +522,13 @@ func _reset() -> void:
 # rebuild after an undo share it.
 func _dress_world() -> void:
 	critters.clear()
-	var lumps: Array = []
-	lumps.append_array(_scene.get("lumps", []))
-	lumps.append_array(_edit_lumps)
-	for c in SceneBuilder.spawn_lumps(map, {"lumps": lumps}):
+	for c in SceneBuilder.spawn_lumps(map, {"lumps": _edit_lumps}):
 		_add_critter(c)
+	for pl in _decor_plans:
+		critters.add_shroom_plan(pl)
 	_clear_slugs()
-	var slug_pts: Array = []
-	slug_pts.append_array(_scene.get("slugs", []))
-	slug_pts.append_array(_edit_slugs)
 	var k := 0
-	for at in SceneBuilder.slug_points({"slugs": slug_pts}):
+	for at in SceneBuilder.slug_points({"slugs": _edit_slugs}):
 		var s := Slug.new()
 		s.setup(map, at, 31 + k)
 		add_child(s)
@@ -703,8 +712,10 @@ func _edit_self_test() -> void:
 	var n2 := _count_kinds_from(CaveMap.CELL_DECOR)
 	print("EDIT: " + edit_redo())
 	var n3 := _count_kinds_from(CaveMap.CELL_DECOR)
-	print("EDIT: decor cells %d, after stamp %d, after undo %d, after redo %d, spot taken %s, entries %d" % [n0, n1, n2, n3, str(not placed), _edit_decor.size()])
-	var undo_ok := n0 == 0 and n1 > 100 and n2 == 0 and n3 == n1 and not placed and _edit_decor.size() == 3
+	print("EDIT: decor cells %d, after stamp %d, after undo %d, after redo %d, spot taken %s, entries %d, terrain decor %d" % [n0, n1, n2, n3, str(not placed), _edit_decor.size(), _count_kinds_from(CaveMap.CELL_DECOR, _author)])
+	# Stamped decor is in the baked map, never in the terrain; the
+	# entries: the cluster, two cones, the thorn bush, cluster_0.
+	var undo_ok := n0 == 0 and n1 > 100 and n2 == 0 and n3 == n1 and not placed and _edit_decor.size() == 5 and _count_kinds_from(CaveMap.CELL_DECOR, _author) == 0
 	print("EDIT: " + edit_spawn(Vector2(500.0, 780.0)))
 	print("EDIT: " + edit_exit(Rect2(1700.0, 700.0, 60.0, 60.0)))
 	print("EDIT: " + edit_light(Vector2(600.0, 500.0), Vector2(700.0, 560.0), "torch", 20.0, 1.2, "cone"))
@@ -717,7 +728,10 @@ func _edit_self_test() -> void:
 	var counts := {}
 	for v in _author.solid:
 		counts[v] = counts.get(v, 0) + 1
-	print("EDIT: kinds before load ", counts)
+	var baked := {}
+	for v in _baked.solid:
+		baked[v] = baked.get(v, 0) + 1
+	print("EDIT: kinds before load ", counts, " baked ", baked)
 	var versions := level_versions("edtest")
 	print("EDIT: versions ", versions.size(), " ", versions.map(func(v): return "v%d %s" % [v.n, v.kind]), " entries ", level_entries().size())
 	print("EDIT: " + load_version("edtest"))
@@ -725,17 +739,62 @@ func _edit_self_test() -> void:
 	var counts2 := {}
 	for v in _author.solid:
 		counts2[v] = counts2.get(v, 0) + 1
+	var baked2 := {}
+	for v in _baked.solid:
+		baked2[v] = baked2.get(v, 0) + 1
+	print("EDIT: baked after load ", baked2)
 	print("EDIT: kinds after load ", counts2, " gas pockets ", _gas.size(), " slugs ", _slugs.size(), " spawn ", gecko.pos, " exit ", _exit, " decor entries ", _edit_decor.size())
 	var lights_ok: bool = _edit_lights.size() == 1 and _lights.size() == 1 and _lights[0][2] < 0.0
 	print("EDIT: lights after load ", _edit_lights, " undo_ok ", undo_ok, " files_ok ", files_ok, " lights_ok ", lights_ok)
-	print("EDIT TEST " + ("OK" if counts == counts2 and undo_ok and _edit_decor.size() == 3 and files_ok and lights_ok else "DIFFERS"))
+	# A move and a removal: the stamp's cells go with it, the terrain stays.
+	var before := _count_kinds_from(CaveMap.CELL_DECOR)
+	var it := edit_item_at(Vector2(800.0, _edit_decor[4].rect.get_center().y))
+	print("EDIT: item at the cluster ", it, " ", edit_item_text(it))
+	print("EDIT: " + edit_move(it, Vector2(200.0, 0.0)))
+	var moved_x: float = _edit_decor[4].x
+	var moved_n := _count_kinds_from(CaveMap.CELL_DECOR)
+	var left := edit_item_at(Vector2(800.0, _edit_decor[4].rect.get_center().y))
+	var moved_ok: bool = absf(moved_x - 1000.0) < 0.01 and absi(moved_n - before) < 40 and left.is_empty()
+	print("EDIT: " + edit_remove({"list": "decor", "i": 4}))
+	var removed_ok: bool = _edit_decor.size() == 4 and _count_kinds_from(CaveMap.CELL_DECOR) < before - 100 and _author.solid == _undo[_undo.size() - 1].cells
+	print("EDIT: moved_ok ", moved_ok, " removed_ok ", removed_ok, " x ", moved_x, " decor ", before, " -> ", moved_n, " left at 800 ", left)
+	print("EDIT TEST " + ("OK" if counts == counts2 and baked == baked2 and undo_ok and moved_ok and removed_ok and _edit_decor.size() == 4 and files_ok and lights_ok else "DIFFERS"))
 	_remove_level_files("edtest")
 	get_tree().quit()
 
 
-func _count_kinds_from(kind: int) -> int:
+# The editor in or out. In: the live world made again from the level in
+# hand, whatever the play did to it, the entries with their handles.
+# Out: made again once more when the editor changed anything, so the
+# play starts on the level as edited, the gecko where it stood.
+func _set_editing(on: bool) -> void:
+	if on == _editing:
+		return
+	_editing = on
+	_editor.visible = on
+	_marks.visible = on
+	_ghost.visible = on
+	_label.position.x = (_editor.panel_width() + 12.0) if on else 12.0
+	if on:
+		_edits_at_open = _edits
+		_rebuild_world()
+		_editor.refresh()
+	else:
+		edit_ghost({})
+		edit_light_preview([])
+		edit_marks({}, {}, Vector2.ZERO)
+		if _edits != _edits_at_open:
+			_rebuild_world()
+		edit_home()
+
+
+var _edits := 0                # Strokes, undos and redos so far
+var _edits_at_open := 0        # _edits when the editor opened: what tells its close that something changed
+
+
+func _count_kinds_from(kind: int, m: CaveMap = null) -> int:
 	var n := 0
-	for v in _author.solid:
+	for v in (m if m else _baked).solid:
 		if v >= kind:
 			n += 1
 	return n
@@ -743,9 +802,20 @@ func _count_kinds_from(kind: int) -> int:
 
 # --- The editor's hands on the world (editor.gd) ---
 
-var _edit_lumps: Array = []     # Vines and lumps placed in the editor, for the saved level
-var _edit_slugs: Array = []
-var _edit_decor: Array = []     # The decor stamps placed, {name, x, y, where, flags, rect}: the brush keeps new ones clear of them, the level file lists them
+# The level in hand is the terrain (_author, the cells png of a save)
+# and these lists. The decor, the dripstone cones and the brush's runs
+# are entries baked on the terrain (_bake) into _baked, which the live
+# world is made from: never part of the terrain, so the editor can move
+# them, change them and take them away. Opening the editor makes the
+# live world again from the level (whatever the play did to it), and so
+# does leaving it after an edit, and an undo.
+var _edit_lumps: Array = []     # The lumps and the critters, [kind, x, y, size...] each (tests/scene_builder.gd spawn_lumps): the scene's on a reset, then the editor's
+var _edit_slugs: Array = []     # [x, y] each
+var _decor_plans: Array = []    # The decor mushrooms the particle world makes shrooms that bend (_bake_stamp), _dress_world makes them
+var _edit_decor: Array = []     # The entries baked on the terrain in order, each a Dictionary with a type: stamp {name, x, y, where, flags, anchor}, cone {name, x, y, h, variant}, run {names, path, where, spacing, mirror, pin, seed}; rects (what the bake set) and rect (their bounds) are the bake's
+var _baked: CaveMap             # The terrain with the entries baked on: the live world's cells, the surfaces new stamps find
+var _build_seed := 0            # The sim's seed for the particles (sim.gd build): the generated cave's, 0 for a scene
+var _stroke_area := Rect2()     # The ground a stroke painted, so its end can bake the entries on it again
 var _edit_lights: Array = []    # The lights, [x, y, kind] or [x, y, kind, radius, strength, shape, x2, y2] each (tests/scene_builder.gd light_point): the level's on a reset, then the editor's; the level file lists them
 var _lights: Array = []         # The same as the light pass takes them, [position, colour, radius, end]
 var _light_preview: Array = []  # The editor's light on the cursor before the click, in the light pass's form, empty for none
@@ -767,6 +837,7 @@ func edit_begin() -> void:
 	if _author == null or not _stroke.is_empty():
 		return
 	_stroke = _edit_state()
+	_stroke_area = Rect2()
 
 
 func edit_end() -> void:
@@ -776,11 +847,16 @@ func edit_end() -> void:
 	_stroke = {}
 	var now := _edit_state()
 	if _edit_changed(before, now):
-		if before.cells != now.cells and _backdrop:
-			# The dripstone silhouettes hang from the cells: made again
-			# now, so the view is what a load of these cells shows.
-			_backdrop.rebuild_near(_author.solid)
+		if before.cells != now.cells and sim and _entries_meet(_stroke_area.grow(8.0)):
+			# Ground painted under or over an entry: the world made
+			# again, so the entry finds its surface anew.
+			_rebuild_world()
+		elif (before.cells != now.cells or before.decor != now.decor) and _backdrop:
+			# The dripstone silhouettes hang from the baked cells, cones
+			# and all: made again now, so the view is what a load shows.
+			_backdrop.rebuild_near(_baked.solid)
 		_undo.append(before)
+		_edits += 1
 		while _undo.size() > UNDO_MAX:
 			_undo.pop_front()
 		_redo.clear()
@@ -804,6 +880,7 @@ func edit_undo() -> String:
 		return "nothing to undo"
 	_redo.append(_edit_state())
 	_edit_restore(_undo.pop_back())
+	_edits += 1
 	return "undone, %d left" % _undo.size()
 
 
@@ -812,6 +889,7 @@ func edit_redo() -> String:
 		return "nothing to redo"
 	_undo.append(_edit_state())
 	_edit_restore(_redo.pop_back())
+	_edits += 1
 	return "redone"
 
 
@@ -834,15 +912,169 @@ func _edit_restore(st: Dictionary) -> void:
 	_edit_spawn = st.spawn
 	_edit_exit = st.exit
 	_author.solid = st.cells.duplicate()
+	_rebuild_world()
+	_relight()
+	_dirty = true
+	_dirty_v = true
+
+
+# The live world made again from the level in hand: the terrain with
+# the entries baked on, the lumps, critters and slugs set again. The
+# editor's way in and out (Tab), an undo, a move, and a stroke that
+# painted ground under an entry. The gecko stays where it is unless the
+# ground is back over it, then it goes to the spawn.
+func _rebuild_world() -> void:
+	if _author == null:
+		return
 	_fills.clear()
 	if sim:
-		map.build_cells(_author.solid)
-		_backdrop.rebuild_near(_author.solid)
+		map.generate_cells(_build_seed, _bake())
+		if _backdrop:
+			_backdrop.rebuild_near(_baked.solid)
 	else:
 		_author.repaint_all()
 	_dress_world()
-	_dirty = true
-	_dirty_v = true
+	if _baked and _baked.solid_within(gecko.pos, 3.0):
+		gecko.spawn(_spawn_at(), Vector2.UP)
+		_cam_reset()
+
+
+# Where the gecko starts: the editor's spawn, the scene's, or the
+# generated cave's.
+func _spawn_at() -> Vector2:
+	if _edit_spawn != Vector2.INF:
+		return _edit_spawn
+	if not _scene.is_empty():
+		return SceneBuilder.spawn_point(map, _scene, Gecko.RIDE_H).pos
+	return _gen_spawn - Vector2(0.0, Gecko.RIDE_H)
+
+
+# The baked map made again: the terrain, then every entry stamped on it
+# in order, each finding its surface on what the ones before it left.
+# Returns the cells the particles are made from: the baked ones with
+# the decor mushrooms lifted out (each a shroom that bends, planned in
+# _decor_plans for _dress_world). The bitmap world has no bake: its map
+# is the authoring map and stamps go straight on it.
+func _bake() -> PackedByteArray:
+	_decor_plans = []
+	if not sim:
+		_baked = _author
+		return _author.solid
+	if _baked == null or _baked == _author:
+		_baked = CaveMap.new()
+	_baked.solid = _author.solid.duplicate()
+	for e in _edit_decor:
+		e.rects = []
+		e.rect = Rect2()
+	for e in _edit_decor:
+		_bake_entry(e, false)
+	var kinds := _baked.solid.duplicate()
+	for pl in _decor_plans:
+		for c in pl.cells:
+			kinds[c[1] * _baked.W + c[0]] = CaveMap.CELL_AIR
+	return kinds
+
+
+# One entry stamped on the baked map, its rects kept (the handles, the
+# brush's spacing). live: into the running world as well, the cells
+# filled after the next tick and the mushrooms made shrooms that bend
+# at once, as a click in the editor wants.
+func _bake_entry(e: Dictionary, live: bool) -> void:
+	e.rects = []
+	match String(e.type):
+		"cone":
+			var down: bool = e.name == "stalactite"
+			var p := Vector2(e.x, e.y)
+			var line: Vector2 = _baked.ceiling_above(p) if down else _baked.floor_below(p)
+			var h: float = e.h
+			SceneBuilder.cone(_baked, Vector2(p.x, line.y), h, down, int(e.variant))
+			if live and sim:
+				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down, int(e.variant))
+			e.rects.append(Rect2(p.x - h * 0.3, line.y if down else line.y - h, h * 0.6, h))
+		"run":
+			# The brush's run laid again along its path, with its seed:
+			# the same pieces on the same ground, refitted where the
+			# ground or the entries before it changed.
+			var path: Array = e.path
+			if path.is_empty():
+				return
+			var b := _run_brush(e, live)
+			b.begin(e.names, _v(path[0]), String(e.where))
+			for i in range(1, path.size()):
+				b.drag(_v(path[i]))
+			b.end(_v(path[path.size() - 1]))
+		_:
+			_bake_stamp(e, String(e.name), Vector2(e.x, e.y), String(e.where), String(e.flags), live)
+	var r := Rect2()
+	for rr in e.rects:
+		r = rr if r.size == Vector2.ZERO else r.merge(rr)
+	e.rect = r
+
+
+# A decor brush (decor_brush.gd) laying the run e on the baked map.
+func _run_brush(e: Dictionary, live: bool) -> RefCounted:
+	var b := DecorBrush.new()
+	b.map = _baked
+	b.place = func(name: String, at: Vector2, w: String, flags: String) -> Rect2: return _bake_stamp(e, name, at, w, flags, live)
+	b.taken = _edit_taken
+	b.rng.seed = int(e.seed)
+	b.spacing = float(e.spacing)
+	b.mirror = bool(e.mirror)
+	b.pin = String(e.pin)
+	return b
+
+
+static func _v(a) -> Vector2:
+	return a if a is Vector2 else Vector2(float(a[0]), float(a[1]))
+
+
+# A stamp of the entry e on the baked map: its rect added to e's. A
+# decor mushroom is planned as a shroom that bends, what of it has no
+# stem to bend left as cells. Returns the rect, empty when nothing was
+# set.
+func _bake_stamp(e: Dictionary, name: String, at: Vector2, where: String, flags: String, live: bool) -> Rect2:
+	var rect := SceneBuilder.stamp_rect(_baked, name, at, where)
+	var cells: Array = SceneBuilder.stamp(_baked, name, at, where, flags)
+	if cells.is_empty():
+		return Rect2()
+	e.rects.append(rect)
+	if sim and SceneBuilder.is_shroom_stamp(name):
+		var res: Array = Critters.plan_decor(cells, SceneBuilder.frame_up(where), CaveMap.CELL_FULL, SceneBuilder.png_stamps()[name].part_n)
+		for pl in res[0]:
+			if not live:
+				_decor_plans.append(pl)
+			elif critters.add_shroom_plan(pl):
+				_decor_plans.append(pl)
+			else:
+				res[1].append_array(pl.cells)
+		cells = res[1]
+	if live and sim:
+		# Into the live sim: each cell set is filled on the next tick
+		# (fill_circle at a cell's centre with the cell's radius takes
+		# that cell alone).
+		var cell := CaveMap.CELL_FULL
+		for c in cells:
+			_fills.append([Vector2((c[0] + 0.5) * cell, (c[1] + 0.5) * cell), cell, c[2]])
+	return rect
+
+
+# Whether an entry's rect meets r.
+func _entries_meet(r: Rect2) -> bool:
+	if r.size == Vector2.ZERO:
+		return false
+	for e in _edit_decor:
+		if (e.rect as Rect2).intersects(r):
+			return true
+	return false
+
+
+# Decor cells out of a terrain: a level saved before the split had its
+# stamps baked into the cells png, and the entries are their only source
+# now.
+static func _strip_decor(m: CaveMap) -> void:
+	for i in m.solid.size():
+		if m.solid[i] >= CaveMap.CELL_DECOR:
+			m.solid[i] = CaveMap.CELL_AIR
 
 
 # A circle of kind at p: the live world and the authoring map alike.
@@ -850,28 +1082,19 @@ func _edit_restore(st: Dictionary) -> void:
 # (_physics_process). A melt reaches CARVE_PAD past its radius, as a
 # bite does, and so does the map's erase: a paint of a kind melts that
 # much less, so it takes exactly the circle it fills, as the map does,
-# and leaves no ring of air round it. Air drops the decor entries and
-# the lights it covers.
+# and leaves no ring of air round it. A paint is terrain only: the
+# entries over it are baked again at the stroke's end (edit_end), on
+# the ground as painted.
 func edit_paint(p: Vector2, r: float, kind: int) -> void:
 	if _author == null:
 		return
-	if kind == CaveMap.CELL_AIR:
-		_author.erase_circle(p, r, true)
-		var kept: Array = []
-		for d in _edit_decor:
-			if not (d.rect as Rect2).grow(r).has_point(p):
-				kept.append(d)
-		_edit_decor = kept
-		var lit: Array = []
-		for l in _edit_lights:
-			var lp: Array = SceneBuilder.light_point(l)
-			if _seg_dist(p, lp[0], lp[3]) > r:
-				lit.append(l)
-		if lit.size() != _edit_lights.size():
-			_edit_lights = lit
-			_relight()
-	else:
-		_author.material_circle(p, r, kind)
+	for m in ([_author, _baked] if _baked and _baked != _author else [_author]):
+		if kind == CaveMap.CELL_AIR:
+			m.erase_circle(p, r, true)
+		else:
+			m.material_circle(p, r, kind)
+	var area := Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0)
+	_stroke_area = area if _stroke_area.size == Vector2.ZERO else _stroke_area.merge(area)
 	if sim:
 		map.erase_circle(p, r if kind == CaveMap.CELL_AIR else r - CaveMap.CARVE_PAD, true)
 		if kind != CaveMap.CELL_AIR:
@@ -886,7 +1109,7 @@ func edit_paint(p: Vector2, r: float, kind: int) -> void:
 func edit_where(p: Vector2, where: String) -> String:
 	if where != "nearest":
 		return where
-	var m: CaveMap = _author if _author else map
+	var m: CaveMap = _surf()
 	var d := {"floor": m.floor_below(p).y - p.y, "ceiling": p.y - m.ceiling_above(p).y,
 			"wall_right": m.wall_beside(p, 1).x - p.x, "wall_left": p.x - m.wall_beside(p, -1).x}
 	var best := "floor"
@@ -899,44 +1122,77 @@ func edit_where(p: Vector2, where: String) -> String:
 # Whether a stamp at p would stand clear of every placed one by spacing
 # px (the brush's rule, unless it is set free).
 func edit_can_place(name: String, p: Vector2, where: String, spacing: float) -> bool:
-	var r := SceneBuilder.stamp_rect(_author if _author else map, name, p, edit_where(p, where)).grow(spacing)
+	var r := SceneBuilder.stamp_rect(_surf(), name, p, edit_where(p, where)).grow(spacing)
 	return not _edit_taken(r)
 
 
 func _edit_taken(r: Rect2) -> bool:
 	for d in _edit_decor:
-		if r.intersects(d.rect):
-			return true
+		for rr in d.get("rects", []):
+			if r.intersects(rr):
+				return true
 	return false
+
+
+# The map stamps find their surfaces on: the baked one, so a stamp goes
+# on the decor before it as it will at the next bake.
+func _surf() -> CaveMap:
+	if _baked:
+		return _baked
+	return _author if _author else map
 
 
 # The decor brush (decor_brush.gd) over a stroke: begun where the button
 # went down with the group's stamps and the editor's settings, dragged
-# each frame, ended where it came up. It places through edit_stamp, so
-# its stamps are undone with the stroke and saved with the level.
+# each frame, ended where it came up. The stroke is one entry, a run:
+# the path the cursor took and the brush's seed, so the bake lays the
+# same pieces again, and a move of it lays them along the moved path.
 func edit_brush_begin(names: Array, p: Vector2, where: String, spacing: float, mirror: bool, pin: String) -> void:
 	if _author == null:
 		return
-	_brush = DecorBrush.new()
-	_brush.map = _author
-	_brush.place = func(name: String, at: Vector2, w: String, flags: String) -> Rect2: return edit_stamp(name, at, 0.0, w, flags)
-	_brush.taken = _edit_taken
-	_brush.rng.randomize()
-	_brush.spacing = spacing
-	_brush.mirror = mirror
-	_brush.pin = pin
-	_brush.begin(names, p, edit_where(p, where))
+	p = _snap(p)
+	var e := {"type": "run", "names": names.duplicate(), "path": [p], "where": edit_where(p, where), "spacing": spacing,
+			"mirror": mirror, "pin": pin, "seed": randi() & 0x7fffffff, "rects": [], "rect": Rect2()}
+	_edit_decor.append(e)
+	_brush = _run_brush(e, true)
+	_brush.begin(e.names, p, e.where)
 
 
 func edit_brush_drag(p: Vector2) -> void:
-	if _brush:
-		_brush.drag(p)
+	if _brush == null:
+		return
+	p = _snap(p)
+	var e: Dictionary = _edit_decor[_edit_decor.size() - 1]
+	if p == e.path[e.path.size() - 1]:
+		return
+	e.path.append(p)
+	_brush.drag(p)
+	_bounds(e)
 
 
-func edit_brush_end(p: Vector2) -> void:
-	if _brush:
-		_brush.end(p)
-		_brush = null
+func edit_brush_end(_p: Vector2) -> void:
+	if _brush == null:
+		return
+	var e: Dictionary = _edit_decor[_edit_decor.size() - 1]
+	_brush.end(e.path[e.path.size() - 1])
+	_brush = null
+	_bounds(e)
+	if e.rects.is_empty():
+		_edit_decor.pop_back()
+
+
+# An entry's rect: the bounds of what it set.
+static func _bounds(e: Dictionary) -> void:
+	var r := Rect2()
+	for rr in e.rects:
+		r = rr if r.size == Vector2.ZERO else r.merge(rr)
+	e.rect = r
+
+
+# A point as the level file keeps it: on a quarter px, which the json
+# writes exactly, so a run's path bakes the same after a load.
+static func _snap(p: Vector2) -> Vector2:
+	return p.snapped(Vector2(0.25, 0.25))
 
 
 # A stamp at p: a decor stamp (a PNG or a table) on the surface, a
@@ -949,6 +1205,7 @@ func edit_brush_end(p: Vector2) -> void:
 func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags := "", opts := {}) -> Rect2:
 	if _author == null:
 		return Rect2()
+	p = _snap(p)
 	var size: int = int(opts.get("size", 0))
 	var variant: int = int(opts.get("variant", 0))
 	match name:
@@ -975,28 +1232,19 @@ func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags :=
 			_slugs.append(sl)
 			_edit_slugs.append([p.x, p.y])
 		"stalactite", "stalagmite":
-			var down := name == "stalactite"
-			var line: Vector2 = map.ceiling_above(p) if down else map.floor_below(p)
 			var h := cone_height(size) if size > 0 else maxf(r * 2.0, 8.0)
-			SceneBuilder.cone(_author, Vector2(p.x, line.y), h, down, variant)
-			if sim:
-				SceneBuilder.cone(map, Vector2(p.x, line.y), h, down, variant)
+			var e := {"type": "cone", "name": name, "x": p.x, "y": p.y, "h": h, "variant": variant, "size": size}
+			_bake_entry(e, true)
+			_edit_decor.append(e)
+			return e.rect
 		_:
 			var table := stamp_table(name, size)
-			var w := edit_where(p, where)
-			var rect := SceneBuilder.stamp_rect(_author, table, p, w)
-			var cells: Array = SceneBuilder.stamp(_author, table, p, w, flags)
-			if cells.is_empty():
+			var e := {"type": "stamp", "name": table, "x": p.x, "y": p.y, "where": edit_where(p, where), "flags": flags, "anchor": where}
+			_bake_entry(e, true)
+			if e.rects.is_empty():
 				return Rect2()
-			_edit_decor.append({"name": table, "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": rect})
-			if sim:
-				# Into the live sim: each cell set is filled on the next
-				# tick (fill_circle at a cell's centre with the cell's
-				# radius takes that cell alone).
-				var cell := CaveMap.CELL_FULL
-				for c in cells:
-					_fills.append([Vector2((c[0] + 0.5) * cell, (c[1] + 0.5) * cell), cell, c[2]])
-			return rect
+			_edit_decor.append(e)
+			return e.rect
 	return Rect2()
 
 
@@ -1169,28 +1417,327 @@ func edit_ghost(spec: Dictionary) -> String:
 			if not png.is_empty():
 				if not _ghost_tex.has(table):
 					_ghost_tex[table] = ImageTexture.create_from_image(png.img)
-				items.append(["tex", _ghost_tex[table], SceneBuilder.frame(_author, p, where), png.w, png.h])
+				items.append(["tex", _ghost_tex[table], SceneBuilder.frame(_surf(), p, where), png.w, png.h])
 			else:
-				for c in SceneBuilder.table_cells(_author, table, p, where):
+				for c in SceneBuilder.table_cells(_surf(), table, p, where):
 					items.append(["cell", Rect2(c[0] * cell, c[1] * cell, cell, cell), CaveMap.THORN])
-			items.append(["box", SceneBuilder.stamp_rect(_author, table, p, where)])
+			items.append(["box", SceneBuilder.stamp_rect(_surf(), table, p, where)])
 	_ghost.items = items
 	_ghost.queue_redraw()
 	return where
 
 
-# The decor list from a level's "decor" entries, [name, x, y, where, flags]
-# each, with their rects on the built map.
+# The level file's decor list to entries, and back. A stamp is [name,
+# x, y, where, flags] as before the split; a cone {"cone": name, x, y,
+# h, variant}; a run {"run": names, path, where, spacing, mirror, pin,
+# seed}, its path [x, y] pairs.
 func _decor_entries(list: Array) -> Array:
 	var out: Array = []
 	for d in list:
+		if d is Dictionary:
+			if d.has("cone"):
+				out.append({"type": "cone", "name": String(d.cone), "x": float(d.x), "y": float(d.y), "h": float(d.h),
+						"variant": int(d.get("variant", 0)), "size": int(d.get("size", 0)), "rects": [], "rect": Rect2()})
+			elif d.has("run"):
+				var path: Array = []
+				for q in d.path:
+					path.append(Vector2(float(q[0]), float(q[1])))
+				out.append({"type": "run", "names": (d.run as Array).map(func(n) -> String: return String(n)), "path": path,
+						"where": String(d.where), "spacing": float(d.get("spacing", 0.0)), "mirror": bool(d.get("mirror", true)),
+						"pin": String(d.get("pin", "")), "seed": int(d.seed), "rects": [], "rect": Rect2()})
+			continue
 		if d.size() < 4:
 			continue
-		var p := Vector2(float(d[1]), float(d[2]))
-		var w := String(d[3])
-		var flags := String(d[4]) if d.size() > 4 else ""
-		out.append({"name": String(d[0]), "x": p.x, "y": p.y, "where": w, "flags": flags, "rect": SceneBuilder.stamp_rect(_author if _author else map, String(d[0]), p, w)})
+		out.append({"type": "stamp", "name": String(d[0]), "x": float(d[1]), "y": float(d[2]), "where": String(d[3]),
+				"flags": String(d[4]) if d.size() > 4 else "", "anchor": String(d[5]) if d.size() > 5 else String(d[3]), "rects": [], "rect": Rect2()})
 	return out
+
+
+static func _decor_json(e: Dictionary) -> Variant:
+	match String(e.type):
+		"cone":
+			return {"cone": e.name, "x": e.x, "y": e.y, "h": e.h, "variant": e.variant, "size": e.get("size", 0)}
+		"run":
+			return {"run": e.names, "path": (e.path as Array).map(func(q: Vector2) -> Array: return [q.x, q.y]), "where": e.where,
+					"spacing": e.spacing, "mirror": e.mirror, "pin": e.pin, "seed": e.seed}
+	return [e.name, e.x, e.y, e.where, e.flags, e.get("anchor", e.where)]
+
+
+# --- The handles: what the editor takes hold of (editor.gd) ---
+#
+# An item is {list, i}: "decor" (a stamp, a cone, a run), "lumps" (a
+# lump or a critter), "slugs" or "lights", and its index there. A move,
+# a change or a removal is a stroke of its own, undone as one, and the
+# world is made again from the level after it (a light only relights).
+
+func edit_items() -> Array:
+	var out: Array = []
+	for list in ["decor", "lumps", "slugs", "lights"]:
+		for i in _item_list(list).size():
+			out.append({"list": list, "i": i, "rect": _item_rect(list, i)})
+	return out
+
+
+func _item_list(list: String) -> Array:
+	match list:
+		"decor":
+			return _edit_decor
+		"lumps":
+			return _edit_lumps
+		"slugs":
+			return _edit_slugs
+	return _edit_lights
+
+
+func _item(it: Dictionary) -> Variant:
+	if it.is_empty():
+		return null
+	var l := _item_list(String(it.list))
+	return l[it.i] if int(it.i) < l.size() else null
+
+
+# The box a handle is drawn as and taken by: what a decor entry set, a
+# critter's or a lump's body about its point, a light's source and aim.
+func _item_rect(list: String, i: int) -> Rect2:
+	var m := _surf()
+	match list:
+		"decor":
+			var e: Dictionary = _edit_decor[i]
+			if (e.rect as Rect2).size != Vector2.ZERO:
+				return e.rect
+			var at := _v(e.path[0]) if e.type == "run" else Vector2(e.x, e.y)
+			return Rect2(at - Vector2(4.0, 4.0), Vector2(8.0, 8.0))
+		"lumps":
+			var l: Array = _edit_lumps[i]
+			var p := Vector2(float(l[1]), float(l[2]))
+			var r := float(l[3])
+			match String(l[0]):
+				"vine":
+					var c: Vector2 = m.ceiling_above(p)
+					return Rect2(p.x - 5.0, c.y, 10.0, r)
+				"shroom":
+					var f: Vector2 = m.floor_below(p)
+					return Rect2(p.x - 3.0 - 2.0 * r, f.y - 8.0 - 6.0 * r, 6.0 + 4.0 * r, 8.0 + 6.0 * r)
+				"longslug":
+					return Rect2(p.x - r * 0.5, p.y - 5.0, r, 10.0)
+				"boulder", "clay":
+					var f: Vector2 = m.floor_below(p)
+					return Rect2(p.x - r, f.y - 2.0 * r - 2.0, 2.0 * r, 2.0 * r)
+			return Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0)
+		"slugs":
+			var s: Array = _edit_slugs[i]
+			return Rect2(float(s[0]) - 5.0, float(s[1]) - 5.0, 10.0, 10.0)
+	var lp: Array = SceneBuilder.light_point(_edit_lights[i])
+	var a: Vector2 = lp[0]
+	var b: Vector2 = lp[3]
+	return Rect2(a, Vector2.ZERO).expand(b).grow(6.0)
+
+
+# The item under p: the smallest box that holds it, so a mushroom on a
+# run of moss is taken before the run.
+func edit_item_at(p: Vector2) -> Dictionary:
+	var best := {}
+	var area := INF
+	for it in edit_items():
+		var r: Rect2 = (it.rect as Rect2).grow(2.0)
+		if r.has_point(p) and r.get_area() < area:
+			area = r.get_area()
+			best = {"list": it.list, "i": it.i}
+	return best
+
+
+# What an item is, for the tag under the cursor.
+func edit_item_text(it: Dictionary) -> String:
+	var x = _item(it)
+	if x == null:
+		return ""
+	match String(it.list):
+		"decor":
+			match String(x.type):
+				"run":
+					return "run of %s · %d pieces · %s" % [SceneBuilder.stamp_group(String(x.names[0])), x.rects.size(), x.where]
+				"cone":
+					return "%s · size %d · shape %d" % [x.name, _cone_size(x), int(x.variant) + 1]
+			return "%s · %s%s" % [x.name, x.where, " · mirrored" if String(x.flags).contains("h") else ""]
+		"lumps":
+			return "%s · %d" % [String(x[0]), int(x[3])]
+		"slugs":
+			return "slug"
+	return "%s light · r %d · strength %.1f" % [String(x[2]), int(_light_full(x)[3]), float(_light_full(x)[4])]
+
+
+static func _cone_size(e: Dictionary) -> int:
+	return clampi(int(round((float(e.h) - 12.0) / 12.0)), 1, 5)
+
+
+# A light entry in its long form, [x, y, kind, radius, strength, shape, x2, y2].
+static func _light_full(l: Array) -> Array:
+	if l.size() >= 8:
+		return l
+	var k: Array = SceneBuilder.LIGHTS.get(String(l[2]), SceneBuilder.LIGHTS["torch"])
+	return [l[0], l[1], l[2], l[3] if l.size() > 3 else k[1], l[4] if l.size() > 4 else 1.0, "point", l[0], l[1]]
+
+
+# An item moved by d px: a stamp or a cone finds its surface from the
+# moved point (a stamp set to the nearest surface takes the nearest
+# there), a run's whole path moves and its pieces are laid again.
+func edit_move(it: Dictionary, d: Vector2) -> String:
+	var x = _item(it)
+	if x == null or d.length() < 0.5:
+		return ""
+	d = _snap(d)
+	edit_begin()
+	match String(it.list):
+		"decor":
+			if x.type == "run":
+				x.path = (x.path as Array).map(func(q) -> Vector2: return _v(q) + d)
+			else:
+				x.x += d.x
+				x.y += d.y
+				if x.type == "stamp" and String(x.get("anchor", "")) == "nearest":
+					x.where = edit_where(Vector2(x.x, x.y), "nearest")
+		"lumps":
+			x[1] = float(x[1]) + d.x
+			x[2] = float(x[2]) + d.y
+		"slugs":
+			x[0] = float(x[0]) + d.x
+			x[1] = float(x[1]) + d.y
+		"lights":
+			var l := _light_full(x)
+			l[0] = float(l[0]) + d.x
+			l[1] = float(l[1]) + d.y
+			l[6] = float(l[6]) + d.x
+			l[7] = float(l[7]) + d.y
+			_edit_lights[it.i] = l
+	_item_changed(it)
+	return "moved %d, %d" % [int(d.x), int(d.y)]
+
+
+func edit_remove(it: Dictionary) -> String:
+	if _item(it) == null:
+		return "nothing there"
+	var what := edit_item_text(it)
+	edit_begin()
+	_item_list(String(it.list)).remove_at(it.i)
+	_item_changed(it)
+	return what.get_slice(" · ", 0) + " removed"
+
+
+# The wheel on an item: the next variant of a stamp's group (the same
+# role, an end for an end), another pick of a run's rules (its seed), a
+# cone's or a shroom's next shape, a light's radius (Shift: strength).
+func edit_turn(it: Dictionary, dir: int, shift: bool) -> String:
+	var x = _item(it)
+	if x == null:
+		return ""
+	edit_begin()
+	match String(it.list):
+		"decor":
+			match String(x.type):
+				"run":
+					x.seed = (int(x.seed) + dir) & 0x7fffffff
+				"cone":
+					x.variant = posmod(int(x.variant) + dir, 4)
+				_:
+					var names: Array = []
+					var group := SceneBuilder.stamp_group(String(x.name))
+					var role := SceneBuilder.stamp_role(String(x.name))
+					for n in SceneBuilder.png_stamps():
+						if SceneBuilder.stamp_group(n) == group and SceneBuilder.stamp_role(n) == role:
+							names.append(n)
+					names.sort()
+					if names.size() > 1:
+						x.name = names[posmod(names.find(x.name) + dir, names.size())]
+		"lumps":
+			if String(x[0]) == "shroom":
+				while x.size() < 5:
+					x.append(0.0)
+				x[4] = float(posmod(int(x[4]) + dir, 2))
+		"lights":
+			var l := _light_full(x)
+			if shift:
+				l[4] = clampf(snappedf(float(l[4]) + 0.1 * dir, 0.1), 0.2, 2.0)
+			else:
+				l[3] = clampf(float(l[3]) + 2.0 * dir, 4.0, 64.0)
+			_edit_lights[it.i] = l
+	_item_changed(it)
+	return edit_item_text(it)
+
+
+# Up and down on an item: a cone's height, a vine's length, a shroom's,
+# a slime's or a long slug's size 1 to 5, a lump's radius, the thorn
+# bush small or big.
+func edit_resize(it: Dictionary, dir: int) -> String:
+	var x = _item(it)
+	if x == null:
+		return ""
+	edit_begin()
+	match String(it.list):
+		"decor":
+			if x.type == "cone":
+				x.size = clampi(_cone_size(x) + dir, 1, 5)
+				x.h = cone_height(x.size)
+			elif x.type == "stamp" and String(x.name).begins_with("thorn"):
+				x.name = "thorn" if dir > 0 else "thorn_s"
+		"lumps":
+			match String(x[0]):
+				"vine":
+					x[3] = vine_length(clampi(int(round(float(x[3]) / 24.0)) + dir, 1, 5))
+				"shroom":
+					x[3] = float(clampi(int(x[3]) + dir, 1, 5))
+				"slime":
+					x[3] = slime_radius(clampi(int(round((float(x[3]) - 5.0) / 3.0)) + dir, 1, 5))
+				"longslug":
+					x[3] = long_slug_length(clampi(int(round((float(x[3]) - 20.0) / 14.0)) + dir, 1, 5))
+				_:
+					x[3] = clampf(float(x[3]) + dir, 3.0, 30.0)
+	_item_changed(it)
+	return edit_item_text(it)
+
+
+# H on an item: a stamp mirrored along its surface, a run's random
+# mirroring on or off.
+func edit_flip(it: Dictionary) -> String:
+	var x = _item(it)
+	if x == null or String(it.list) != "decor" or x.type == "cone":
+		return ""
+	edit_begin()
+	if x.type == "run":
+		x.mirror = not bool(x.mirror)
+	else:
+		x.flags = String(x.flags).replace("h", "") if String(x.flags).contains("h") else String(x.flags) + "h"
+	_item_changed(it)
+	return edit_item_text(it)
+
+
+# After a change to an item: the world made again (a light only lit
+# again), and the change one undo step.
+func _item_changed(it: Dictionary) -> void:
+	if String(it.list) == "lights":
+		_relight()
+	else:
+		_rebuild_world()
+	edit_end()
+
+
+# The handles drawn (LightMarks): every item's box faint, the one under
+# the cursor and the one taken brighter, the taken one at the drag's
+# offset while it is dragged.
+func edit_marks(hover: Dictionary, sel: Dictionary, offset: Vector2) -> void:
+	if _marks == null:
+		return
+	var boxes: Array = []
+	if _editing:
+		for it in edit_items():
+			var st := 0
+			if not sel.is_empty() and it.list == sel.list and it.i == sel.i:
+				st = 2
+			elif not hover.is_empty() and it.list == hover.list and it.i == hover.i:
+				st = 1
+			boxes.append([it.rect, st])
+	_marks.boxes = boxes
+	_marks.offset = offset
+	_marks.queue_redraw()
 
 
 func edit_spawn(p: Vector2) -> String:
@@ -1363,25 +1910,18 @@ func _default_level_name() -> String:
 	return "edit"
 
 
-# The level as a file: a base of the cells png and one scene on it with
-# the spawn, the exit, the vines and lumps, the slugs, the decor and the
-# lights. The game and the suite load it like the clutch. A generated
-# cave saves its own spawn and the lumps it scattered, so a load of it
-# starts where it started, with the same boulders and heaps.
+# The level as a file: a base of the cells png, the terrain alone, and
+# one scene on it with the spawn, the exit, the vines and lumps, the
+# slugs, the decor entries and the lights. The game and the suite load
+# it like the clutch. A generated cave saves its own spawn and the
+# lumps it scattered, so a load of it starts where it started, with
+# the same boulders and heaps.
 func _level_dict(name: String, png: String) -> Dictionary:
 	var spawn: Array = ["at", _edit_spawn.x, _edit_spawn.y, 0, -1] if _edit_spawn != Vector2.INF else _scene.get("spawn", ["floor", _gen_spawn.x, _gen_spawn.y - 20.0])
-	var lumps: Array = []
-	lumps.append_array(_scene.get("lumps", []))
-	if _scene.is_empty():
-		lumps.append_array(_gen_lumps)
-	lumps.append_array(_edit_lumps)
-	var slugs: Array = []
-	slugs.append_array(_scene.get("slugs", []))
-	slugs.append_array(_edit_slugs)
 	var decor: Array = []
-	for d in _edit_decor:
-		decor.append([d.name, d.x, d.y, d.where, d.flags])
-	var sc := {"base": name, "spawn": spawn, "lumps": lumps, "slugs": slugs, "decor": decor, "lights": _edit_lights.duplicate(true)}
+	for e in _edit_decor:
+		decor.append(_decor_json(e))
+	var sc := {"base": name, "spawn": spawn, "lumps": _edit_lumps.duplicate(true), "slugs": _edit_slugs.duplicate(true), "decor": decor, "lights": _edit_lights.duplicate(true)}
 	var ex := _edit_exit if _edit_exit.has_area() else _exit
 	if ex.has_area():
 		sc["exit"] = [ex.position.x, ex.position.y, ex.size.x, ex.size.y]
@@ -1716,9 +2256,10 @@ func _check_gas() -> void:
 			continue
 		var c := r.get_center()
 		_gas.remove_at(i)
-		if _author:
-			# The pocket is plain air in the authored cells (the bitmap
-			# world's map itself; the sim's shows air there already).
+		if _author and not sim:
+			# The pocket is plain air in the bitmap world's map, which is
+			# its authoring map too. The sim's shows air there already
+			# and its authored cells keep the pocket for the next build.
 			_author.clear_gas(r)
 		gecko.blast(c, BLAST_SPEED)
 		if sim:
@@ -1962,7 +2503,7 @@ func _load_scene(i: int) -> void:
 	_hint_t = 5.0
 
 
-# Shift+Tab: back to the first cave.
+# Shift+Tab: back to the main cave.
 func _main_cave() -> void:
 	_pick_level()
 	_demo_step = -1
@@ -1970,7 +2511,7 @@ func _main_cave() -> void:
 	gecko.chew_override = false
 	gecko.lmb_override = false
 	_reset()
-	_hint = "the clutch"
+	_hint = LEVEL
 	_hint_t = 7.0
 
 
@@ -2070,7 +2611,12 @@ func _process(_dt: float) -> void:
 	if not over_panel and Input.is_action_pressed("drop_sand"):
 		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
 	if Input.is_action_just_pressed("regenerate"):
-		if not _scene.is_empty():
+		if not _scene.is_empty() and _dirty and sim:
+			# Edits not saved yet: the level in hand again, not the file.
+			_rebuild_world()
+			gecko.spawn(_spawn_at(), Vector2.UP)
+			_cam_reset()
+		elif not _scene.is_empty():
 			_reset()
 		else:
 			seed_value += 1
@@ -2085,17 +2631,7 @@ func _process(_dt: float) -> void:
 	if Input.is_action_just_pressed("scene_main", true):
 		_main_cave()
 	if Input.is_action_just_pressed("edit_toggle", true) and not _editor.dialog_open():
-		_editing = not _editing
-		_editor.visible = _editing
-		_marks.visible = _editing
-		_ghost.visible = _editing
-		_label.position.x = (_editor.panel_width() + 12.0) if _editing else 12.0
-		if _editing:
-			_editor.refresh()
-		else:
-			edit_ghost({})
-			edit_light_preview([])
-			edit_home()
+		_set_editing(not _editing)
 	if Input.is_action_just_pressed("debug_toggle"):
 		_set_debug(not _debug)
 	if Input.is_action_just_pressed("pose_editor"):
@@ -2160,12 +2696,34 @@ func _author_hist() -> Dictionary:
 class LightMarks extends Node2D:
 	var lights: Array = []
 	var preview: Array = []   # The editor's light on the cursor, faint
+	var boxes: Array = []     # The handles (main.gd edit_marks): [rect, 0 idle, 1 under the cursor, 2 taken]
+	var offset := Vector2.ZERO   # The taken one's drag
 
 	func _draw() -> void:
 		for l in lights:
 			_mark(l, 1.0)
 		if not preview.is_empty():
 			_mark(preview, 0.5)
+		for b in boxes:
+			var r: Rect2 = b[0]
+			match int(b[1]):
+				0:
+					_corners(r, Color(0.94, 0.93, 0.9, 0.35))
+				1:
+					draw_rect(r, Color(0.94, 0.93, 0.9, 0.8), false, 1.0)
+				2:
+					draw_rect(r, Color(0.79, 0.70, 0.54, 0.25), true)
+					draw_rect(r, Color(0.79, 0.70, 0.54), false, 1.0)
+					if offset != Vector2.ZERO:
+						draw_rect(Rect2(r.position + offset, r.size), Color(0.94, 0.93, 0.9, 0.9), false, 1.0)
+
+	# A box's corners, so a dressed wall is not caged in lines.
+	func _corners(r: Rect2, col: Color) -> void:
+		var k := minf(4.0, minf(r.size.x, r.size.y) * 0.5)
+		for c in [[r.position, 1.0, 1.0], [Vector2(r.end.x, r.position.y), -1.0, 1.0], [r.end, -1.0, -1.0], [Vector2(r.position.x, r.end.y), 1.0, -1.0]]:
+			var p: Vector2 = c[0]
+			draw_line(p, p + Vector2(k * c[1], 0.0), col, 1.0)
+			draw_line(p, p + Vector2(0.0, k * c[2]), col, 1.0)
 
 	# A point: a ring of its radius. A strip: the segment and a ring at
 	# each end. A cone: the wedge from the source to the aim.

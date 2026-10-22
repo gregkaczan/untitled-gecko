@@ -870,6 +870,14 @@ func _bind(cl: int, idx: int, groups: int, push := PackedByteArray()) -> void:
 
 # The chamber as particles: the bitmap generator decides what each cell
 # is (air, rock, water), one particle per cell with a little jitter.
+# The last build's seed, cells, data and each row's free slots: the next
+# build with the seed copies the data and writes again only the rows
+# whose cells changed (the editor makes the world again after each
+# move). A cell's particle depends on its kind, its index and the seed
+# alone (_cell_rand), so that is the data a whole build would make.
+var _built := {}
+
+
 func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByteArray:
 	if kinds.is_empty():
 		var gen := CaveMap.new()
@@ -877,6 +885,11 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 		kinds = gen.solid
 		gen.free()
 
+	if not _built.is_empty() and int(_built.seed) == seed_value and (_built.kinds as PackedByteArray).size() == kinds.size():
+		var data: PackedByteArray = (_built.data as PackedByteArray).duplicate()
+		_write_rows(data, seed_value, kinds, _built.kinds, _built.rows)
+		_built = {"seed": seed_value, "kinds": kinds.duplicate(), "data": data.duplicate(), "rows": _built.rows}
+		return data
 	var data := PackedByteArray()
 	data.resize(TOTAL_UINTS * 4)
 	_wf(data, O_P + 0, SIM_DT)
@@ -918,21 +931,37 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 		for fi in 12:
 			_wf(data, O_M + mi * 12 + fi, mats[mi][fi])
 
-	# The cell classes start as the map says (the first predict pass
-	# reads them before any render pass has written them), so a bed of
-	# sand does not see air under it and wake on the first tick.
-	var idx := 0
+	var rows: Array = []
+	rows.resize(RENDER_H)
+	_write_rows(data, seed_value, kinds, PackedByteArray(), rows)
+	_built = {"seed": seed_value, "kinds": kinds.duplicate(), "data": data.duplicate(), "rows": rows}
+	return data
+
+
+# The particles of the rows whose cells differ from old (every row when
+# old is empty) written into data, a cell's particle at its own index;
+# rows[y] keeps each row's free slots, and _dead is made from them. The
+# cell classes start as the map says (the first predict pass reads them
+# before any render pass has written them), so a bed of sand does not
+# see air under it and wake on the first tick.
+func _write_rows(data: PackedByteArray, seed_value: int, kinds: PackedByteArray, old: PackedByteArray, rows: Array) -> void:
 	for yi in RENDER_H:
+		var a := yi * RENDER_W
+		if not old.is_empty() and kinds.slice(a, a + RENDER_W) == old.slice(a, a + RENDER_W):
+			continue
+		var free := PackedInt32Array()
 		for xi in RENDER_W:
-			var kind := kinds[yi * RENDER_W + xi]
+			var idx := a + xi
+			var kind := kinds[idx]
 			var b := O_PT + idx * 8
 			if kind == CaveMap.CELL_AIR or kind == CaveMap.CELL_GAS:
+				data.encode_u32((O_CT + idx) * 4, 0)
 				_wf(data, b + 0, -1000.0)
 				_wf(data, b + 1, -1000.0)
 				_wf(data, b + 4, -1000.0)
 				_wf(data, b + 5, -1000.0)
 				_wf(data, b + 7, 0.0)
-				_dead.append(idx)
+				free.append(idx)
 			else:
 				# Static matter sits on its cell's centre, as the editor's
 				# fills put it (fill_circle), so a brush's melt, which
@@ -940,8 +969,8 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 				# authoring map erases; what moves starts a little off it.
 				var mat := material_of(kind)
 				var still := mat == MAT_ROCK or mat == MAT_HARD or mat == MAT_COPPER or mat == MAT_BEDROCK or mat == MAT_SHROOM
-				var jx := 0.0 if still else _rng.randf_range(-0.5, 0.5)
-				var jy := 0.0 if still else _rng.randf_range(-0.5, 0.5)
+				var jx := 0.0 if still else _cell_rand(seed_value, idx, 1) - 0.5
+				var jy := 0.0 if still else _cell_rand(seed_value, idx, 2) - 0.5
 				var x := clampf(xi * PIXEL_SZ + PIXEL_SZ * 0.5 + jx, 1.0, WORLD_W - 1.0)
 				var y := clampf(yi * PIXEL_SZ + PIXEL_SZ * 0.5 + jy, 1.0, WORLD_H - 1.0)
 				var cls := CT_SOLID
@@ -961,12 +990,24 @@ func _create_initial_data(seed_value: int, kinds: PackedByteArray) -> PackedByte
 				_wf(data, b + 4, x)
 				_wf(data, b + 5, y)
 				var fr := frac_of(kind)
-				_wf(data, b + 7, float(mat) + (fr if fr >= 0.0 else _rng.randf_range(0.0, FRAC_MAX) * 0.1))
+				_wf(data, b + 7, float(mat) + (fr if fr >= 0.0 else _cell_rand(seed_value, idx, 3) * FRAC_MAX * 0.1))
 			_wf(data, b + 2, 0.0)
 			_wf(data, b + 3, 0.0)
 			_wf(data, b + 6, 0.0)
-			idx += 1
-	return data
+		rows[yi] = free
+	_dead.clear()
+	for r in rows:
+		_dead.append_array(Array(r))
+
+
+# A number in 0..1 for a cell's particle: its index, the seed and which
+# draw, hashed, so a build gives each cell the same whatever the rest.
+static func _cell_rand(seed_value: int, idx: int, k: int) -> float:
+	var h := (idx * 374761393 + seed_value * 668265263 + k * 1442695041) & 0xffffffff
+	h = ((h ^ (h >> 15)) * 2246822519) & 0xffffffff
+	h = ((h ^ (h >> 13)) * 3266489917) & 0xffffffff
+	h ^= h >> 16
+	return float(h & 0xffffff) / 16777216.0
 
 
 # The fraction a cell of the map's kind is built with, or -1 for random:

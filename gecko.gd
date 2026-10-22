@@ -113,6 +113,7 @@ const LAND_SETTLE := 12          # Ticks after a landing the base's track is hel
 const PATH_MIN_SEG := 0.5         # A base move shorter than this moves the track's end rather than adding a point to it
 const SAG_STEP := 2.0             # Px a tick a body point's offset off the track (its sag onto the surface, its push off rock) may change...
 const SAG_K := 0.2                # ...or this fraction of the offset left, if more: the body landing from the air settles onto its lay in a quarter second
+const HANG_BEND := 0.35           # Most a link of the clinging body with no surface in reach turns toward world down from the link before (radians): the tail behind a perch on a crumb hangs
 const LINK_SQUASH := 2.0           # Px a drawn link may shrink under LINK: the sag onto a sharp tip or into a corner gathered the points at the rock
 const LINK_SLACK := 1.5           # Px a drawn link may stretch past LINK: the sag toward the surface pulled the neck's first point 15 px from a reared head, and the head blob parted from the body
 const BODY_GAP := 2.0          # Clearance a chain point keeps past its radius
@@ -2583,7 +2584,30 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 		w = _thin_point(i, w, q)
 		_pt("rb_thin", _t_rbt)
 		var w_want := w
-		if q.found and not _thin_on[i]:
+		# Where the track itself runs out into the open (behind a perch on
+		# a crumb), the point hangs from the one before, its link turned
+		# toward world down by at most HANG_BEND, and is only kept out of
+		# the clearance of rock it hangs past. Laid on the track there, a
+		# body perched on a crumb's corner kept the straight landing
+		# track, tilted up with the frame, and the tail stood up in the
+		# air for as long as the gecko sat there (filmed 2026-10-22).
+		# Decided from the track point, not the sagged one: a point whose
+		# sagged spot sat at the edge of the crumb's reach hung one tick
+		# and sagged at the crumb the next, a 2 px rattle; and after a
+		# landing on a floor the air pose leaves points out of reach for
+		# a few ticks, and they come down onto the track as before.
+		var hanging: bool = on_track and i >= 2 and not _thin_on[i] and not map.solid_within(p, r + BODY_HUG)
+		if hanging:
+			var link := chain.points[i - 1] - chain.points[i - 2]
+			var dir := link.normalized() if link.length() > 0.01 else -tdir
+			var turn := clampf(dir.angle_to(Vector2.DOWN), -HANG_BEND, HANG_BEND)
+			w_want = chain.points[i - 1] + dir.rotated(turn) * LINK
+			if q.found:
+				var clear := r + BODY_GAP
+				var from_rock: Vector2 = w_want - q.nearest
+				if from_rock.length() < clear:
+					w_want = q.nearest + (from_rock.normalized() if from_rock.length() > 0.01 else up) * clear
+		elif q.found and not _thin_on[i]:
 			var away: Vector2 = (w - q.nearest).normalized() if q.dist > 0.01 else up
 			# Laid higher than its clearance, like the head, by BODY_LIFT
 			# for the body and a pixel for the tail's tip, which drags
@@ -2610,7 +2634,7 @@ func _lay_body(new_head: Vector2, base: Vector2) -> void:
 		# taken off along the neck, it moved a resting point between two
 		# equally near cells of a tunnel's roof, and the point flipped
 		# 1.2 px every few ticks.
-		if on_track:
+		if on_track and not hanging:
 			var off := w_want - p
 			w_want = p + off - tdir * off.dot(tdir)
 		w = w.move_toward(w_want, maxf(SAG_STEP, w.distance_to(w_want) * SAG_K))

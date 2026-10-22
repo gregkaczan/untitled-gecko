@@ -144,6 +144,8 @@ func _run() -> void:
 
 	# --- The checks ---
 	_check("cells", a.author == b.author, "the authored cells differ after the load")
+	_check("baked", a.baked == b.baked, "the decor baked on the terrain differs after the load")
+	_check("terrain", _decor_free(a.author), "decor cells in the terrain: the stamps were baked into it")
 	_check_static(a, b)
 	_check("decor", a.decor == b.decor, "decor %s\n   vs %s" % [str(a.decor), str(b.decor)])
 	_check("lights", a.lights == b.lights, "lights %s\n   vs %s" % [str(a.lights), str(b.lights)])
@@ -190,6 +192,10 @@ func _shot(name: String) -> Dictionary:
 	main._follow()
 	main.edit_ghost({})
 	main.edit_light_preview([])
+	main._marks.visible = false   # The handles and light rings
+	main._label.visible = false
+	main._fps_label.visible = false   # The timing readout: its numbers differ shot to shot
+	main._editor._tag.visible = false
 	for s in main._slugs:
 		s.visible = false
 	await tree.physics_frame
@@ -202,17 +208,10 @@ func _shot(name: String) -> Dictionary:
 	_class_png(main.sim.cells, OUT + "/" + name + ".classes.png")
 	var decor: Array = []
 	for d in main._edit_decor:
-		decor.append([d.name, d.x, d.y, d.where, d.flags])
-	var lumps: Array = []
-	lumps.append_array(main._scene.get("lumps", []))
-	if main._scene.is_empty():
-		lumps.append_array(main._gen_lumps)
-	lumps.append_array(main._edit_lumps)
-	var slugs: Array = []
-	slugs.append_array(main._scene.get("slugs", []))
-	slugs.append_array(main._edit_slugs)
+		decor.append([main._decor_json(d), d.rects])
 	return {"img": img, "author": (main._author.solid as PackedByteArray).duplicate(), "cells": (main.sim.cells as PackedByteArray).duplicate(),
-			"decor": decor, "lights": main._edit_lights.duplicate(true), "lumps": lumps, "slugs": slugs,
+			"baked": (main._baked.solid as PackedByteArray).duplicate(),
+			"decor": decor, "lights": main._edit_lights.duplicate(true), "lumps": main._edit_lumps.duplicate(true), "slugs": main._edit_slugs.duplicate(true),
 			"counts": [main._gas.size(), main.critters.vines.size(), main._slugs.size(), main._lights.size(),
 					main.critters.shrooms.size(), main.critters.slimes.size(), main.critters.long_slugs.size()],
 			"cam": main.get_viewport().get_canvas_transform(), "panel": main._editor.panel_width()}
@@ -373,3 +372,10 @@ func _check_pixels(a: Dictionary, b: Dictionary) -> void:
 		where.append("%d px at world %d, %d" % [tiles[k], int(wp.x), int(wp.y)])
 	print("SAVE: pixels %d differ outside the mask, %d within it (%s)" % [bad, masked, "settling matter" if masked > 0 else "none"])
 	_check("pixels", bad == 0, "in %d tiles of 32 px: %s" % [tiles.size(), "; ".join(where)])
+
+
+static func _decor_free(cells: PackedByteArray) -> bool:
+	for v in cells:
+		if v >= CaveMap.CELL_DECOR:
+			return false
+	return true

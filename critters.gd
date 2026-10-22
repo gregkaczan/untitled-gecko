@@ -24,6 +24,7 @@ const LongSlug = preload("res://long_slug.gd")
 
 const LAND_WINDOW := 6         # Ticks after the gecko's landing in which a shroom under its feet takes the landing
 const JUMP_KICK := 0.15        # Of the gecko's jump speed kicked back into the held place of the vine it leaves
+const WHOLE_PART := 0.7       # Of a decor mushroom's pixels that must be set for it to bend (critters.gd plan_decor): fewer, it was laid against rock or a stem was cut, and stays decor
 const CATCH_K := 0.4           # Of the gecko's flight speed the vine's held point takes when it catches the vine: the rope swings away with it
 
 var sim: Node2D
@@ -74,18 +75,55 @@ func _sim_ok() -> bool:
 	return sim != null and sim.ready_to_run
 
 
-# A shroom standing on the floor under p, size 1 to Shroom.MAX_SIZE.
+# A shroom standing on the floor under p, size 1 to Shroom.MAX_SIZE
+# (shroom.gd sprite_cells: the one sprite, scaled, mirrored on an odd
+# variant).
 func add_shroom(p: Vector2, size: int, variant := 0) -> bool:
 	if not _sim_ok():
 		return false
-	var fl: Vector2 = map.floor_below(p)
+	var cells: Array = Shroom.sprite_cells(map, p, size, variant, sim.PIXEL_SZ)
+	return add_shroom_plan(Shroom.plan(cells, Vector2i(0, -1), sim.PIXEL_SZ), size)
+
+
+# A shroom from its plan (shroom.gd plan: a decor mushroom's cells and
+# the way it grows), of size (its mass) size, or one read off its
+# height for 0.
+func add_shroom_plan(pl: Dictionary, size := 0) -> bool:
+	if not _sim_ok() or pl.is_empty():
+		return false
 	var s := Shroom.new()
 	_seed += 1
-	if not s.setup(sim, map, Vector2(p.x, fl.y - 1.0), size, variant, 977 + _seed):
+	if not s.setup_plan(sim, map, pl, size if size > 0 else Shroom.size_of(pl, sim.PIXEL_SZ)):
 		return false
 	shrooms.append(s)
 	_by_chunk[s.chunk] = s
 	return true
+
+
+# A decor stamp's cells, as SceneBuilder.stamp sets them ([x, y, kind,
+# part] each), split into its mushrooms (the sprite's parts, a cluster's
+# single ones) and each planned as a shroom growing along up_v; part_n
+# holds each part's pixels. A part not nearly all set (laid against
+# rock or other decor) or with no stem to bend stays decor. Returns
+# [plans, the cells no plan took].
+static func plan_decor(cells: Array, up_v: Vector2i, cell: float, part_n: Array) -> Array:
+	var by := {}
+	for c in cells:
+		var k: int = c[3] if c.size() > 3 else -1
+		if not by.has(k):
+			by[k] = []
+		by[k].append(c)
+	var left: Array = []
+	var plans: Array = []
+	for k in by:
+		var part: Array = by[k]
+		var whole: bool = k >= 0 and k < part_n.size() and part.size() >= int(part_n[k] * WHOLE_PART)
+		var pl := Shroom.plan(part, up_v, cell) if whole else {}
+		if pl.is_empty():
+			left.append_array(part)
+		else:
+			plans.append(pl)
+	return [plans, left]
 
 
 # A vine hanging from the ceiling over p, length px.

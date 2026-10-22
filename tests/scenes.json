@@ -26590,6 +26590,186 @@
    "state": "swim",
    "note": "a block 760 px over a deep pool: a jump off its edge into the water, then nothing or a swim on; let be it floats up, into the top half of the pool"
   },
+  "crumb_perch_4_820": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "fill",
+     820,
+     868,
+     4,
+     4
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still"
+   ],
+   "state": "cling",
+   "note": "a 4 px crumb of rock in the air at x 820, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight"
+  },
+  "crumb_perch_8_816": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "fill",
+     816,
+     868,
+     8,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still"
+   ],
+   "state": "cling",
+   "note": "a 8 px crumb of rock in the air at x 816, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight"
+  },
+  "crumb_perch_12_812": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "fill",
+     812,
+     868,
+     12,
+     12
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still"
+   ],
+   "state": "cling",
+   "note": "a 12 px crumb of rock in the air at x 812, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight"
+  },
+  "crumb_perch_8_790": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "fill",
+     790,
+     868,
+     8,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still"
+   ],
+   "state": "cling",
+   "note": "a 8 px crumb of rock in the air at x 790, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight"
+  },
+  "crumb_perch_8_850": {
+   "base": "solid",
+   "terrain": [
+    [
+     "erase",
+     60,
+     40,
+     1800,
+     920
+    ],
+    [
+     "fill",
+     200,
+     896,
+     500,
+     64
+    ],
+    [
+     "fill",
+     850,
+     868,
+     8,
+     8
+    ]
+   ],
+   "spawn": [
+    "floor",
+    560,
+    856
+   ],
+   "scripts": [
+    "leap_still"
+   ],
+   "state": "cling",
+   "note": "a 8 px crumb of rock in the air at x 850, landed on from a jump off a block: the body settles onto it, no part left in the air along the flight"
+  },
   "critters_lab": {
    "base": "room",
    "terrain": [

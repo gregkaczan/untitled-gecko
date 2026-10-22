@@ -7,7 +7,7 @@
 # reads. Prints a CRIT line a check and CRIT TEST OK or CRIT TEST FAILS.
 #
 # Cases: shroom_rest, shroom_land, shroom_boost, shroom_chew,
-# shroom_cut, shroom_rock, vine_swing, vine_cut, vine_climb, vine_catch,
+# shroom_cut, shroom_rock, decor, vine_swing, vine_cut, vine_climb, vine_catch,
 # slime_creep, slime_bite, slime_wade, longslug, perf.
 #
 #   (main.gd runs it as GECKO_PROBE=res://tests/critters_test.gd)
@@ -54,6 +54,7 @@ func _run() -> void:
 		"shroom_chew": await _shroom_chew()
 		"shroom_cut": await _shroom_cut()
 		"shroom_rock": await _shroom_rock()
+		"decor": await _decor()
 		"vine_swing": await _vine_swing()
 		"vine_cut": await _vine_cut()
 		"vine_climb": await _vine_climb()
@@ -352,6 +353,38 @@ func _shroom_rock() -> void:
 	for k in s.SEGS:
 		back += s.theta[k]
 	_check("rock_back", absf(back) < 0.02, "let go, it stands straight again (%.3f rad)" % back)
+
+
+# The decor's mushrooms bend too: each stamped by the editor on the
+# lab's floor is a shroom (a cluster three, one a mushroom), with no
+# standing cell left of it; a level's are made on load.
+func _decor() -> void:
+	var c: Node2D = main.critters
+	var want := {"cluster_0": 3, "cluster_2": 3, "tall_a_0": 1, "tall_b_1": 1, "shroom_s_0": 1, "cluster_1_p2": 1}
+	var x := 760.0
+	for nm in want:
+		var before: int = c.shrooms.size()
+		var r: Rect2 = main.edit_stamp(nm, Vector2(x, 780.0), 12.0, "floor", "", {})
+		await _ticks(4)
+		var made: int = c.shrooms.size() - before
+		var standing: Array = _cells_of_class(main.sim.CT_SOLID, r.grow(-1.0))
+		_check("decor_" + nm, made == want[nm] and standing[0] == 0, "%s: %d shrooms (want %d), %d standing cells" % [nm, made, want[nm], standing[0]])
+		x += 60.0
+	# One bends under a weight like any shroom.
+	var s: RefCounted = c.shrooms[c.shrooms.size() - 3]
+	s.weight_at = s.cap_xf().origin + Vector2(10.0, -2.0)
+	var bent := 0.0
+	for i in 90:
+		await _ticks(1)
+		var sum := 0.0
+		for k in s.SEGS:
+			sum += s.theta[k]
+		bent = maxf(bent, absf(sum))
+	s.weight_at = Vector2.INF
+	_check("decor_bends", bent > 0.03, "a stamped tall shroom bent %.2f rad under a weight" % bent)
+	print("CRIT note decor: " + main.load_level("cave5"))
+	await _ticks(10)
+	_check("decor_level", c.shrooms.size() >= 3 and main._decor_plans.size() == c.shrooms.size(), "cave 5's mushrooms: %d shrooms of %d plans" % [c.shrooms.size(), main._decor_plans.size()])
 
 
 # --- the vine ---

@@ -66,90 +66,96 @@ var _rest_d := PackedFloat32Array()   # Each joint's bend at rest (the sprite's 
 var _angles := PackedFloat32Array()
 
 
-# Lays the shroom out on the air above base (the floor's surface point)
-# from the decor sprite SPRITE: size 1 to 5 at its own scale, 6 to 10
-# at twice it; an odd variant mirrors it. Its pixels are the cells, in
-# their own colours, glowing where the decor's do; the stem's
-# centreline, read row by row up to the cap, is the chain's rest pose
-# (the bent stem rests bent). False when it does not fit (no free
-# slots, no air, no sprite).
-func setup(sim_in: Node2D, map_in: Node2D, base_in: Vector2, size: int, variant: int, _seed_v: int) -> bool:
-	sim = sim_in
-	map = map_in
-	size = clampi(size, 1, MAX_SIZE)
-	mass = 0.5 + size * MASS_K
-	var pick := sprite_for(size, variant)
-	var sc: int = pick[1]
-	var stamp: Dictionary = SceneBuilder.png_stamps().get(pick[0], {})
-	if stamp.is_empty():
-		return false
-	var mirror: bool = pick[2]
-	var w: int = stamp.w
-	var h: int = stamp.h
-	var art := {}                  # Vector2i art pixel -> decor kind (its skin band)
-	var widths := PackedInt32Array()
-	widths.resize(h)
-	var lo := PackedInt32Array()
-	var hi := PackedInt32Array()
-	lo.resize(h)
-	hi.resize(h)
-	lo.fill(w)
-	hi.fill(-1)
-	var cs: PackedInt32Array = stamp.cells
-	for k in range(0, cs.size(), 3):
-		var x: int = (w - 1 - cs[k]) if mirror else cs[k]
-		var y: int = cs[k + 1]
-		art[Vector2i(x, y)] = cs[k + 2]
-		lo[y] = mini(lo[y], x)
-		hi[y] = maxi(hi[y], x)
+# The rig of a shroom from its cells, nothing made yet: cells are
+# [x, y, kind] on the sim's grid (a decor kind, its colour and glow),
+# up_v the way it grows off its surface (floor (0, -1), ceiling (0, 1),
+# a wall sideways), cell the grid's px. Rows run across up_v from the
+# surface out; the cap is the rows from the lowest one (past the first
+# two, a foot's flare) three cells wider than the row under it or three
+# quarters of the widest, out; the stem the rows under it (an outlined
+# stem is most of a small cap's width, so a share of the widest alone
+# took it for cap), and the stem's centre on
+# each row (smoothed) cut into SEGS equal links is the chain's rest
+# pose, so a bent stem rests bent. {} when it has no stem to bend (a
+# cap on the surface, a stamp turned over): it stays decor.
+static func plan(cells: Array, up_v: Vector2i, cell: float) -> Dictionary:
+	if cells.size() < 6:
+		return {}
+	var along := Vector2i(-up_v.y, up_v.x)
+	var h0 := 1 << 30
+	for c in cells:
+		h0 = mini(h0, c[0] * up_v.x + c[1] * up_v.y)
+	var lo := {}
+	var hi := {}
+	var rows := 0
+	for c in cells:
+		var r: int = c[0] * up_v.x + c[1] * up_v.y - h0
+		var l: int = c[0] * along.x + c[1] * along.y
+		lo[r] = mini(lo.get(r, l), l)
+		hi[r] = maxi(hi.get(r, l), l)
+		rows = maxi(rows, r + 1)
 	var widest := 0
-	for y in h:
-		widths[y] = hi[y] - lo[y] + 1 if hi[y] >= 0 else 0
-		widest = maxi(widest, widths[y])
-	# The cap: from the lowest row as wide as most of the widest up.
-	var cap_y := 0
-	for y in range(h - 1, -1, -1):
-		if widths[y] >= int(ceil(widest * 0.55)):
-			cap_y = y
+	for r in lo:
+		widest = maxi(widest, hi[r] - lo[r] + 1)
+	var wid := PackedInt32Array()
+	wid.resize(rows)
+	for r in rows:
+		wid[r] = hi[r] - lo[r] + 1 if lo.has(r) else 0
+	var cap_r := -1
+	for r in range(2, rows):
+		if wid[r] >= wid[r - 1] + 3 or wid[r] >= int(ceil(widest * 0.75)):
+			cap_r = r
 			break
-	if cap_y >= h - 2:
-		return false
-	# The stem's centre on each row under the cap, smoothed over three.
-	var ps: float = sim.PIXEL_SZ
-	var cell := ps * sc
+	if cap_r < 2:
+		return {}
 	var raw := PackedFloat32Array()
-	raw.resize(h)
-	for y in range(cap_y + 1, h):
-		raw[y] = (lo[y] + hi[y]) * 0.5 if hi[y] >= 0 else raw[y - 1]
-	var mid := PackedFloat32Array()
-	mid.resize(h)
+	raw.resize(cap_r)
 	var stem_w := 1
-	for y in range(cap_y + 1, h):
+	for r in cap_r:
+		raw[r] = (lo[r] + hi[r]) * 0.5 if lo.has(r) else raw[maxi(r - 1, 0)]
+		if lo.has(r):
+			stem_w = maxi(stem_w, hi[r] - lo[r] + 1)
+	var mid := PackedFloat32Array()
+	mid.resize(cap_r)
+	for r in cap_r:
 		var n := 0
 		var sum := 0.0
 		for d in [-1, 0, 1]:
-			if y + d > cap_y and y + d < h:
-				sum += raw[y + d]
+			if r + d >= 0 and r + d < cap_r:
+				sum += raw[r + d]
 				n += 1
-		mid[y] = sum / n
-		stem_w = maxi(stem_w, widths[y])
-	# Where the sprite sits: the stem's foot on base, on the cell grid.
-	var bottom := (floorf(base_in.y / ps) + 1.0) * ps
-	var ox := snappedf(base_in.x - (mid[h - 1] + 0.5) * cell, ps)
-	var oy := bottom - h * cell
-	var line := PackedVector2Array([Vector2(ox + (mid[h - 1] + 0.5) * cell, bottom)])
-	for y in range(h - 1, cap_y, -1):
-		line.append(Vector2(ox + (mid[y] + 0.5) * cell, oy + (y + 0.5) * cell))
-	line.append(Vector2(ox + (mid[cap_y + 1] + 0.5) * cell, oy + (cap_y + 1) * cell))
+		mid[r] = sum / n
+	var fa := Vector2(along)
+	var fu := Vector2(up_v)
+	var at := func(l: float, r: float) -> Vector2:
+		return (fa * l + fu * (h0 + r) + Vector2(0.5, 0.5)) * cell
+	var line := PackedVector2Array([at.call(mid[0], -0.5)])
+	for r in cap_r:
+		line.append(at.call(mid[r], float(r)))
+	line.append(at.call(mid[cap_r - 1], cap_r - 0.5))
 	var total := 0.0
 	for i in line.size() - 1:
 		total += line[i].distance_to(line[i + 1])
+	return {"cells": cells, "up": fu, "line": line, "height": total, "half_w": stem_w * cell * 0.5,
+			"cap_w": widest * cell * 0.5, "cap_r": cap_r, "h0": h0, "up_v": up_v, "rows": rows}
+
+
+# A shroom made from its plan (plan above), its mass from its size (1
+# to MAX_SIZE; decor() reads one off its height). False when it does not
+# fit (no free bones, the cells taken).
+func setup_plan(sim_in: Node2D, map_in: Node2D, pl: Dictionary, size: int) -> bool:
+	sim = sim_in
+	map = map_in
+	if pl.is_empty():
+		return false
+	mass = 0.5 + clampi(size, 1, MAX_SIZE) * MASS_K
+	up = pl.up
+	var line: PackedVector2Array = pl.line
 	base = line[0]
-	height = total
+	height = pl.height
 	seg = height / SEGS
-	half_w = stem_w * cell * 0.5
-	cap_w = widest * cell * 0.5
-	# The chain's rest pose: the line cut into SEGS equal links.
+	half_w = pl.half_w
+	cap_w = pl.cap_w
 	var rest := PackedVector2Array()
 	for i in SEGS + 1:
 		rest.append(_along(line, seg * i))
@@ -167,36 +173,37 @@ func setup(sim_in: Node2D, map_in: Node2D, base_in: Vector2, size: int, variant:
 	bone0 = sim.alloc_bones(SEGS + 1)
 	if bone0 < 0:
 		return false
+	var ps: float = sim.PIXEL_SZ
+	var up_v: Vector2i = pl.up_v
+	var h0: int = pl.h0
+	var cap_r: int = pl.cap_r
 	var cells: Array = []
 	var skin := {}
 	var fracs := {}
 	counts0.resize(SEGS + 1)
 	counts0.fill(0)
-	for px in art:
-		var band: int = art[px]
-		for j in sc:
-			for i in sc:
-				var c := Vector2i(int(round((ox + (px.x * sc + i) * ps) / ps)), int(round((oy + (px.y * sc + j) * ps) / ps)))
-				if c.x < 0 or c.y < 0 or c.x >= sim.RENDER_W or c.y >= sim.RENDER_H or skin.has(c):
-					continue
-				if sim.cells.size() >= sim.RENDER_W * sim.RENDER_H * 4 and sim.cells.decode_u32((c.y * sim.RENDER_W + c.x) * 4) != 0:
-					continue
-				var bone := SEGS
-				var wt := 0.0
-				if px.y > cap_y:
-					var t := _arc_of(rest, Vector2((c.x + 0.5) * ps, (c.y + 0.5) * ps)) / seg
-					var k := clampi(int(floor(t)), 0, SEGS - 1)
-					var f := t - k
-					if f < 0.5 and k > 0:
-						bone = k - 1
-						wt = 0.5 + f
-					else:
-						bone = k
-						wt = maxf(f - 0.5, 0.0)
-				cells.append(c)
-				skin[c] = [bone0 + bone, wt]
-				fracs[c] = sim.FRAC_SKIN + (band + 0.5) * sim.SKIN_BAND
-				counts0[bone] += 1
+	for e in pl.cells:
+		var c := Vector2i(e[0], e[1])
+		if c.x < 0 or c.y < 0 or c.x >= sim.RENDER_W or c.y >= sim.RENDER_H or skin.has(c):
+			continue
+		if sim.cells.size() >= sim.RENDER_W * sim.RENDER_H * 4 and sim.cells.decode_u32((c.y * sim.RENDER_W + c.x) * 4) != 0:
+			continue
+		var bone := SEGS
+		var wt := 0.0
+		if c.x * up_v.x + c.y * up_v.y - h0 < cap_r:
+			var t := _arc_of(rest, Vector2((c.x + 0.5) * ps, (c.y + 0.5) * ps)) / seg
+			var k := clampi(int(floor(t)), 0, SEGS - 1)
+			var f := t - k
+			if f < 0.5 and k > 0:
+				bone = k - 1
+				wt = 0.5 + f
+			else:
+				bone = k
+				wt = maxf(f - 0.5, 0.0)
+		cells.append(c)
+		skin[c] = [bone0 + bone, wt]
+		fracs[c] = sim.FRAC_SKIN + (int(e[2]) + 0.5) * sim.SKIN_BAND
+		counts0[bone] += 1
 	if cells.is_empty():
 		return false
 	_pose()
@@ -209,6 +216,45 @@ func setup(sim_in: Node2D, map_in: Node2D, base_in: Vector2, size: int, variant:
 		return false
 	map.anchored[chunk] = true
 	return true
+
+
+# The size a shroom of this plan counts as (its mass): about a size a
+# 13 px of its height.
+static func size_of(pl: Dictionary, cell: float) -> int:
+	return clampi(int(round(int(pl.rows) * cell / 13.0)), 1, MAX_SIZE)
+
+
+# A shroom stamped on the floor under p from SPRITE, as critters.gd
+# add_shroom lays one (a scene's "shroom" lump): size 1 to 5 at the
+# sprite's scale, 6 to 10 at twice it, an odd variant mirrored. Its
+# cells, [x, y, kind] each on the map's grid, the stem's foot under p.
+static func sprite_cells(map: Node2D, p: Vector2, size: int, variant: int, cell: float) -> Array:
+	var pick := sprite_for(size, variant)
+	var sc: int = pick[1]
+	var stamp: Dictionary = SceneBuilder.png_stamps().get(pick[0], {})
+	if stamp.is_empty():
+		return []
+	var w: int = stamp.w
+	var h: int = stamp.h
+	var cs: PackedInt32Array = stamp.cells
+	# The foot: the bottom row's middle, lying on p.
+	var foot := 0.0
+	var n := 0
+	for k in range(0, cs.size(), 3):
+		if cs[k + 1] == h - 1:
+			foot += (w - 1 - cs[k]) if pick[2] else cs[k]
+			n += 1
+	foot = foot / maxi(n, 1)
+	var fl: Vector2 = map.floor_below(p)
+	var bx := int(floor(p.x / cell)) - int(round((foot + 0.5) * sc - 0.5))
+	var by := int(floor(fl.y / cell)) - h * sc
+	var out: Array = []
+	for k in range(0, cs.size(), 3):
+		var x: int = (w - 1 - cs[k]) if pick[2] else cs[k]
+		for j in sc:
+			for i in sc:
+				out.append([bx + x * sc + i, by + cs[k + 1] * sc + j, cs[k + 2]])
+	return out
 
 
 # The sprite a shroom of this size and variant is drawn from: [stamp

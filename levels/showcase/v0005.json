@@ -1,0 +1,40 @@
+{
+ "bases": {
+  "showcase": [
+   [
+    "blank"
+   ],
+   [
+    "cells",
+    "res://levels/showcase/v0005.cells.png"
+   ]
+  ]
+ },
+ "kind": "auto",
+ "saved_at": "2026-10-22 15:58:38",
+ "scenes": {
+  "showcase": {
+   "base": "showcase",
+   "decor": [
+    [
+     "tall_b_1",
+     369.0,
+     801.0,
+     "floor",
+     ""
+    ]
+   ],
+   "lights": [],
+   "lumps": [],
+   "slugs": [],
+   "spawn": [
+    "floor",
+    500.0,
+    700.0
+   ]
+  }
+ },
+ "scripts": {
+
+ }
+}

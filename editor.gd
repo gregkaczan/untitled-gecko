@@ -17,10 +17,16 @@
 # The light picked is seeded at the cursor before the click, so the
 # world shows it, the wheel sizing its radius and Shift+wheel its
 # strength; the right button takes a light away; a check turns the
-# light pass off, the whole cave lit flat. Everything goes
-# through main.gd, which paints the live world (the particle sim or the
-# bitmap) and an authoring cell map alike, keeps every stroke for undo
-# (Ctrl+Z, Ctrl+Y), autosaves versions of the level and loads them.
+# light pass off, the whole cave lit flat. Select (the Tools card, V
+# or Esc: nothing picked) is the hand: every stamp, cone, run, critter, lump, slug and
+# light placed shows a box, a drag moves it, the wheel, the arrows and H
+# change it, Del or the right button takes it away. Everything goes
+# through main.gd, which keeps the paints as terrain on an authoring
+# cell map and the rest as entries baked on it into the live world (the
+# particle sim or the bitmap), makes that world again from the level
+# when the editor opens and, after edits, when it closes, keeps every
+# stroke for undo (Ctrl+Z, Ctrl+Y), autosaves versions of the level and
+# loads them.
 # Ctrl+wheel zooms about the cursor with no limit, the middle button
 # pans, Home brings the camera back to the gecko, [ and ] size the
 # brush, Esc drops the pick, ? shows the cheat sheet of all of it. New
@@ -66,8 +72,16 @@ const CHEAT := [
 		["Ctrl+wheel", "zoom about the cursor"],
 		["MMB drag", "pan; Home: back to the gecko"],
 		["Ctrl+Z, Ctrl+Y", "undo, redo"],
-		["Esc", "drop the pick; close a dialog"],
-		["?", "this sheet; Tab or F2 leaves the editor"]]],
+		["Esc", "let go of the item; drop the pick; close a dialog"],
+		["?", "this sheet; Tab or F2 leaves the editor"],
+		["Tab", "in: the world as the level has it; out: baked, play on"]]],
+	["Select (V, Esc, or Tools)", [
+		["hover", "an item's box and what it is"],
+		["LMB drag", "moves it; it finds its surface where it lands"],
+		["wheel", "next variant; a run: another pick of its rules"],
+		["up, down", "size: cones, vines, critters, lumps, thorns"],
+		["H", "mirror a stamp; a run's random mirroring"],
+		["Del, RMB", "takes it away"]]],
 	["Paints", [
 		["LMB, RMB", "paint the kind, erase to air"],
 		["wheel, [ ]", "brush radius 4 to 48 px"]]],
@@ -75,11 +89,13 @@ const CHEAT := [
 		["pick", "a ghost rides the cursor on the surface the anchor finds"],
 		["wheel", "next variant, pinning the brush; any is first"],
 		["LMB click, drag", "lays it; a drag lays a run along the surface"],
+		["RMB", "takes away the stamp or run under it"],
 		["Free", "each click places the variant anywhere"]]],
 	["Stamps", [
 		["up, down", "size 1 to 5: a cone's height, a vine's length, the bush"],
 		["wheel", "a cone's shape, 4 of them"],
-		["LMB click", "sets it where the ghost stands"]]],
+		["LMB click", "sets it where the ghost stands"],
+		["RMB", "takes away what is under it"]]],
 	["Lights", [
 		["pick", "the light is live on the cursor"],
 		["wheel", "radius 4 to 64; Shift+wheel strength 0.2 to 2.0"],
@@ -101,6 +117,7 @@ var _hint: Label
 var _paint_group := ButtonGroup.new()
 var _light_group := ButtonGroup.new()
 var _shape_group := ButtonGroup.new()
+var _select_b: Button          # The Tools card's Select: the hand, nothing picked
 var _paint_buttons: Array = []
 var _light_buttons: Array = []
 var _shape_buttons: Array = []
@@ -152,6 +169,9 @@ var _radius := 12.0            # The brush
 var _lradius := 16.0           # A light's radius
 var _strength := 1.0
 var _drag_from := Vector2.INF  # A cone's source or a strip's start while dragging
+var _hover := {}               # The item under the cursor with nothing picked (main.gd edit_item_at)
+var _sel := {}                 # The item taken: what the wheel, the arrows, H and Delete change
+var _grab := Vector2.INF       # Where the taken item was pressed, while it is dragged
 var _was_down := false
 var _was_rmb := false
 var _panning := false
@@ -197,9 +217,18 @@ func _ready() -> void:
 	head.add_child(_undo_b)
 	_redo_b = _button("Redo", func() -> void: say(_main.edit_redo()))
 	head.add_child(_redo_b)
-	_hint = _label("Tab leaves · ? keys · Ctrl+wheel zoom · MMB pan", 11, DIM)
+	_hint = _label("Tab leaves · ? keys · V or Esc: Select · Ctrl+wheel zoom · MMB pan", 11, DIM)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD
 	col.add_child(_hint)
+
+	# Tools: Select, the hand on what is placed (V or Esc).
+	var tools := _card(col, "Tools", "V")
+	_select_b = _swatch("Select", BOX_BG, func() -> void: _choose("none", -1))
+	_select_b.button_pressed = true
+	tools.add_child(_select_b)
+	var thint := _label("click takes · drag moves · wheel variant · up, down size · H mirror · Del or RMB removes", 11, DIM)
+	thint.autowrap_mode = TextServer.AUTOWRAP_WORD
+	tools.add_child(thint)
 
 	# Paints: a box a kind, and the brush.
 	var paints := _card(col, "Paints")
@@ -660,6 +689,11 @@ func _choose(mode: String, pick: int) -> void:
 	_mode = mode
 	_pick = pick
 	_drag_from = Vector2.INF
+	_select_b.set_pressed_no_signal(mode == "none")
+	if mode != "none":
+		_sel = {}
+		_hover = {}
+		_grab = Vector2.INF
 	if mode != "decor":
 		_decor.deselect_all()
 	if mode != "stamp":
@@ -820,8 +854,31 @@ func _input(event: InputEvent) -> void:
 		if not event.echo:
 			if _cheat_box.visible:
 				_cheat_box.visible = false
+			elif not _sel.is_empty():
+				_sel = {}
+				say("let go")
 			else:
 				_drop_pick()
+		get_viewport().set_input_as_handled()
+	elif k == KEY_V and not event.ctrl_pressed:
+		if not event.echo:
+			_choose("none", -1)
+			say("select")
+		get_viewport().set_input_as_handled()
+	elif _mode == "none" and not _sel.is_empty() and k in [KEY_UP, KEY_DOWN, KEY_DELETE, KEY_BACKSPACE, KEY_H]:
+		# The taken item: the arrows size it, H mirrors it, Delete takes it away.
+		if not event.echo or k == KEY_UP or k == KEY_DOWN:
+			match k:
+				KEY_UP, KEY_DOWN:
+					say(_main.edit_resize(_sel, 1 if k == KEY_UP else -1))
+				KEY_H:
+					say(_main.edit_flip(_sel))
+				_:
+					say(_main.edit_remove(_sel))
+					_sel = {}
+					_hover = {}
+		Input.action_release("move_up")
+		Input.action_release("move_down")
 		get_viewport().set_input_as_handled()
 	elif (k == KEY_UP or k == KEY_DOWN) and _mode == "stamp":
 		# The arrows are the stamp's size here, not the gecko's climb.
@@ -841,6 +898,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.ctrl_pressed:
 				_main.edit_zoom(_main.EDIT_ZOOM_STEP if dir > 0 else 1.0 / _main.EDIT_ZOOM_STEP, event.position)
 				say(_main.edit_zoom_text())
+			elif _mode == "none":
+				# The wheel on the item taken, else on the one under the cursor.
+				var it := _sel if not _sel.is_empty() else _hover
+				if not it.is_empty():
+					say(_main.edit_turn(it, dir, event.shift_pressed))
 			else:
 				_dial(dir, event.shift_pressed)
 			get_viewport().set_input_as_handled()
@@ -857,8 +919,10 @@ func _keys() -> void:
 		return
 	if Input.is_action_just_pressed("edit_undo"):
 		say(_main.edit_undo())
+		_sel = {}
 	if Input.is_action_just_pressed("edit_redo"):
 		say(_main.edit_redo())
+		_sel = {}
 	if Input.is_action_just_pressed("edit_home"):
 		_main.edit_home()
 		say(_main.edit_zoom_text())
@@ -904,9 +968,17 @@ func _process(dt: float) -> void:
 	if over:
 		_main.edit_ghost({})
 		_main.edit_light_preview([])
+		_main.edit_marks({}, _sel, Vector2.ZERO)
 		_tag.visible = false
 		return
 	var anchor: String = ANCHORS[_anchor.selected]
+	if _mode != "none":
+		_main.edit_marks({}, {}, Vector2.ZERO)
+		if rpressed and (_mode == "decor" or _mode == "stamp"):
+			# The right button takes away what is under it.
+			var it: Dictionary = _main.edit_item_at(world)
+			if not it.is_empty() and it.list != "lights":
+				say(_main.edit_remove(it))
 	match _mode:
 		"paint":
 			if lmb:
@@ -914,9 +986,7 @@ func _process(dt: float) -> void:
 			elif rmb:
 				_main.edit_paint(world, _radius, 0)
 		"decor":
-			if rmb:
-				_main.edit_paint(world, _radius, 0)
-			elif lmb and _group != "":
+			if lmb and _group != "":
 				if _free.button_pressed:
 					if pressed:
 						_main.edit_stamp(_free_variant(), world, _radius, anchor, _free_flags())
@@ -934,9 +1004,7 @@ func _process(dt: float) -> void:
 				_tag.visible = false
 		"stamp":
 			var name := _stamp_name()
-			if rmb:
-				_main.edit_paint(world, _radius, 0)
-			elif pressed:
+			if pressed:
 				_main.edit_stamp(name, world, _radius, anchor, "", {"size": _stamp_size, "variant": _stamp_var})
 				_main.edit_ghost({})
 				say("%s set, size %d" % [name, _stamp_size])
@@ -966,9 +1034,41 @@ func _process(dt: float) -> void:
 			var how := "click sets it" if _shape == "point" else ("press at the source, drag to the aim, release" if _shape == "cone" else "press, drag along the surface, release")
 			_show_tag(screen, "%s · %s · r %d · strength %.1f" % [kind, _shape, int(_lradius), _strength], how + " · RMB removes")
 		_:
-			_main.edit_ghost({})
-			_main.edit_light_preview([])
-			_tag.visible = false
+			_select(world, screen, lmb, pressed, rpressed)
+
+
+# Nothing picked: the hand. The item under the cursor shows its box and
+# its tag; a press takes it and a drag moves it, laid at the release;
+# the right button takes it away. The wheel, the arrows, H and Delete
+# work on the one taken (_unhandled_input, _input).
+func _select(world: Vector2, screen: Vector2, lmb: bool, pressed: bool, rpressed: bool) -> void:
+	_main.edit_ghost({})
+	_main.edit_light_preview([])
+	if _grab == Vector2.INF:
+		_hover = _main.edit_item_at(world)
+	if pressed:
+		_sel = _hover
+		_grab = world if not _sel.is_empty() else Vector2.INF
+	elif not lmb and _grab != Vector2.INF:
+		var d := world - _grab
+		_grab = Vector2.INF
+		if d.length() >= 1.0:
+			say(_main.edit_move(_sel, d))
+	if rpressed and not _hover.is_empty():
+		say(_main.edit_remove(_hover))
+		_sel = {}
+		_hover = {}
+	var off := world - _grab if _grab != Vector2.INF else Vector2.ZERO
+	_main.edit_marks(_hover, _sel, off)
+	var it := _sel if _grab != Vector2.INF else _hover
+	if it.is_empty():
+		_tag.visible = false
+		return
+	var line: String = _main.edit_item_text(it)
+	var how := "drag moves · wheel variant · up, down size · H mirror · Del or RMB removes"
+	if it.list == "lights":
+		how = "drag moves · wheel radius · Shift+wheel strength · Del or RMB removes"
+	_show_tag(screen, line, how)
 
 
 func _show_tag(screen: Vector2, line: String, hint: String) -> void:

@@ -6,23 +6,31 @@
    ],
    [
     "cells",
-    "res://levels/cave5/v0002.cells.png"
+    "res://levels/cave5/v0011.cells.png"
    ]
   ]
  },
  "kind": "auto",
- "saved_at": "2026-10-21 10:15:18",
+ "saved_at": "2026-10-22 09:39:14",
  "scenes": {
   "cave5": {
    "base": "cave5",
    "decor": [],
    "lights": [],
-   "lumps": [],
+   "lumps": [
+    [
+     "shroom",
+     1223.5,
+     800.5,
+     3.0,
+     0.0
+    ]
+   ],
    "slugs": [],
    "spawn": [
     "floor",
-    960,
-    540
+    500.0,
+    700.0
    ]
   }
  },

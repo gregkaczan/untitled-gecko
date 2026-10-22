@@ -1,6 +1,6 @@
 # Movement suite report
 
-Runs: 201, passing: 197, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 206, passing: 202, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 | run | result | draw | head | chain | bunch | lag | dance | upflip | uposc | state | stall | ftog | fslide | fjump | sink | float | cjerk | shake | tube | body* | stuck* | creep* | settle* | travel | outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -42,6 +42,11 @@ Runs: 201, passing: 197, failing: 4. Columns are event counts; * marks informati
 | clutch_shaft:cl_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 607 | ok |
 | clutch_turn:cl_turn | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 812 | ok |
 | corner_climb:wall_ceiling | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1612 | ok |
+| crumb_perch_12_812:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 308 | ok |
+| crumb_perch_4_820:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 308 | ok |
+| crumb_perch_8_790:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 415 | ok |
+| crumb_perch_8_816:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 308 | ok |
+| crumb_perch_8_850:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 325 | ok |
 | dig_level_wall:dig_level | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 335 | ok |
 | dig_shaft:dig_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 215 | ok |
 | dig_turns:dig_turns | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 520 | ok |
@@ -85,7 +90,7 @@ Runs: 201, passing: 197, failing: 4. Columns are event counts; * marks informati
 | gap_lower_16:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 1150 | ok |
 | gap_lower_32:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 1228 | ok |
 | gap_lower_48:gap_cross | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 |  | 1334 | ok |
-| gas_pocket:dig_pocket | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  |  | 343 | ok |
+| gas_pocket:dig_pocket | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 |  |  | 1 | 343 | ok |
 | idle_ledge:idle | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | ok |
 | idle_rim:idle | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 0 | ok |
 | idle_slot:slot_lip | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 363 | ok |
