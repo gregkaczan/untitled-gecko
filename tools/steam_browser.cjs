@@ -7,7 +7,7 @@
 //   node tools/steam_browser.cjs start           open the window (its own profile)
 //   node tools/steam_browser.cjs read            the visible tab: headings, fields, buttons, numbered
 //   node tools/steam_browser.cjs show <n|text>   outline element n (or the first with that text) in red
-//   node tools/steam_browser.cjs fill <n> <val>  type into field n, pick an option, or tick a box, Steam's too (not saved)
+//   node tools/steam_browser.cjs fill <n> <val>  type, pick an option or a file, tick a box, Steam's too (not saved)
 //   node tools/steam_browser.cjs click <n>       click item n (wizard steps, tag buttons; never a save)
 //   node tools/steam_browser.cjs shot [file]     screenshot of the visible tab
 //   node tools/steam_browser.cjs goto <url>      open a URL in the visible tab
@@ -171,7 +171,8 @@ async function main() {
         const box = document.getElementById(el.id + '_input');
         if ((!!box.value && box.value !== '0') !== on) window.ToggleCheckbox(el.id);
       }, /^(on|yes|1|true)$/i.test(val));
-    } else if (tag.startsWith('select')) await loc.selectOption({ label: val });
+    } else if (tag === 'input:file') await loc.setInputFiles(val);   // picks the file; the page's Upload sends it
+    else if (tag.startsWith('select')) await loc.selectOption({ label: val });
     else if (/checkbox|radio/.test(tag)) {
       const on = /^(on|yes|1|true)$/i.test(val);
       // clicked in the page: Steam hides or covers some boxes, which a mouse click cannot reach
