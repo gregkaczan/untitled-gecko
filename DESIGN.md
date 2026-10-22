@@ -1182,14 +1182,12 @@ way).
   pale green slug that digests fast.
 - The area goes into the gut at AREA_SCALE (a full bite, radius 12, is
   about 45 gut px²), split into pieces of PIECE_MIN to PIECE_MAX that
-  run down the gullet as bulges (GULP) and drop in at the throat one
-  after another.
+  swell the gullet's stub (STUB px out of the wall, only there to show
+  the way in) for GULP and drop in at the throat one after another.
 - Pieces are discs to the physics (gravity, bounces off each other and
   the wall) and jagged polygons to the eye, in the material's colour
-  (rock lighter than in the world so it reads on the lining). In the
-  acid at the bottom they are lighter and slowed, and digest faster.
-  Each loses DIGEST (out of the acid) or ACID_DIGEST (in it) gut px² a
-  second, times its material's rate (sand and clay 1.5, hard rock 0.5,
+  (rock lighter than in the world so it reads on the lining). Each
+  loses DIGEST gut px² a second, times its material's rate (sand and clay 1.5, hard rock 0.5,
   copper 0.7, shroom and moss 3), and is gone under GONE.
 - The wall is a ring of N_WALL points, each sprung to its rest place
   (a bean: an ellipse with the top left pressed in) and to its
@@ -1209,7 +1207,9 @@ way).
   spawn (R) empties it.
 
 As tuned: full after 14 bites of chewing straight on (about 6 s), room
-for the next bite 3.4 s after the last, empty after 38 s.
+for the next bite 1.6 s after the last, empty after 39 s. (An acid
+pool at the bottom and a long gullet were tried and taken out at the
+user's choice.)
 `godot --headless --path . -s tests/gut_test.gd` checks that and,
 every tick through jumps and landings, that no piece is outside the
 wall, the wall is whole and nothing is NaN.

@@ -1,8 +1,7 @@
 # The gut, always on screen at the bottom left: a soft stomach the
 # chewed rock goes into. Each bite comes down the gullet as a bulge and
 # drops in as a few jagged pieces in the bitten material's colour, which
-# fall, bounce off the wall and each other, sink into the acid at the
-# bottom and shrink as they digest. A gut holding CAP_FILL of its own
+# fall, bounce off the wall and each other, and shrink as they digest. A gut holding CAP_FILL of its own
 # area takes no bite (gecko.gd gut_full): chewing straight through rock
 # fills it, and the gecko waits for it or finds another way.
 #
@@ -26,7 +25,7 @@ const RY := 16.0
 const DENT := 5.0               # The lesser curve: the top left pressed in, a bean
 const N_WALL := 30
 const THROAT_A := -0.30 * PI    # Where on the rest shape the gullet joins (top right)
-const TUBE_TOP := Vector2(48.0, -2.0)
+const STUB := 4.0              # The gullet's stub out of the wall at the throat, just enough to show the way in
 const WALL_K := 0.10            # Each wall point's spring to its rest place, a step
 const WALL_DAMP := 0.86         # A wall point keeps this much of its speed, a step
 const EDGE_K := 0.5             # How much of a neighbour's stretch a step takes back
@@ -36,16 +35,12 @@ const SQUEEZE_RATE := 2.4       # rad/s
 const GRAVITY := 150.0          # Gut px/s²
 const BOUNCE := 0.35
 const SLIDE := 0.9              # The speed along the wall a piece keeps at a touch
-const ACID_Y := 0.80            # The acid's top: this far from the rest shape's top to its bottom
-const ACID_DRAG := 0.15         # A piece in the acid keeps this much of its speed a second
-const ACID_LIFT := 0.4          # and its weight is this much lighter
 const CAP_FILL := 0.55          # The pieces' area over the rest shape's at which the gut is full
 const AREA_SCALE := 0.10        # Gut px² a world px² of bitten rock: a bite of radius 12 is about 45
 const PIECE_MIN := 12.0         # A bite splits into pieces of this to PIECE_MAX gut px²
 const PIECE_MAX := 28.0
 const GONE := 0.6               # A piece smaller than this (gut px²) is digested
-const DIGEST := 0.45            # Gut px² a piece loses a second, out of the acid
-const ACID_DIGEST := 1.3        # and in it
+const DIGEST := 1.0             # Gut px² a piece loses a second
 const GULP := 0.35              # Seconds a bite takes down the gullet
 const GULP_GAP := 0.07          # Between the pieces of one bite
 const SHAKE := 0.02             # The gecko's change of speed (world px/s²) to the pieces' pull (gut px/s²)
@@ -56,8 +51,6 @@ const MEMBRANE := Color(0.55, 0.27, 0.32)
 const MEMBRANE_LIT := Color(0.80, 0.42, 0.48)   # The gecko's tongue colour, on the upper rim
 const MEMBRANE_FULL := Color(0.78, 0.30, 0.30)
 const INSIDE := Color(0.13, 0.05, 0.07, 0.92)
-const ACID := Color(0.55, 0.62, 0.22, 0.55)
-const ACID_TOP := Color(0.72, 0.80, 0.34, 0.8)
 const ROCK := Color(0.47, 0.41, 0.35)          # Rock, lighter than in the world so it reads on the lining
 const STONE := Color(0.52, 0.50, 0.46)         # A swallowed lump (the sim does not say its material)
 const SLUG := Color(0.62, 0.95, 0.72)
@@ -71,7 +64,7 @@ var _prev := PackedVector2Array()
 var _rest := PackedVector2Array()  # Each wall point's place about CENTRE
 var _edge := PackedFloat32Array()  # Rest length from point i to i + 1
 var _throat := 0
-var _acid_y := 0.0
+var _tube_top := Vector2.ZERO   # The gullet's open end, STUB out from the throat
 var _cap := 0.0
 var _pieces: Array = []            # {p, v, area, r, rot, spin, shape, col, rate}
 var _gulps: Array = []             # {t, area, col, rate}: on their way down the gullet
@@ -102,12 +95,10 @@ func _ready() -> void:
 	add_child(shown)
 
 
-# The wall's rest shape, the throat, the acid line and the room, before
+# The wall's rest shape, the throat, the gullet and the room, before
 # the gut is in the tree.
 func _init() -> void:
 	_rng.seed = 7
-	var top := INF
-	var bottom := -INF
 	var best := INF
 	for i in N_WALL:
 		var a := TAU * i / N_WALL
@@ -116,8 +107,6 @@ func _init() -> void:
 		var da := wrapf(a - 1.38 * PI, -PI, PI)
 		r.y += DENT * exp(-da * da / 0.25)
 		_rest.append(r)
-		top = minf(top, r.y)
-		bottom = maxf(bottom, r.y)
 		var dt := absf(wrapf(a - THROAT_A, -PI, PI))
 		if dt < best:
 			best = dt
@@ -126,7 +115,8 @@ func _init() -> void:
 		_edge.append(_rest[i].distance_to(_rest[(i + 1) % N_WALL]))
 		_pts.append(CENTRE + _rest[i])
 	_prev = _pts.duplicate()
-	_acid_y = CENTRE.y + lerpf(top, bottom, ACID_Y)
+	var e := _rest[(_throat + 1) % N_WALL] - _rest[(_throat - 1 + N_WALL) % N_WALL]
+	_tube_top = _pts[_throat] - Vector2(-e.y, e.x).normalized() * STUB
 	var poly := PackedVector2Array()
 	for r in _rest:
 		poly.append(r)
@@ -232,8 +222,7 @@ func _physics_process(dt: float) -> void:
 		_step_pieces(h, pull)
 	for i in range(_pieces.size() - 1, -1, -1):
 		var pc: Dictionary = _pieces[i]
-		var rate := ACID_DIGEST if pc.p.y > _acid_y else DIGEST
-		pc.area -= rate * pc.rate * dt
+		pc.area -= DIGEST * pc.rate * dt
 		if pc.area < GONE:
 			_pieces.remove_at(i)
 		else:
@@ -309,11 +298,7 @@ func _step_wall() -> void:
 
 func _step_pieces(h: float, pull: Vector2) -> void:
 	for pc in _pieces:
-		var g := GRAVITY
-		if pc.p.y > _acid_y:
-			g *= 1.0 - ACID_LIFT
-			pc.v *= pow(ACID_DRAG, h)
-		pc.v += (Vector2(0.0, g) + pull) * h
+		pc.v += (Vector2(0.0, GRAVITY) + pull) * h
 		pc.p += pc.v * h
 		pc.rot += pc.spin * h
 	var n := _pieces.size()
@@ -413,33 +398,20 @@ func _draw_gut() -> void:
 		return
 	var f := clampf(fill(), 0.0, 1.0)
 	var skin := MEMBRANE.lerp(MEMBRANE_FULL, maxf(f - 0.8, 0.0) / 0.2)
-	# The gullet, with the bites on their way down as bulges.
+	# The gullet's stub, swelling as a bite comes through.
 	var throat := _pts[_throat]
-	c.draw_line(TUBE_TOP, throat, skin, 5.0)
+	c.draw_line(_tube_top, throat, skin, 5.0)
 	for g in _gulps:
 		var u := clampf(1.0 - g.t / GULP, 0.0, 1.0)
-		c.draw_circle(TUBE_TOP.lerp(throat, u), 3.2, skin)
+		c.draw_circle(_tube_top.lerp(throat, u), 3.2, skin)
 	c.draw_colored_polygon(outer, skin)
-	c.draw_line(TUBE_TOP, throat, INSIDE, 2.0)
+	c.draw_line(_tube_top, throat, INSIDE, 2.0)
 	c.draw_colored_polygon(_pts, INSIDE)
 	for pc in _pieces:
 		var poly := PackedVector2Array()
 		for v in pc.shape:
 			poly.append(pc.p + (v as Vector2).rotated(pc.rot) * pc.r)
 		c.draw_colored_polygon(poly, pc.col)
-	# The acid: the inside below a gently moving line, over the pieces so
-	# what lies in it is tinted.
-	var cut := PackedVector2Array()
-	var x := -2.0
-	while x <= VIEW.x + 2.0:
-		cut.append(Vector2(x, _acid_y + 0.8 * sin(_t * 1.7 + x * 0.35)))
-		x += 3.0
-	cut.append(Vector2(VIEW.x + 2.0, VIEW.y + 2.0))
-	cut.append(Vector2(-2.0, VIEW.y + 2.0))
-	for poly in Geometry2D.intersect_polygons(_pts, cut):
-		c.draw_colored_polygon(poly, ACID)
-	for line in Geometry2D.intersect_polyline_with_polygon(cut.slice(0, cut.size() - 2), _pts):
-		c.draw_polyline(line, ACID_TOP, 1.0)
 	# The light on the upper rim.
 	var rim := PackedVector2Array()
 	for i in range(N_WALL / 2 + 2, N_WALL - 1):
