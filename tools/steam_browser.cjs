@@ -6,7 +6,7 @@
 //   node tools/steam_browser.cjs start           open the window (its own profile)
 //   node tools/steam_browser.cjs read            the visible tab: headings, fields, buttons, numbered
 //   node tools/steam_browser.cjs show <n|text>   outline element n (or the first with that text) in red
-//   node tools/steam_browser.cjs fill <n> <val>  type into field n, pick an option, or tick a box (not saved)
+//   node tools/steam_browser.cjs fill <n> <val>  type into field n, pick an option, or tick a box, Steam's too (not saved)
 //   node tools/steam_browser.cjs shot [file]     screenshot of the visible tab
 //   node tools/steam_browser.cjs goto <url>      open a URL in the visible tab
 //
@@ -81,6 +81,13 @@ function scan() {
       else if (it.kind === 'checkbox' || it.kind === 'radio') it.value = el.checked ? 'on' : 'off';
       else it.value = clean(el.value).slice(0, 60);
       if (el.required || /\*\s*$/.test(it.label)) it.required = true;
+    } else if (el.classList.contains('fancyCheckbox')) {   // Steam's own tick box: a link over a hidden input
+      it.kind = 'tick';
+      const row = el.closest('.checkboxGrid');
+      const rowName = row && row.firstElementChild !== el.parentElement ? clean(row.firstElementChild.innerText) + ' ' : '';
+      it.label = (rowName + clean(el.innerText || el.title)).slice(0, 70);
+      const box = document.getElementById(el.id + '_input');
+      it.value = box && box.value && box.value !== '0' ? 'on' : 'off';
     } else {
       it.kind = tag === 'a' ? 'link' : 'button';
       it.label = clean(el.innerText || el.value || el.getAttribute('aria-label') || el.title).slice(0, 70);
@@ -155,8 +162,13 @@ async function main() {
     const [n, ...rest] = args; const val = rest.join(' ');
     const loc = p.locator(`[data-uh="${n}"]`);
     if (!await loc.count()) { console.log('No item ' + n + '; run read again.'); process.exit(0); }
-    const tag = await loc.evaluate(el => el.tagName.toLowerCase() + ':' + (el.type || ''));
-    if (tag.startsWith('select')) await loc.selectOption({ label: val });
+    const tag = await loc.evaluate(el => el.classList.contains('fancyCheckbox') ? 'tick' : el.tagName.toLowerCase() + ':' + (el.type || ''));
+    if (tag === 'tick') {   // only flips the box; the page still needs its own save
+      await loc.evaluate((el, on) => {
+        const box = document.getElementById(el.id + '_input');
+        if ((!!box.value && box.value !== '0') !== on) window.ToggleCheckbox(el.id);
+      }, /^(on|yes|1|true)$/i.test(val));
+    } else if (tag.startsWith('select')) await loc.selectOption({ label: val });
     else if (/checkbox|radio/.test(tag)) await (/^(on|yes|1|true)$/i.test(val) ? loc.check() : loc.uncheck());
     else await loc.fill(val);
     await p.evaluate(mark, `[data-uh="${n}"]`);
