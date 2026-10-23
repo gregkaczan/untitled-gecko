@@ -57,6 +57,7 @@ const Backdrop = preload("res://backdrop.gd")
 const Slug = preload("res://slug.gd")
 const Critters = preload("res://critters.gd")
 const Shroom = preload("res://shroom.gd")
+const Strand = preload("res://strand.gd")
 const Editor = preload("res://editor.gd")
 const DecorBrush = preload("res://decor_brush.gd")
 const Gecko = preload("res://gecko.gd")
@@ -65,6 +66,7 @@ const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const PoseAnim = preload("res://pose_anim.gd")
 const Gut = preload("res://gut.gd")
+const DecorPalettes = preload("res://decor_palettes.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
 const LEVEL := "cave5"         # The main cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0); cave 5 as edited (levels/cave5.json) for now, the clutch before
@@ -301,6 +303,8 @@ func _ready() -> void:
 		add_child(_backdrop)
 		_backdrop.attach_far(sim)
 	gecko.blobs = blobs
+	if sim:
+		blobs.set_cells_tex(sim.cells_tex)
 	critters = Critters.new()
 	add_child(critters)
 	critters.setup(sim, map, gecko)
@@ -441,6 +445,7 @@ func _ready() -> void:
 func _reset() -> void:
 	_anim_stop()
 	critters.clear()
+	_set_bands(_scene.get("bands", []) if not _scene.is_empty() else [])
 	if not _scene.is_empty():
 		# The scene's lists are the level in hand: the editor moves and
 		# saves them.
@@ -826,6 +831,7 @@ var _edit_decor: Array = []     # The entries baked on the terrain in order, eac
 var _baked: CaveMap             # The terrain with the entries baked on: the live world's cells, the surfaces new stamps find
 var _build_seed := 0            # The sim's seed for the particles (sim.gd build): the generated cave's, 0 for a scene
 var _stroke_area := Rect2()     # The ground a stroke painted, so its end can bake the entries on it again
+var _edit_bands: Array = []     # The bands of decor palettes, [y, palette] each (decor_palettes.gd): the level's on a reset, then the editor's
 var _edit_lights: Array = []    # The lights, [x, y, kind] or [x, y, kind, radius, strength, shape, x2, y2] each (tests/scene_builder.gd light_point): the level's on a reset, then the editor's; the level file lists them
 var _lights: Array = []         # The same as the light pass takes them, [position, colour, radius, end]
 var _light_preview: Array = []  # The editor's light on the cursor before the click, in the light pass's form, empty for none
@@ -878,11 +884,11 @@ func edit_end() -> void:
 
 func _edit_state() -> Dictionary:
 	return {"cells": _author.solid.duplicate(), "decor": _edit_decor.duplicate(true), "lumps": _edit_lumps.duplicate(true),
-			"slugs": _edit_slugs.duplicate(true), "lights": _edit_lights.duplicate(true), "spawn": _edit_spawn, "exit": _edit_exit}
+			"slugs": _edit_slugs.duplicate(true), "lights": _edit_lights.duplicate(true), "spawn": _edit_spawn, "exit": _edit_exit, "bands": _edit_bands.duplicate(true)}
 
 
 func _edit_changed(a: Dictionary, b: Dictionary) -> bool:
-	return a.cells != b.cells or a.decor != b.decor or a.lumps != b.lumps or a.slugs != b.slugs or a.lights != b.lights or a.spawn != b.spawn or a.exit != b.exit
+	return a.cells != b.cells or a.decor != b.decor or a.lumps != b.lumps or a.slugs != b.slugs or a.lights != b.lights or a.spawn != b.spawn or a.exit != b.exit or a.bands != b.bands
 
 
 func edit_undo() -> String:
@@ -921,6 +927,7 @@ func _edit_restore(st: Dictionary) -> void:
 	_edit_lights = st.lights.duplicate(true)
 	_edit_spawn = st.spawn
 	_edit_exit = st.exit
+	_set_bands(st.bands)
 	_author.solid = st.cells.duplicate()
 	_rebuild_world()
 	_relight()
@@ -1074,8 +1081,16 @@ func _bake_stamp(e: Dictionary, name: String, at: Vector2, where: String, flags:
 	if cells.is_empty():
 		return Rect2()
 	e.rects.append(rect)
-	if sim and SceneBuilder.is_shroom_stamp(name):
-		var res: Array = Critters.plan_decor(cells, SceneBuilder.frame_up(where), CaveMap.CELL_FULL, SceneBuilder.png_stamps()[name].part_n)
+	if sim and SceneBuilder.is_strand_stamp(name):
+		# A strand: a rope between its ends, not cells (strand.gd).
+		var pl := Strand.plan(cells, CaveMap.CELL_FULL)
+		if not pl.is_empty():
+			if live:
+				critters.add_strand_plan(pl)
+			_decor_plans.append(pl)
+			cells = []
+	elif sim and SceneBuilder.is_shroom_stamp(name):
+		var res: Array = Critters.plan_decor(cells, SceneBuilder.frame_up(where), CaveMap.CELL_FULL, SceneBuilder.png_stamps()[name].part_n, SceneBuilder.is_plant_stamp(name))
 		for pl in res[0]:
 			if not live:
 				_decor_plans.append(pl)
@@ -1261,6 +1276,13 @@ func edit_stamp(name: String, p: Vector2, r: float, where := "nearest", flags :=
 			var ln := long_slug_length(size) if size > 0 else 40.0
 			critters.add_long_slug(p, ln)
 			_edit_lumps.append(["longslug", p.x, p.y, ln])
+		"worm":
+			var wz := size if size > 0 else 1
+			critters.add_worm(p, wz)
+			_edit_lumps.append(["worm", p.x, p.y, float(wz)])
+		"jelly":
+			critters.add_jelly(p)
+			_edit_lumps.append(["jelly", p.x, p.y, 1.0])
 		"slug":
 			var sl := Slug.new()
 			sl.setup(map, p, 31 + _slugs.size())
@@ -1313,6 +1335,10 @@ func _add_critter(c: Array) -> void:
 			critters.add_slime(c[1], c[2])
 		"longslug":
 			critters.add_long_slug(c[1], c[2])
+		"worm":
+			critters.add_worm(c[1], int(c[2]))
+		"jelly":
+			critters.add_jelly(c[1])
 
 
 # The light pass takes MAX_GLOWS: past that the gecko's own and those
@@ -1390,6 +1416,64 @@ static func _seg_dist(p: Vector2, a: Vector2, b: Vector2) -> float:
 
 
 # The lights as the light pass takes them, from the list, and the marks.
+# The bands of decor palettes (decor_palettes.gd): the sim's, the bitmap
+# world's and the editor's marks, from a level's list ([] for one band of
+# sage).
+func _set_bands(list: Array) -> void:
+	DecorPalettes.set_bands(list)
+	_edit_bands = DecorPalettes.bands_json()
+	if sim:
+		sim.set_bands(_edit_bands)
+	elif map:
+		map.repaint_all()
+	if _marks:
+		_marks.bands = _edit_bands
+		_marks.queue_redraw()
+
+
+# The editor's bands: the band under p takes the next palette (dir 1)
+# or the one before (-1).
+func edit_band_palette(p: Vector2, dir: int) -> String:
+	var names: Array = DecorPalettes.names()
+	var k := DecorPalettes.band_index(p.y)
+	var bands := _edit_bands.duplicate(true)
+	var i := posmod(names.find(String(bands[k][1])) + dir, names.size())
+	bands[k][1] = names[i]
+	_set_bands(bands)
+	return "band %d from y %d: %s" % [k + 1, int(bands[k][0]), names[i]]
+
+
+# A new band from p's height down, in the palette of the band it splits.
+func edit_band_split(p: Vector2) -> String:
+	if _edit_bands.size() >= DecorPalettes.MAX_BANDS:
+		return "%d bands at most" % DecorPalettes.MAX_BANDS
+	var y := int(round(p.y / 2.0)) * 2
+	var k := DecorPalettes.band_index(p.y)
+	for b in _edit_bands:
+		if absi(int(b[0]) - y) < 8:
+			return "a band starts there already"
+	var bands := _edit_bands.duplicate(true)
+	bands.append([y, bands[k][1]])
+	_set_bands(bands)
+	return "new band from y %d (B changes its palette)" % y
+
+
+# The band border nearest p (not the first band's top) taken away: the
+# band above runs on over it.
+func edit_band_merge(p: Vector2) -> String:
+	if _edit_bands.size() < 2:
+		return "one band only"
+	var best := 1
+	for i in range(1, _edit_bands.size()):
+		if absf(float(_edit_bands[i][0]) - p.y) < absf(float(_edit_bands[best][0]) - p.y):
+			best = i
+	var bands := _edit_bands.duplicate(true)
+	var gone: Array = bands[best]
+	bands.remove_at(best)
+	_set_bands(bands)
+	return "band border at y %d removed" % int(gone[0])
+
+
 func _relight() -> void:
 	_lights = SceneBuilder.light_points({"lights": _edit_lights})
 	if _marks:
@@ -1446,6 +1530,13 @@ func edit_ghost(spec: Dictionary) -> String:
 			var ln := long_slug_length(size)
 			items.append(["line", p - Vector2(ln * 0.5, 0.0), p + Vector2(ln * 0.5, 0.0), Color(0.86, 0.62, 0.74), 6.0])
 			where = "surface"
+		"worm":
+			var wl := 98.0 if size >= 4 else 50.0
+			items.append(["line", p - Vector2(wl * 0.5, 0.0), p + Vector2(wl * 0.5, 0.0), Color(0.99, 0.98, 0.81), 8.0])
+			where = "surface"
+		"jelly":
+			items.append(["disc", p, 8.0, Color(0.97, 0.55, 0.85)])
+			where = "water"
 		_:
 			var table := stamp_table(name, size)
 			where = edit_where(p, String(spec.get("where", "nearest")))
@@ -1556,6 +1647,11 @@ func _item_rect(list: String, i: int) -> Rect2:
 					return Rect2(p.x - 3.0 - 2.0 * r, f.y - 8.0 - 6.0 * r, 6.0 + 4.0 * r, 8.0 + 6.0 * r)
 				"longslug":
 					return Rect2(p.x - r * 0.5, p.y - 5.0, r, 10.0)
+				"worm":
+					var wl := 98.0 if r >= 4.0 else 50.0
+					return Rect2(p.x - wl * 0.5, p.y - wl * 0.25, wl, wl * 0.5)
+				"jelly":
+					return Rect2(p.x - 10.0, p.y - 12.0, 20.0, 24.0)
 				"boulder", "clay":
 					var f: Vector2 = m.floor_below(p)
 					return Rect2(p.x - r, f.y - 2.0 * r - 2.0, 2.0 * r, 2.0 * r)
@@ -1725,6 +1821,8 @@ func edit_resize(it: Dictionary, dir: int) -> String:
 					x[3] = slime_radius(clampi(int(round((float(x[3]) - 5.0) / 3.0)) + dir, 1, 5))
 				"longslug":
 					x[3] = long_slug_length(clampi(int(round((float(x[3]) - 20.0) / 14.0)) + dir, 1, 5))
+				"worm", "jelly":
+					x[3] = float(clampi(int(x[3]) + dir, 1, 5))
 				_:
 					x[3] = clampf(float(x[3]) + dir, 3.0, 30.0)
 	_item_changed(it)
@@ -1957,7 +2055,7 @@ func _level_dict(name: String, png: String) -> Dictionary:
 	var decor: Array = []
 	for e in _edit_decor:
 		decor.append(_decor_json(e))
-	var sc := {"base": name, "spawn": spawn, "lumps": _edit_lumps.duplicate(true), "slugs": _edit_slugs.duplicate(true), "decor": decor, "lights": _edit_lights.duplicate(true)}
+	var sc := {"base": name, "spawn": spawn, "lumps": _edit_lumps.duplicate(true), "slugs": _edit_slugs.duplicate(true), "decor": decor, "lights": _edit_lights.duplicate(true), "bands": DecorPalettes.bands_json()}
 	var ex := _edit_exit if _edit_exit.has_area() else _exit
 	if ex.has_area():
 		sc["exit"] = [ex.position.x, ex.position.y, ex.size.x, ex.size.y]
@@ -2737,11 +2835,22 @@ func _author_hist() -> Dictionary:
 # them).
 class LightMarks extends Node2D:
 	var lights: Array = []
+	var bands: Array = []     # The bands of decor palettes, [y, palette] each: a dashed line and a name at each border while editing
 	var preview: Array = []   # The editor's light on the cursor, faint
 	var boxes: Array = []     # The handles (main.gd edit_marks): [rect, 0 idle, 1 under the cursor, 2 taken]
 	var offset := Vector2.ZERO   # The taken one's drag
 
 	func _draw() -> void:
+		if bands.size() > 1:
+			var col := Color(0.79, 0.70, 0.54, 0.6)
+			for i in range(1, bands.size()):
+				var y := float(bands[i][0])
+				var x := 0.0
+				while x < 1920.0:
+					draw_line(Vector2(x, y), Vector2(x + 8.0, y), col, 1.0)
+					x += 16.0
+		for b in bands:
+			draw_string(ThemeDB.fallback_font, Vector2(4.0, float(b[0]) + 10.0), String(b[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color(0.94, 0.93, 0.9, 0.7))
 		for l in lights:
 			_mark(l, 1.0)
 		if not preview.is_empty():

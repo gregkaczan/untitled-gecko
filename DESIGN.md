@@ -908,6 +908,119 @@ without them (the driven particles are always awake, but there are a
 few thousand). With no critters the shaders cost nothing measurable
 (cave 5 timed against the commit before them).
 
+## The packs' art
+
+Human-made pixel art from bought and free packs, replacing the Retro
+Diffusion takes a band at a time (2026-10-23). The user circled the
+pieces on the art hunt page's Downloaded tab (docs/art_hunt in the
+session-20261021-0836 worktree, not in git); `tools/pack_import.py
+manifest <hunt dir>` names each cut and gives it a use (its TABLE) in
+`decor/packs.json`, and `build <hunt dir> <Mycelium.zip>` writes:
+
+- `decor/palettes/<pack>.png`: 16 of the pack's own colours, dark to
+  light, the least used merged into their nearest kin (Ward) when it
+  has more (mycelium 24 into 16, warm 41, garden 39).
+- `decor/stamps/<pack>/<name>.png`: each cut in its palette, a
+  `<name>.glow.png` beside it where it glows (the Mycelium pack's own
+  emission maps; for a cut marked lit with none, its pale half).
+  Shrooms come in three heights, the stem's rows dropped or repeated
+  evenly and the cap kept to the pixel: takes 0 to 9 as drawn, 10 up
+  short, 20 up tall. Curtains are cut into a left end, a middle whose
+  two edges are as alike as can be found (so middles tile) and a right
+  end. Hanging art is stored upside down, so a ceiling stamp hangs it
+  as drawn. The mycelium's near-black navy is lifted a little and a
+  stem's navy half goes to the mid blue, so stems read as one line.
+- `decor/critters/`: the worm's first frame (and `worm_small.png`, half
+  the size, each 2x2 its commonest colour) and the jellyfish's sheet.
+
+The packs: mycelium (Val_DeMar, CC0), warm (Neorice's 16x16 shrooms:
+credit "Neorice (neoriceisgood.com)" is required), garden (Danaida's
+climbing plants), the jellyfish (Elthen) and the worm (Myla_Doodles:
+its page states no licence; ask before shipping or replace it). None of
+the paid or free packs may be redistributed as files: they ship inside
+the game's pack only.
+
+**Bands of palettes** (`decor_palettes.gd`). A decor cell's kind is a
+colour index and a glow bit, never a colour; a level's `"bands": [[y,
+palette], ...]` says which palette a cell at that height reads its
+index in, so each band of the climb keeps a pack's colours. 8 bands
+and 8 palettes at most. Across 32 px under a band's top the two
+palettes are dithered a cell to a cell (one hash on both sides). The
+sim holds them in a block at its buffer's tail (`sim.gd` O_PL,
+`set_bands`, `render_write.glsl` decor_pal); a skinned chunk's colours
+(a shroom, a fallen piece) are read at its rest place, so a shroom that
+bends keeps them; the bitmap world draws the same (`cave_map.gd`). A
+stamp's home palette is its folder under `decor/stamps` (none: sage,
+the first palette, `decor/palette.png`); laid in another band it takes
+that band's colours index for index. The editor: P and Shift+P give the
+band under the cursor the next or the previous palette, K starts a new
+band at the cursor's height, Shift+K removes the border nearest it;
+borders are dashed lines with the palette's name while editing; undo
+covers them and the level file saves them.
+
+**What uses each.** Shrooms that bend (critters, shroom.gd): the
+groups myc_shroom, warm_brown, warm_orange, warm_spot (`SHROOM_GROUPS`).
+Plants that bend (`PLANT_GROUPS`, garden_plant): `Shroom.plan` with
+is_plant, the whole sprite one plant, stem to its last row, the leaves
+going with the link beside them, a third of a shroom's mass so it sways
+under the gecko, no jump boost. Strands (`STRAND_GROUPS`, myc_strand,
+`strand.gd`): a rope between the drawn line's two ends (an end off the
+rock reaches straight up for it, 120 px at most, a link drawn in the
+thread's colour), verlet, no cells in the sim: no hold and no wall,
+pushed aside by the gecko's chain, the long slugs and worms and the
+jellyfish, settling back; a melt across it cuts it there (each part
+hangs from its own anchor), an anchor whose rock is chewed lets go.
+Curtains (garden_moss, garden_roots) are the editor's carpet runs on a
+ceiling, decor cells that stand. The rest scatter.
+
+**Worm** (`["worm", x, y, size]`, long_slug.gd set_sprite): a long slug
+in the worm's drawn skin, no blobs and no glow, slower (0.55). Each
+sprite pixel rides the body at its place back from the head and its
+height off the belly, lifted by the swelling wave, so the squeeze shows;
+set down at four points a quarter cell about it, so a bend leaves no
+cell empty. Sizes 1 to 3 the small sprite (about the gecko's length), 4
+and 5 the sprite as drawn (twice that).
+
+**Jellyfish** (`["jelly", x, y, 1]`, jelly.gd): hangs in the water,
+sinking slowly; every 1.8 to 4 s the pulse row plays and on its third
+frame it darts (85 px/s) mostly up and to the side, never out of the
+water (a dart whose end is dry turns down), and drifts to a stop. Out
+of the water it falls and lies as a puddle until back in. A tongue tip
+or a melt on it pops it (the pop row, then gone). A faint pink glow.
+The water reads as the cells round it (its particles leave single cells
+empty).
+
+Strands, worms and jellyfish are drawn by `critters.gd` a pixel a cell
+on the 2 px grid.
+
+**The water's hue.** A solid pixel the water's gather reaches, or with
+water above it before three open cells, is multiplied toward (0.42,
+0.72, 1.0) by 0.55 (`render_water.glsl`); the drawn critters the same
+by their cell; the gecko per pixel from the sim's cell classes over the
+world (`sim.gd` cells_tex, the class in red, uploaded each frame;
+`metaball.gdshader`), the five cells about each pixel.
+
+**Decor that falls** (`decor_support.gd`, `sim_map.gd` support). At
+each build the decor cells that touch (corners too) are pieces, each
+with the rock cells round it that hold it. A melt near a piece (every
+`sim.melt_circle` and blast is listed in `sim.gd` melts) has it read
+again from the sim's cells two ticks on: what is still joined through
+decor to living rock stays, the rest comes loose. A decor particle sits
+at its cell's own index, so each still there is rewritten in place as
+bonded stone in the decor's skin bands (its rest place its cell, so it
+keeps its band's colours), a lump a square of 16 cells, nudged down so
+it wakes and falls, to be shoved, dragged and swallowed (chunk ids past
+239 read as air: big pieces in 16-cell squares keep the count down).
+
+**Levels.** `levels/art_tunnel.json`: one tunnel stepping down through
+the three bands (warm, garden, mycelium with a pool at its end), every
+new piece along it: walk right from the spawn. `levels/packs_lab.json`:
+the three bands as rooms over one another, for the tests.
+`tools/packs_test.sh` (tests/packs_test.gd, the lab, the virtual
+display): bands, rig, plant_sway, strand, support, worm, jelly,
+water_tint; `shots` takes a frame of each band to runs/packs, and the
+probe's `tour` case on `GECKO_SCENE=art_tunnel:hold` frames the tunnel.
+
 ## Surfaces that will not be held
 
 Ways the cave resists free climbing and digging straight through, all

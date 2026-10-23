@@ -13,6 +13,7 @@ extends SceneTree
 const CaveMapScript = preload("res://cave_map.gd")
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DecorBrush = preload("res://decor_brush.gd")
+const DecorPalettes = preload("res://decor_palettes.gd")
 const OUT := "res://runs/brush"
 const FLOOR := 800.0
 const CEIL := 100.0
@@ -270,7 +271,7 @@ func _draw(name: String, where: String) -> void:
 			var v: int = _map.solid[(r.position.y + y) * _map.W + r.position.x + x]
 			var col := Color(0.08, 0.08, 0.11)
 			if v >= CaveMapScript.CELL_DECOR:
-				col = CaveMapScript.DECOR_PALETTE[(v - CaveMapScript.CELL_DECOR) & 15]
+				col = DecorPalettes.colour_at(v - CaveMapScript.CELL_DECOR, r.position.x + x, r.position.y + y, cell)
 			elif v == CaveMapScript.CELL_ROCK:
 				col = Color(0.36, 0.34, 0.32)
 			elif v != CaveMapScript.CELL_AIR:

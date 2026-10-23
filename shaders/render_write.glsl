@@ -27,13 +27,41 @@ const uint O_SS = 25039950u;   // per brain [count, sum x, sum y, pad], x and y 
 const uint O_SD = 25040014u;   // slime density per cell (render_water.glsl)
 // A skinned chunk's colours (critters.gd): stone (mat 4) at fraction
 // 0.09 + band * 0.0002: bands 0 to 7 a SKIN_PAL colour, 8 to 15 the same
-// glowing; 16 to 31 a DECOR_PAL colour (a shroom drawn from a decor
+// glowing; 16 to 31 a decor palette colour (decor_pal) (a shroom drawn from a decor
 // sprite), 32 to 47 the same glowing.
 const vec3 SKIN_PAL[8] = vec3[8](vec3(0.86, 0.82, 0.70), vec3(0.62, 0.55, 0.44), vec3(0.78, 0.36, 0.30), vec3(0.95, 0.72, 0.42),
                                  vec3(0.42, 0.82, 0.62), vec3(0.20, 0.42, 0.18), vec3(0.34, 0.58, 0.24), vec3(0.62, 0.46, 0.86));
-// The decor stamps' palette (cave_map.gd DECOR_PALETTE): a mat 12 particle in a
-// fraction band under 0.097 is one of these, band & 15; a band of 16 and up glows.
-const vec3 DECOR_PAL[16] = vec3[16](vec3(0.024, 0.043, 0.016), vec3(0.114, 0.176, 0.086), vec3(0.137, 0.224, 0.118), vec3(0.212, 0.255, 0.145), vec3(0.251, 0.325, 0.180), vec3(0.588, 0.616, 0.627), vec3(0.278, 0.373, 0.220), vec3(0.388, 0.416, 0.267), vec3(0.451, 0.557, 0.369), vec3(0.839, 0.867, 0.878), vec3(0.580, 0.616, 0.455), vec3(0.631, 0.702, 0.529), vec3(0.710, 0.804, 0.608), vec3(0.804, 0.824, 0.655), vec3(0.953, 0.965, 0.957), vec3(0.945, 0.933, 0.788));
+// The decor's palettes by band (decor_palettes.gd, sim.gd O_PL): [count,
+// 8 band tops (world px), 8 palette slots, 8 palettes of 16 RGBA8]. A
+// decor index is read in the palette of the band its place lies in;
+// within BLEND px under a band's top the band above's for a share of the
+// cells that shrinks with the depth, a hash a cell, so the seam is a
+// dither of two palettes' own colours.
+const uint O_PL = 25558414u;
+const float BLEND = 32.0;
+
+float band_hash(int cx, int cy) {
+    uint h = (uint(cx) * 73856093u) ^ (uint(cy) * 19349663u);
+    h = (h ^ (h >> 13u)) * 1274126177u;
+    h ^= h >> 16u;
+    return float(h & 0xffffu) / 65536.0;
+}
+
+vec3 decor_pal(uint idx, float x, float y, float psz) {
+    uint n = min(buf.d[O_PL], 8u);
+    int cx = int(floor(x / psz)), cy = int(floor(y / psz));
+    float yc = (float(cy) + 0.5) * psz;
+    uint k = 0u;
+    for (uint i = 0u; i < n; i++) {
+        if (yc >= uintBitsToFloat(buf.d[O_PL + 1u + i])) k = i;
+    }
+    if (k > 0u) {
+        float t = (yc - uintBitsToFloat(buf.d[O_PL + 1u + k])) / BLEND;
+        if (t < 1.0 && band_hash(cx, cy) > t) k -= 1u;
+    }
+    uint slot = min(buf.d[O_PL + 9u + k], 7u);
+    return unpackUnorm4x8(buf.d[O_PL + 17u + slot * 16u + (idx & 15u)]).rgb;
+}
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
@@ -138,7 +166,7 @@ void main() {
         if (f >= 0.097) { emits = true; em = vec3(0.25, 0.85, 0.35); }
         else {
             uint band = uint(f / 0.003);
-            if (band >= 16u) { emits = true; em = DECOR_PAL[band & 15u] * 0.9; }
+            if (band >= 16u) { emits = true; em = decor_pal(band, sx, sy, psz) * 0.9; }
         }
         if (emits) {
             // A slow, shallow breath, a 32 px patch to a phase, so a
@@ -149,7 +177,9 @@ void main() {
     }
     bool skin_col = (mat == 4u && fract(mat_f) >= 0.0899);
     uint skin_band = skin_col ? min(uint((fract(mat_f) - 0.09) / 0.0002), 47u) : 0u;
-    vec3 skin_c = skin_band >= 16u ? DECOR_PAL[skin_band & 15u] : SKIN_PAL[skin_band & 7u];
+    // A decor sprite's colours are read in the band of its rest place, so
+    // a shroom that bends, or a piece of decor fallen, keeps them.
+    vec3 skin_c = skin_band >= 16u ? decor_pal(skin_band, rf(O_SK + id * 4u + 2u), rf(O_SK + id * 4u + 3u), psz) : SKIN_PAL[skin_band & 7u];
     if (skin_col && (skin_band & 8u) != 0u && skin_band < 16u) { emits = true; em = skin_c * 0.8; }
     if (skin_col && skin_band >= 32u) { emits = true; em = skin_c * 0.9; }
     if (mat == 14u) { emits = true; em = vec3(0.10, 0.32, 0.08); }
@@ -342,7 +372,7 @@ void main() {
 
     // --- Decor (mat 12 in a band): a stamp's pixel in its palette colour, a touch of jitter ---
     } else if (mat == 12u) {
-        vec3 c = DECOR_PAL[uint(fract(mat_f) / 0.003) & 15u];
+        vec3 c = decor_pal(uint(fract(mat_f) / 0.003), sx, sy, psz);
         float j = (hash11(svar * 127.1 + sid * 0.0013) - 0.5) * 0.04;
         cr = c.r + j; cg = c.g + j; cb = c.b + j;
 

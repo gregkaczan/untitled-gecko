@@ -15,12 +15,26 @@
 # world has none (add_* return false). The cost is a few microseconds a
 # chain a tick and no map queries for the plants (the long slug's head
 # makes one nearest_solid a tick); last_us has the tick's time.
+#
+# Drawn here, a pixel a cell on the 2 px grid: the strands (strand.gd,
+# mycelium threads the bodies brush aside), the worms (long slugs in a
+# drawn skin) and the jellyfish (jelly.gd); a pixel in the water takes
+# the water's hue. The melts the sim saw (sim.gd melts) cut strands, pop
+# jellyfish and wake the decor's support check (decor_support.gd).
 extends Node2D
 
 const Shroom = preload("res://shroom.gd")
 const Vine = preload("res://vine.gd")
 const Slime = preload("res://slime.gd")
 const LongSlug = preload("res://long_slug.gd")
+const Strand = preload("res://strand.gd")
+const Jelly = preload("res://jelly.gd")
+const WORM_SPRITE := "res://decor/critters/worm.png"
+const WORM_SMALL := "res://decor/critters/worm_small.png"   # Half the size (tools/pack_import.py halve): about the gecko's length
+const JELLY_SHEET := "res://decor/critters/jelly.png"
+const WATER_HUE := Color(0.42, 0.72, 1.0)   # A pixel in the water is multiplied toward this
+const WATER_K := 0.55                       # by this much
+const BODY_R := 2.0                         # A gecko chain point's reach when it brushes a strand (strand.gd adds its own)
 
 const LAND_WINDOW := 6         # Ticks after the gecko's landing in which a shroom under its feet takes the landing
 const JUMP_KICK := 0.15        # Of the gecko's jump speed kicked back into the held place of the vine it leaves
@@ -34,6 +48,9 @@ var shrooms: Array = []
 var vines: Array = []
 var slimes: Array = []
 var long_slugs: Array = []
+var strands: Array = []
+var jellies: Array = []
+static var _images := {}       # Path -> Image, the creatures' sprites read once
 var last_us := 0               # The last pre_tick and post_tick together, µs
 var parts_us := PackedInt32Array([0, 0, 0, 0, 0])   # Of that: the shrooms, the vines, the slimes, the long slugs, the counts read after the tick
 var held: RefCounted = null    # The shroom or vine the gecko holds this tick
@@ -62,7 +79,10 @@ func clear() -> void:
 	vines.clear()
 	slimes.clear()
 	long_slugs.clear()
+	strands.clear()
+	jellies.clear()
 	_by_chunk.clear()
+	queue_redraw()
 	held = null
 	if map:
 		map.anchored.clear()
@@ -89,6 +109,8 @@ func add_shroom(p: Vector2, size: int, variant := 0) -> bool:
 # the way it grows), of size (its mass) size, or one read off its
 # height for 0.
 func add_shroom_plan(pl: Dictionary, size := 0) -> bool:
+	if pl.get("strand", false):
+		return add_strand_plan(pl)
 	if not _sim_ok() or pl.is_empty():
 		return false
 	var s := Shroom.new()
@@ -104,12 +126,13 @@ func add_shroom_plan(pl: Dictionary, size := 0) -> bool:
 # part] each), split into its mushrooms (the sprite's parts, a cluster's
 # single ones) and each planned as a shroom growing along up_v; part_n
 # holds each part's pixels. A part not nearly all set (laid against
-# rock or other decor) or with no stem to bend stays decor. Returns
+# rock or other decor) or with no stem to bend stays decor. A plant
+# (plant true) is the whole sprite as one, leaves and all. Returns
 # [plans, the cells no plan took].
-static func plan_decor(cells: Array, up_v: Vector2i, cell: float, part_n: Array) -> Array:
+static func plan_decor(cells: Array, up_v: Vector2i, cell: float, part_n: Array, plant := false) -> Array:
 	var by := {}
 	for c in cells:
-		var k: int = c[3] if c.size() > 3 else -1
+		var k: int = (c[3] if c.size() > 3 else -1) if not plant else 0
 		if not by.has(k):
 			by[k] = []
 		by[k].append(c)
@@ -117,8 +140,11 @@ static func plan_decor(cells: Array, up_v: Vector2i, cell: float, part_n: Array)
 	var plans: Array = []
 	for k in by:
 		var part: Array = by[k]
-		var whole: bool = k >= 0 and k < part_n.size() and part.size() >= int(part_n[k] * WHOLE_PART)
-		var pl := Shroom.plan(part, up_v, cell) if whole else {}
+		var all_n := 0
+		for n in part_n:
+			all_n += int(n)
+		var whole: bool = (part.size() >= int(all_n * WHOLE_PART)) if plant else (k >= 0 and k < part_n.size() and part.size() >= int(part_n[k] * WHOLE_PART))
+		var pl := Shroom.plan(part, up_v, cell, plant) if whole else {}
 		if pl.is_empty():
 			left.append_array(part)
 		else:
@@ -150,6 +176,55 @@ func add_slime(p: Vector2, r: float) -> bool:
 		return false
 	slimes.append(s)
 	map.slime_on = true
+	return true
+
+
+# A strand from its plan (strand.gd plan: a myc_strand stamp's cells).
+func add_strand_plan(pl: Dictionary) -> bool:
+	var s := Strand.new()
+	if not s.setup(map, pl):
+		return false
+	strands.append(s)
+	return true
+
+
+static func image(path: String) -> Image:
+	if not _images.has(path):
+		var img := Image.new()
+		var bytes := FileAccess.get_file_as_bytes(path)
+		if bytes.is_empty() or img.load_png_from_buffer(bytes) != OK:
+			img = null
+		else:
+			img.convert(Image.FORMAT_RGBA8)
+		_images[path] = img
+	return _images[path]
+
+
+# A worm on the surface nearest p: a long slug in the worm's skin, as
+# long as the sprite (a pixel a cell): sizes 1 to 3 the small one, about
+# the gecko's length, 4 and 5 the sprite as drawn, twice that.
+func add_worm(p: Vector2, size := 1) -> bool:
+	var img := image(WORM_SPRITE if size >= 4 else WORM_SMALL)
+	if img == null:
+		return false
+	var cell: float = sim.PIXEL_SZ if sim else 2.0
+	var s := LongSlug.new()
+	_seed += 1
+	s.setup(map, p, img.get_width() * cell, 707 + _seed)
+	s.set_sprite(img, cell)
+	long_slugs.append(s)
+	return true
+
+
+# A jellyfish in the water about p.
+func add_jelly(p: Vector2) -> bool:
+	var img := image(JELLY_SHEET)
+	if img == null:
+		return false
+	var j := Jelly.new()
+	_seed += 1
+	j.setup(map, p, img, 911 + _seed)
+	jellies.append(j)
 	return true
 
 
@@ -234,8 +309,18 @@ func pre_tick(dt: float) -> void:
 		var bl: Array = gecko.extra_blobs.duplicate()
 		for s in long_slugs:
 			s.tick(dt, gecko)
-			bl.append_array(s.blobs())
+			if s.sprite.is_empty():
+				bl.append_array(s.blobs())
 		gecko.extra_blobs = bl
+	var bites: Array = sim.melts if sim else []
+	for j in jellies:
+		j.tick(dt, gecko, bites)
+	if not strands.is_empty():
+		var bodies := _bodies()
+		for st in strands:
+			st.step(dt, bodies)
+	if not long_slugs.is_empty() or not jellies.is_empty() or not strands.is_empty():
+		queue_redraw()
 	var t5 := Time.get_ticks_usec()
 	last_us = t5 - t0
 	parts_us[0] = t2 - t1
@@ -258,8 +343,36 @@ func _ride(p: Vector2, old: Array, now: Array) -> Vector2:
 	return (now[k] as Transform2D) * local - p
 
 
+# What brushes the strands aside: the gecko's chain, the long slugs and
+# worms, the jellyfish. [centre, reach] each.
+func _bodies() -> Array:
+	var out: Array = []
+	if gecko and gecko.chain:
+		for p in gecko.chain.points:
+			out.append([p, BODY_R])
+	for s in long_slugs:
+		for i in range(0, s.points.size(), 2):
+			out.append([s.points[i], 2.0])
+	for j in jellies:
+		if j.alive:
+			out.append([j.pos, 6.0])
+	return out
+
+
 func post_tick() -> void:
 	var t0 := Time.get_ticks_usec()
+	if sim:
+		for m in sim.melts:
+			for st in strands:
+				st.bite(m[0], m[1])
+			if "support" in map:
+				map.support.melted(m[0], m[1])
+		sim.melts.clear()
+		if "support" in map:
+			map.support.tick()
+	for i in range(jellies.size() - 1, -1, -1):
+		if not jellies[i].alive:
+			jellies.remove_at(i)
 	for s in shrooms:
 		s.check_counts()
 	for v in vines:
@@ -272,8 +385,45 @@ func post_tick() -> void:
 func glows() -> Array:
 	var out: Array = []
 	for s in long_slugs:
-		out.append(s.glow())
+		if s.sprite.is_empty():
+			out.append(s.glow())
+	for j in jellies:
+		if j.alive:
+			out.append(j.glow())
 	return out
+
+
+# The drawn creatures and threads, a pixel a cell on the world's grid,
+# a pixel in the water toward the water's hue.
+func _draw() -> void:
+	var cell: float = sim.PIXEL_SZ if sim else 2.0
+	var sz := Vector2(cell, cell)
+	for st in strands:
+		for c in st.draw_cells(cell):
+			draw_rect(Rect2(Vector2(c[0], c[1]) * cell, sz), _in_water(c[0], c[1], c[2]))
+	for s in long_slugs:
+		if s.sprite.is_empty():
+			continue
+		var seen := {}
+		for px in s.skin():
+			var at: Vector2 = px[0]
+			var k := Vector2i(int(floor(at.x / cell)), int(floor(at.y / cell)))
+			if seen.has(k):
+				continue
+			seen[k] = true
+			draw_rect(Rect2(Vector2(k) * cell, sz), _in_water(k.x, k.y, px[1]))
+	for j in jellies:
+		for px in j.skin(cell):
+			var at: Vector2 = px[0]
+			var k := Vector2i(int(floor(at.x / cell)), int(floor(at.y / cell)))
+			draw_rect(Rect2(Vector2(k) * cell, sz), _in_water(k.x, k.y, px[1]))
+
+
+func _in_water(cx: int, cy: int, c: Color) -> Color:
+	var cell: float = sim.PIXEL_SZ if sim else 2.0
+	if map and map.is_water_world(Vector2((cx + 0.5) * cell, (cy + 0.5) * cell)):
+		return c.lerp(c * WATER_HUE, WATER_K)
+	return c
 
 
 # The vine the gecko hangs on, for main.gd's snap; null for none.

@@ -30,6 +30,7 @@
 extends Node2D
 
 const CaveMap = preload("res://cave_map.gd")
+const DecorPalettes = preload("res://decor_palettes.gd")
 
 const WORLD_W := 1920.0
 const WORLD_H := 1080.0
@@ -107,7 +108,9 @@ const SB_STRIDE := 8
 const O_SB := O_BC + MAX_BONES                        # 25039822
 const O_SS := O_SB + MAX_SLIMES * SB_STRIDE           # 25039950, [count, sum x, sum y, pad] per brain
 const O_SD := O_SS + MAX_SLIMES * 4                   # 25040014, slime density per cell
-const TOTAL_UINTS := O_SD + RENDER_W * RENDER_H
+const O_PL := O_SD + RENDER_W * RENDER_H              # 25558414, the decor's bands and palettes (decor_palettes.gd gpu_block, render_write.glsl decor_pal)
+const PL_SIZE := 160
+const TOTAL_UINTS := O_PL + PL_SIZE
 const MAT_SLIME := 14
 const CT_SLIME := 8                              # Cell class of slime: sticky, the walk wades through it slowly
 const FRAC_SKIN := 0.0900                        # Stone (mat 4) at fraction 0.09 + band * 0.0002 is a skinned chunk's colour (render_write.glsl): bands 0 to 7 SKIN_PAL, 8 to 15 the same glowing, 16 to 31 the decor palette (SKIN_DECOR), 32 to 47 the same glowing
@@ -178,6 +181,7 @@ var fold_on := false                # Read the folded grid back each tick (the c
 var crumb_cells := 4                # A bit of matter of at most this many cells (of its 5x5) is a crumb: air to the senses, loosened at the body's touch; 0 for none
 var ready_to_run := false
 var light_on := OS.get_environment("GECKO_LIGHT") == "1"  # The light pass and its overlay: off unless GECKO_LIGHT=1 or the panel turns it on, the whole cave lit (the user's choice, 2026-10-21)
+var melts: Array = []               # The melts (bites, the brush, crumbling rock) since the critters last looked, [centre, radius] each: what cuts a strand, pops a jellyfish and wakes the decor's support check (critters.gd post_tick clears it)
 var chunks := {}                    # Chunk id -> {mat, count} as spawned (the GPU owns what is left of each)
 
 var _rd: RenderingDevice
@@ -186,11 +190,14 @@ var _uniform_set: RID
 var _shaders: Array[RID] = []
 var _pipelines: Array[RID] = []
 var _display_img: Image
+var _cells_img := Image.create(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8)
+var cells_tex := ImageTexture.create_from_image(_cells_img)   # The cell classes over the world, the class in red (read_render)
 var _display_tex: ImageTexture
 var _sprite: Sprite2D
 var _light_img: Image
 var _light_tex: ImageTexture
 var _light_sprite: Sprite2D
+var _bands := DecorPalettes.gpu_block()   # O_PL: the decor's bands and their palettes, uploaded every tick (set_bands)
 var _light := PackedByteArray()      # O_LP: the light pass's parameters, uploaded every tick
 var _push := PackedByteArray()       # The spread's push constant: the pass index
 var _params := PackedByteArray()
@@ -218,7 +225,7 @@ func _ready() -> void:
 	assert(O_CT == 8294670, "O_CT must match the literal in render_write.glsl, render_clear.glsl, pbd_finalize.glsl and pbd_predict.glsl")
 	assert(O_BD == 8813070, "O_BD must match the literal in pbd_predict.glsl, pbd_delta.glsl and render_write.glsl")
 	assert(O_LN == 22291598 and O_C4 == 22809998, "the crumb offsets must match the literals in cell_post.glsl, cell_fold.glsl and pbd_predict.glsl")
-	assert(O_SK == 22939598 and O_BN == 25013198 and O_BC == 25037774 and O_SB == 25039822 and O_SS == 25039950 and O_SD == 25040014, "the skin and slime offsets must match the literals in pbd_predict.glsl, pbd_delta.glsl, pbd_finalize.glsl, grid_clear.glsl, render_clear.glsl, render_write.glsl and render_water.glsl")
+	assert(O_SK == 22939598 and O_BN == 25013198 and O_BC == 25037774 and O_SB == 25039822 and O_SS == 25039950 and O_SD == 25040014 and O_PL == 25558414, "the skin, slime and palette offsets must match the literals in pbd_predict.glsl, pbd_delta.glsl, pbd_finalize.glsl, grid_clear.glsl, render_clear.glsl, render_write.glsl and render_water.glsl")
 	assert(O_LA == 19181070 and O_EM == 21254670 and O_LO == 21773070 and O_LP == 22291470, "the light offsets must match the literals in light_seed.glsl, light_spread.glsl, light_out.glsl, render_clear.glsl and render_write.glsl")
 	z_index = -1
 	_params.resize(40 * 4)
@@ -277,6 +284,12 @@ func _ready() -> void:
 
 
 # The light pass and its overlay on or off (the debug panel).
+# The level's bands of decor palettes (decor_palettes.gd), from the next tick.
+func set_bands(list: Array) -> void:
+	DecorPalettes.set_bands(list)
+	_bands = DecorPalettes.gpu_block()
+
+
 func set_light(on: bool) -> void:
 	light_on = on
 	_light_sprite.visible = on
@@ -337,6 +350,7 @@ func build(seed_value: int, kinds := PackedByteArray()) -> void:
 	_slimes.fill(0.0)
 	_slimes_on = false
 	slime_sums = PackedByteArray()
+	melts.clear()
 	var data := _create_initial_data(seed_value, kinds)
 	if _buf.is_valid():
 		_rd.buffer_update(_buf, 0, data.size(), data)
@@ -384,10 +398,15 @@ func read_fold() -> void:
 	cells4 = _rd.buffer_get_data(_buf, O_C4 * 4, (RENDER_W / 2) * (RENDER_H / 2) * 4)
 
 
-# Once per frame: the rendered pixels into the display texture.
+# Once per frame: the rendered pixels into the display texture, and the
+# cell classes last read back into cells_tex (the class in red: the
+# gecko's water tint, metaball.gdshader).
 func read_render() -> void:
 	if not ready_to_run:
 		return
+	if cells.size() == RENDER_W * RENDER_H * 4:
+		_cells_img.set_data(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8, cells)
+		cells_tex.update(_cells_img)
 	var bytes := _rd.buffer_get_data(_buf, O_RN * 4, RENDER_W * RENDER_H * 4)
 	_display_img.set_data(RENDER_W, RENDER_H, false, Image.FORMAT_RGBA8, bytes)
 	_display_tex.update(_display_img)
@@ -400,6 +419,7 @@ func read_render() -> void:
 # Queue a blast; the GPU takes two per tick from the queue.
 func trigger_explosion_at(pos: Vector2, radius: float, implode := false) -> void:
 	_explosions.append({"pos": pos, "radius": radius, "implode": implode})
+	melts.append([pos, radius])
 
 
 # Slot layout: [pos.x, pos.y, dir.x, dir.y, radius, half_length, active,
@@ -426,6 +446,7 @@ func set_capsule(i: int, pos: Vector2, dir: Vector2, radius: float, half_length:
 func melt_circle(pos: Vector2, radius: float, slot: int, force := false) -> void:
 	set_capsule(slot, pos, Vector2.RIGHT, radius + CARVE_PAD, 0.0, true, MELT_BRUSH if force else 1.0)
 	_capsule_once[slot] = true
+	melts.append([pos, radius + CARVE_PAD])
 
 
 # The gecko's body as two capsules (head to mid-body, mid-body to the
@@ -546,6 +567,57 @@ func spawn_chunk(list: Array, mat: int, mats := {}, frac := -1.0, skin := {}, fr
 			bd.encode_u32((4 + k * 2) * 4, BOND_NONE)
 		_rd.buffer_update(_buf, (O_BD + idx * BD_STRIDE) * 4, bd.size(), bd)
 	chunks[id] = {"mat": mat, "count": list.size()}
+	return id
+
+
+# A particle's record as the GPU holds it now: [x, y, vx, vy, prev x,
+# prev y, pad, material] as 32 bytes, empty out of range.
+func particle_record(idx: int) -> PackedByteArray:
+	if not ready_to_run or idx < 0 or idx >= PARTICLE_COUNT:
+		return PackedByteArray()
+	return _rd.buffer_get_data(_buf, (O_PT + idx * 8) * 4, 32)
+
+
+# Static decor particles made a lump where they stand (decor_support.gd):
+# cells maps a cell's index (its particle's own, sim.gd _write_rows) to
+# its decor band (colour and glow); each becomes stone in the skin band
+# of the same colour, its rest place its cell (so it keeps the palette
+# of the band it was drawn in), bonded to its neighbours among them,
+# nudged down so the lump wakes and falls. The chunk's id, 0 for none.
+func loosen_cells(cells: Dictionary, w: int) -> int:
+	if not ready_to_run or cells.is_empty():
+		return 0
+	var id := _next_chunk
+	_next_chunk += 1
+	for key in cells:
+		var idx: int = key
+		var x := (idx % w + 0.5) * PIXEL_SZ
+		var y := (idx / w + 0.5) * PIXEL_SZ
+		var f := FRAC_SKIN + (SKIN_DECOR + int(cells[idx]) + 0.5) * SKIN_BAND
+		var rec := PackedFloat32Array([x, y, 0.0, 20.0, x, y, 0.0, float(MAT_STONE) + f])
+		_rd.buffer_update(_buf, (O_PT + idx * 8) * 4, 32, rec.to_byte_array())
+		var sk := PackedFloat32Array([0.0, 0.0, x, y]).to_byte_array()
+		_rd.buffer_update(_buf, (O_SK + idx * SK_STRIDE) * 4, sk.size(), sk)
+		var bd := PackedByteArray()
+		bd.resize(BD_STRIDE * 4)
+		bd.encode_u32(0, id)
+		bd.encode_u32(4, 1)
+		var n := 0
+		for dy in range(-1, 2):
+			for dx in range(-1, 2):
+				if (dx == 0 and dy == 0) or n >= MAX_BONDS:
+					continue
+				var m: int = idx + dy * w + dx
+				if not cells.has(m) or absi(m % w - idx % w) > 1:
+					continue
+				bd.encode_u32((4 + n * 2) * 4, m)
+				bd.encode_float((5 + n * 2) * 4, Vector2(dx, dy).length() * PIXEL_SZ)
+				n += 1
+		bd.encode_u32(8, n)
+		for k in range(n, MAX_BONDS):
+			bd.encode_u32((4 + k * 2) * 4, BOND_NONE)
+		_rd.buffer_update(_buf, (O_BD + idx * BD_STRIDE) * 4, bd.size(), bd)
+	chunks[id] = {"mat": MAT_STONE, "count": cells.size()}
 	return id
 
 
@@ -800,6 +872,7 @@ func _update_params() -> void:
 	_rd.buffer_update(_buf, 0, 160, p)
 	_rd.buffer_update(_buf, O_CAP * 4, _capsules.size(), _capsules)
 	_rd.buffer_update(_buf, O_LP * 4, _light.size(), _light)
+	_rd.buffer_update(_buf, O_PL * 4, _bands.size(), _bands)
 	if _bones_used > 0:
 		_rd.buffer_update(_buf, O_BN * 4, _bones_used * BN_STRIDE * 4, _bones.slice(0, _bones_used * BN_STRIDE).to_byte_array())
 	if _slimes_on:
