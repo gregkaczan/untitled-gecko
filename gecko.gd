@@ -265,6 +265,7 @@ var _pose_t := 0.0             # Seconds into it
 var _pose_reverse := false     # Played from the last frame to the first (the curl)
 var _pose_hold := false        # At the end the last pose stays (asleep) until stop_pose
 var _pose_done := false        # The end reached
+var pose_stop_t := INF         # s into the pose where it waits (main.gd's listen holds the meerkat up while Q is held)
 var _pose_base := Vector2.ZERO # The frame the poses are set in: the surface point under the body, its up and facing when the animation began
 var _pose_up := Vector2.UP
 var _pose_facing := 1.0
@@ -3446,6 +3447,7 @@ func play_pose(frames: Array, reverse := false, hold := false) -> void:
 	_pose_reverse = reverse
 	_pose_hold = hold
 	_pose_done = false
+	pose_stop_t = INF
 	_pose_base = pos - up * RIDE_H
 	_pose_up = up
 	_pose_facing = facing
@@ -3484,8 +3486,17 @@ func pose_held() -> bool:
 	return posing and _pose_done
 
 
+# Seconds into the pose playing, and a jump to another time in it.
+func pose_time() -> float:
+	return _pose_t
+
+
+func pose_seek(t: float) -> void:
+	_pose_t = maxf(t, _pose_t)
+
+
 func _pose_tick(dt: float) -> void:
-	_pose_t += dt
+	_pose_t = minf(_pose_t + dt, maxf(pose_stop_t, _pose_t))   # Waits at pose_stop_t; a seek past it runs on
 	var tot := PoseAnim.total(_pose_frames)
 	# Played backwards, the last frame's hold at the end would be a
 	# hold at the start: the span runs to the last frame itself.

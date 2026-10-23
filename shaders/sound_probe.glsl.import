@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dbwpvq6xiy7yc"
+path="res://.godot/imported/sound_probe.glsl-a9255c0b70124e588d42d7a004379d03.res"
+
+[deps]
+
+source_file="res://shaders/sound_probe.glsl"
+dest_files=["res://.godot/imported/sound_probe.glsl-a9255c0b70124e588d42d7a004379d03.res"]
+
+[params]
+

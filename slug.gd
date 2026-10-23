@@ -21,6 +21,9 @@ const COLOR := Color(0.72, 0.95, 0.42)
 const GLOW := Color(0.45, 0.9, 0.4)
 const GLOW_R := 10.0
 const RADII := [3.6, 3.2, 2.6]
+const LURE_T := 6.0            # s a heard sound holds the slug's way toward it, no turns of its own
+const LURE_SPEED := 2.0        # Of SPEED while lured: it hurries
+const HEARD_T := 0.6           # s its glow flares on hearing
 
 var pos := Vector2.ZERO
 var up := Vector2.UP
@@ -33,6 +36,8 @@ var _map: Node2D
 var _turn_t := 3.0
 var _rng := RandomNumberGenerator.new()
 var _pulse := 0.0
+var _lure := 0.0               # s left of hurrying toward a heard sound
+var _heard := 0.0              # s left of the flare
 
 
 func setup(map: Node2D, at: Vector2, seed_v: int) -> void:
@@ -43,8 +48,28 @@ func setup(map: Node2D, at: Vector2, seed_v: int) -> void:
 	_pulse = _rng.randf() * TAU
 
 
+# Where it hears from (waves.gd).
+func ear() -> Vector2:
+	return pos
+
+
+# A sound reached it (waves.gd): it flares and heads that way along
+# its surface, hurrying, for LURE_T.
+func hear(at: Vector2) -> void:
+	_heard = HEARD_T
+	if caught:
+		return
+	var tangent := Vector2(-up.y, up.x) * dir
+	if tangent.dot(at - pos) < 0.0:
+		dir = -dir
+	_lure = LURE_T
+	_turn_t = maxf(_turn_t, LURE_T)
+
+
 func tick(dt: float, gecko: Node2D) -> void:
 	_pulse += dt * 1.7
+	_lure = maxf(_lure - dt, 0.0)
+	_heard = maxf(_heard - dt, 0.0)
 	if caught:
 		# On the tongue: ride the tip; at the mouth, eaten.
 		if gecko.tongue_out:
@@ -70,7 +95,7 @@ func tick(dt: float, gecko: Node2D) -> void:
 			_turn_t = _rng.randf_range(TURN_GAP_MIN, TURN_GAP_MAX)
 			dir = -dir
 		var tangent := Vector2(-up.y, up.x) * dir
-		var next := pos + tangent * SPEED * dt
+		var next := pos + tangent * SPEED * (LURE_SPEED if _lure > 0.0 else 1.0) * dt
 		if _map.solid_within(next, 2.5):
 			dir = -dir
 		else:
@@ -95,5 +120,5 @@ func blobs() -> Array:
 
 
 func glow() -> Array:
-	var k := 0.85 + 0.15 * sin(_pulse)
+	var k := 0.85 + 0.15 * sin(_pulse) + 0.8 * _heard / HEARD_T
 	return [pos, GLOW * k, GLOW_R]

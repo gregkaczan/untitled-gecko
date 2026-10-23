@@ -65,6 +65,8 @@ const SceneBuilder = preload("res://tests/scene_builder.gd")
 const DebugPanel = preload("res://debug_panel.gd")
 const PoseAnim = preload("res://pose_anim.gd")
 const Gut = preload("res://gut.gd")
+const Waves = preload("res://waves.gd")
+const WavePanel = preload("res://wave_panel.gd")
 const SCENE_SETTLE := 0.5      # Seconds a test scene runs on after its script
 var _stay := OS.get_environment("GECKO_STAY") != ""   # GECKO_STAY=1: a test scene hands the keys over when its script ends instead of quitting, to play on from where it left the gecko
 const LEVEL := "cave5"         # The main cave: the scene Shift+Tab goes to (and the game opens on when OPEN_SEED is 0); cave 5 as edited (levels/cave5.json) for now, the clutch before
@@ -234,6 +236,12 @@ var _gen_spawn := Vector2.ZERO  # The generated cave's spawn (its flattest floor
 var _gen_lumps: Array = []
 var _fills: Array = []          # Editor paints waiting for the sim's erase to land: [p, r, kind]
 var _won := false              # The gecko reached the exit: the camera pulls back
+var waves: Node2D                # waves.gd: sound as ripples on the world, the chew's and the hum's
+var _wave_panel: WavePanel       # wave_panel.gd: their look, beside the debug panel on F1
+var _listening := false         # Q held: the meerkat stand, the hum's ripples shown
+var _listen_up := 0.0           # s into the meerkat where it stands tallest, and where it starts down
+var _listen_down := 0.0
+var _listen_end := 0.0
 
 
 func _ready() -> void:
@@ -304,6 +312,10 @@ func _ready() -> void:
 	critters = Critters.new()
 	add_child(critters)
 	critters.setup(sim, map, gecko)
+	waves = Waves.new()
+	waves.sim = sim
+	add_child(waves)
+	gecko.bit.connect(waves.bite)
 	add_child(gecko)
 	_anim = Sprite2D.new()
 	_anim.centered = false
@@ -349,6 +361,10 @@ func _ready() -> void:
 	_panel = DebugPanel.new()
 	_panel.visible = false
 	hud.add_child(_panel)
+	_wave_panel = WavePanel.new()
+	_wave_panel.visible = false
+	hud.add_child(_wave_panel)
+	_wave_panel.setup(waves, DebugPanel.WIDTH)
 	_ensure_scenes()
 	_panel.set_scenes(_scene_all.get("scenes", {}).keys())
 	_panel.set_seed(seed_value)
@@ -473,11 +489,13 @@ func _reset() -> void:
 		return
 	_exit = Rect2()
 	_clear_slugs()
+	waves.clear()
 	_gas.clear()
 	map.clear_currents()
 	if sim:
 		sim.set_daylight(_exit, DAYLIGHT)
 	_sound.set_exit(_exit)
+	waves.set_exit(_exit)
 	_ambience.reset()
 	_camera_home()
 	if sim and _demo_name in ["pull", "strike", "tongue"]:
@@ -549,6 +567,7 @@ func _dress_world() -> void:
 	if sim:
 		sim.set_daylight(_exit, DAYLIGHT)
 	_sound.set_exit(_exit)
+	waves.set_exit(_exit)
 	_ambience.reset()
 	_ambience.set_drip_zones(SceneBuilder.ops_of(_scene, _scene_bases, "drips"))
 	_gas.clear()
@@ -649,6 +668,8 @@ func _physics_process(dt: float) -> void:
 	_update_slugs(dt)
 	_autosave(dt)
 	_anim_tick(dt)
+	_listen_tick()
+	waves.tick(dt, _slugs + critters.long_slugs)
 	if sim:
 		var glows: Array = []
 		if gecko.glow_snuff <= 0.0:
@@ -1789,6 +1810,7 @@ func edit_exit(r: Rect2) -> String:
 	if sim:
 		sim.set_daylight(_exit, DAYLIGHT)
 	_sound.set_exit(_exit)
+	waves.set_exit(_exit)
 	return "exit %d, %d, %d x %d" % [int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)]
 
 
@@ -2237,6 +2259,52 @@ func _anim_stop() -> void:
 		_anim_input = null
 
 
+# Q held: the gecko stands up like a meerkat (poses/meerkat.json) and
+# holds there, and the hum's ripples show as it rises; let go, it gets
+# down and they fade. Only from the gecko's own stance: not mid-air,
+# not in another animation, not in the editor.
+func _listen_tick() -> void:
+	var held := Input.is_action_pressed("listen") and not _editing and gecko.input_override == null
+	if held and not _listening and _anim_name == "" and not gecko.posing and gecko.clinging and not gecko.swimming:
+		var frames: Array = PoseAnim.load_head("meerkat") if PoseAnim.exists("meerkat") else []
+		if not frames.is_empty():
+			_listen_marks(frames)
+			play_anim("meerkat")
+			gecko.pose_stop_t = _listen_up
+			_listening = true
+	if _listening and (not gecko.posing or _anim_name != "meerkat"):
+		_listening = false
+	if _listening and not held and gecko.pose_stop_t < INF:
+		gecko.pose_stop_t = INF
+		gecko.pose_seek(_listen_down)
+	var t: float = gecko.pose_time() if _listening else 0.0
+	if not _listening:
+		waves.listen = 0.0
+	elif t <= _listen_up:
+		waves.listen = clampf(t / maxf(_listen_up, 0.01), 0.0, 1.0)
+	elif t < _listen_down:
+		waves.listen = 1.0
+	else:
+		waves.listen = clampf(1.0 - (t - _listen_down) / maxf(_listen_end - _listen_down, 0.01), 0.0, 1.0)
+
+
+# The meerkat's times: where the head first stands tallest and where it
+# last does (the hold between), from the frames themselves.
+func _listen_marks(frames: Array) -> void:
+	var top := INF
+	for f in frames:
+		top = minf(top, (f.points as PackedVector2Array)[0].y)
+	var at := 0.0
+	_listen_up = -1.0
+	for f in frames:
+		if (f.points as PackedVector2Array)[0].y <= top + 0.5:
+			if _listen_up < 0.0:
+				_listen_up = at
+			_listen_down = at
+		at += float(f.dur)
+	_listen_end = PoseAnim.total(frames)
+
+
 # The pose editor (pose_editor.gd), a scene of its own: F3 or the
 # panel's Poses button. F3 or Esc there comes back to a fresh game.
 func _open_pose_editor() -> void:
@@ -2470,6 +2538,8 @@ func _camera_home() -> void:
 func _set_debug(on: bool) -> void:
 	_debug = on
 	_panel.visible = on
+	_wave_panel.visible = on
+	waves.show_marks = on
 	gecko.debug = on and _panel.overlay_on()
 
 
@@ -2631,7 +2701,7 @@ func _process(_dt: float) -> void:
 		print("F%d %d %d %d %.2f %.2f %.1f %.1f %.2f %.2f %d" % [Engine.get_frames_drawn(), int(screen.x), int(screen.y), gecko._tick,
 			cam.x, cam.y, body.x, body.y, base.x, base.y, 1 if _won else 0])
 	var m := get_global_mouse_position()
-	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position()) or _editing
+	var over_panel := _panel.has_mouse(get_viewport().get_mouse_position()) or _wave_panel.has_mouse(get_viewport().get_mouse_position()) or _editing
 	gecko.mouse_blocked = over_panel
 	if over_panel or get_tree().paused:
 		pass
@@ -2646,6 +2716,15 @@ func _process(_dt: float) -> void:
 	# N held pours: the heap tops itself up every frame as it flows away.
 	if not over_panel and Input.is_action_pressed("drop_sand"):
 		map.spawn_sand(m, maxf(brush_r * 0.5, 4.0))
+	# The sound mockup (waves.gd): a chew wave at the cursor, the hum's
+	# source moved to it or back to the exit.
+	if not over_panel and Input.is_action_just_pressed("wave_chew"):
+		waves.emit_at(m)
+	if not over_panel and Input.is_action_just_pressed("wave_hum", true):
+		waves.hum_at = m
+		waves.hum_set = true
+	if Input.is_action_just_pressed("wave_hum_exit", true):
+		waves.hum_set = false
 	if Input.is_action_just_pressed("regenerate"):
 		if not _scene.is_empty() and _dirty and sim:
 			# Edits not saved yet: the level in hand again, not the file.
