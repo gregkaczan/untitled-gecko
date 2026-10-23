@@ -694,7 +694,7 @@ func _physics_process(dt: float) -> void:
 		_label.text = gecko.debug_text()
 		_panel.set_status(gecko.debug_text())
 	elif _hint_t < 10.0 and not _editing:
-		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   B boulder  C clay  N sand (hold: pour)   R again   Tab editor   F1 debug"
+		_label.text = _hint if _hint != "" else "WASD move   Space jump   LMB tap strike, hold grapple   LMB+RMB drag, eat   RMB chew at cursor   L Liero aim   B boulder  C clay  N sand (hold: pour)   R again   Tab editor   F1 debug"
 	else:
 		_label.text = ""
 
@@ -2672,6 +2672,12 @@ func _process(_dt: float) -> void:
 		_set_debug(not _debug)
 	if Input.is_action_just_pressed("pose_editor"):
 		_open_pose_editor()
+	if Input.is_action_just_pressed("aim_toggle") and not _editing:
+		var on: bool = not gecko.liero_aim
+		gecko.set_liero_aim(on)
+		InputSetup.arrows_move(not on)
+		_hint = "Liero aim: Up / Down aim, Left / Right walk   F / right Ctrl tongue   E / Shift chew   L mouse again" if on else "mouse aim again   (L for Liero aim)"
+		_hint_t = 4.0
 	if Input.is_action_just_pressed("render_coarse"):
 		blobs.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)
 		_panel.set_pixel_size(BlobLayer.PIXEL_SZ_COARSE)

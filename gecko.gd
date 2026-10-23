@@ -172,6 +172,11 @@ const LEG_BLOB_GAP := 4.5      # Largest spacing of the blobs along a leg, so a 
 const HOLD_TIME := 0.12        # Left button held this long with the tongue landed: a grapple, not a strike
 const TONGUE_SPEED := 900.0
 const TONGUE_MAX := 160.0
+const ART_PX := 2.0            # World px to an art pixel (the crosshair sits on that grid)
+const AIM_R := 40.0            # Liero aim: the crosshair's distance from the head, well past CHEW_REACH from the body so a held chew creeps after it
+const AIM_TURN := 1.8          # rad/s Up or Down raises or lowers it at first
+const AIM_TURN_MAX := 4.5      # rad/s once held AIM_RAMP
+const AIM_RAMP := 0.3
 const PULL_SPEED := 360.0      # The body reeled in on the tongue (the grapple)
 const PULL_ACCEL := 2400.0
 const STRIKE_R := 4.0          # Dent a tongue strike leaves in the ground: a cell or so (was 8: it ate the ground)
@@ -290,6 +295,11 @@ var pulling := false           # This tick the tongue dragged a lump in (trace)
 var straining := false         # Stuck to something that will not come (trace, brace)
 var debug := false             # F1: overlay with up vector, probe reach, feet and bite
 var mouse_blocked := false     # The mouse is over the debug panel: no tongue or chew from it
+var liero_aim := false         # L (main.gd): a crosshair Up and Down swing about the head stands in for the mouse
+var aim_dir := Vector2.RIGHT   # Its way from the head, in the world: it stays put on the screen as the body turns, within the arc the body allows
+var _aim_n := Vector2.UP       # The arc's frame: the body's up (one end of the arc)
+var _aim_f := Vector2.RIGHT    # and the way it faces (the arc's middle)
+var _aim_hold := 0.0           # Seconds Up or Down has been held: the swing speeds up
 var _lmb := false              # This tick's left button
 var _lmb_was := false          # Last tick's, for the press edge
 var _press_t := 0.0            # Seconds the left button has been held since the shot
@@ -522,6 +532,7 @@ func _physics_process(dt: float) -> void:
 	_dig_aim = Vector2.ZERO
 	if not _squeeze:
 		_sq_r = move_toward(_sq_r, BODY_R, SQUEEZE_RECOVER)
+	_update_aim(dt)
 	_update_mouse(dt)
 	# The mouth is busy while the tongue is out or the left button is down.
 	chewing = _read_chew() and not tongue_out and not _lmb
@@ -1320,10 +1331,66 @@ func _mouth() -> Vector2:
 func _cursor() -> Vector2:
 	if input_override != null:
 		return pos + aim_override
+	if liero_aim:
+		return chain.head() + _liero_dir() * AIM_R
 	return get_global_mouse_position()
 
 
-# The tongue. A press of the left button shoots it at the cursor, and
+func _liero_dir() -> Vector2:
+	return aim_dir
+
+
+# Where along the arc a way lies: 0 the body's up, PI/2 straight ahead,
+# PI straight into what it stands on. A way behind the body goes to the
+# nearer end.
+func _aim_arc(dir: Vector2) -> float:
+	var r := atan2(dir.dot(_aim_f), dir.dot(_aim_n))
+	if r < 0.0:
+		r = 0.0 if r > -PI / 2.0 else PI
+	return r
+
+
+# Liero aim on or off; on, the crosshair starts where the head looks.
+func set_liero_aim(on: bool) -> void:
+	liero_aim = on
+	_aim_n = up
+	_aim_f = _tangent() * facing
+	var r := _aim_arc(look)
+	aim_dir = _aim_n * cos(r) + _aim_f * sin(r)
+	_aim_hold = 0.0
+	queue_redraw()
+
+
+# The crosshair keeps to a half circle on the side the gecko faces, from
+# its up through straight ahead to straight into what it stands on. In
+# that arc it stays put on the screen as the body turns; Up moves it up
+# the screen and Down down, as far as the arc goes, slowly at first,
+# faster held; Left and Right walk. When the gecko turns round the aim
+# mirrors across its up. The arc's frame holds while the gecko chews or
+# the tongue is out: the body turns in the hole it digs, and a dig should
+# keep its line.
+func _update_aim(dt: float) -> void:
+	if not liero_aim or input_override != null:
+		return
+	if not (_read_chew() or tongue_out):
+		var f := _tangent() * facing
+		if f.dot(_aim_f) < 0.0:
+			aim_dir = 2.0 * aim_dir.dot(up) * up - aim_dir
+		_aim_n = up
+		_aim_f = f
+	var r := _aim_arc(aim_dir)
+	var turn := float(Input.is_physical_key_pressed(KEY_UP)) - float(Input.is_physical_key_pressed(KEY_DOWN))
+	if turn == 0.0:
+		_aim_hold = 0.0
+	else:
+		_aim_hold += dt
+		var speed := lerpf(AIM_TURN, AIM_TURN_MAX, clampf(_aim_hold / AIM_RAMP, 0.0, 1.0))
+		r = move_toward(r, _aim_arc(Vector2.UP if turn > 0.0 else Vector2.DOWN), speed * dt)
+	aim_dir = _aim_n * cos(r) + _aim_f * sin(r)
+
+
+# The tongue. A press of the left button (or the tongue key, F or the
+# right Ctrl) shoots it at the cursor, and
 # where it lands it sticks while the button is down. A tap (released
 # before the tongue has been held HOLD_TIME, landed or not) strikes: a
 # dent in the ground, a lump broken where it is hit, and straight back.
@@ -1336,7 +1403,7 @@ func _cursor() -> Vector2:
 # Airborne or swimming there is nothing to brace on, so the tongue
 # reels the gecko in whichever buttons are down.
 func _update_mouse(dt: float) -> void:
-	_lmb = lmb_override if input_override != null else (Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_blocked)
+	_lmb = lmb_override if input_override != null else ((Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not mouse_blocked) or Input.is_action_pressed("tongue"))
 	var pressed := _lmb and not _lmb_was
 	_lmb_was = _lmb
 	_press_t = 0.0 if pressed else _press_t + dt
@@ -3542,6 +3609,14 @@ func pose_show(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float)
 func _draw() -> void:
 	if chewing and debug:
 		draw_arc(_bite, CHEW_R, 0.0, TAU, 20, Color(1.0, 0.8, 0.5, 0.6), 1.5)
+	if liero_aim and input_override == null:
+		# The crosshair: four arms of art pixels round an empty middle, on
+		# the art grid
+		var c := (_cursor() / ART_PX).floor() * ART_PX
+		var col := Color(0.91, 0.93, 0.87, 0.85)
+		for arm in [Vector2.RIGHT, Vector2.LEFT, Vector2.DOWN, Vector2.UP]:
+			for k in [2.0, 3.0]:
+				draw_rect(Rect2(c + arm * k * ART_PX, Vector2(ART_PX, ART_PX)), col)
 
 
 # The tongue tapers from the mouth to its tip.

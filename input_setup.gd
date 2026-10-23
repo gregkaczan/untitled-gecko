@@ -5,7 +5,11 @@
 # grid: 2 px like the rock, or the default 1 px. Tab or F2 opens and
 # leaves the map editor, Ctrl+Tab loads the next test scene from
 # tests/scenes.json, Shift+Tab goes back to the first cave, F3 opens the
-# pose editor (pose_editor.gd) and leaves it.
+# pose editor (pose_editor.gd) and leaves it. L switches to Liero aim
+# (gecko.gd liero_aim): Up and Down stop moving the gecko and raise and
+# lower a crosshair on the screen within the half circle before its head
+# instead, Left and Right still walk,
+# and F or the right Ctrl is the tongue.
 # B, C and N drop a boulder, a clump of clay or a heap of sand at the
 # cursor. In the map editor Ctrl+Z and Ctrl+Y undo and redo, Home
 # brings the camera back, [ and ] size the brush. The mouse is
@@ -24,6 +28,8 @@ static func ensure_actions() -> void:
 	_key_axis("move_down", [KEY_S, KEY_DOWN], JOY_AXIS_LEFT_Y, 1.0)
 	_add("jump", [_key(KEY_SPACE), _button(JOY_BUTTON_A)])
 	_add("chew", [_key(KEY_E), _key(KEY_SHIFT), _button(JOY_BUTTON_X)])
+	_add("tongue", [_key(KEY_F), _key_right(KEY_CTRL)])
+	_add("aim_toggle", [_key(KEY_L)])
 	_add("regenerate", [_key(KEY_R)])
 	_add("debug_toggle", [_key(KEY_F1)])
 	_add("edit_toggle", [_key(KEY_F2), _key(KEY_TAB)])
@@ -41,6 +47,16 @@ static func ensure_actions() -> void:
 	_add("edit_home", [_key(KEY_HOME)])
 	_add("brush_up", [_key(KEY_BRACKETRIGHT)])
 	_add("brush_down", [_key(KEY_BRACKETLEFT)])
+
+
+# Up and Down move the gecko (off: they only aim, gecko.gd liero_aim).
+static func arrows_move(on: bool) -> void:
+	for pair in [["move_up", KEY_UP], ["move_down", KEY_DOWN]]:
+		var ev := _key(pair[1])
+		if on and not InputMap.action_has_event(pair[0], ev):
+			InputMap.action_add_event(pair[0], ev)
+		elif not on:
+			InputMap.action_erase_event(pair[0], ev)
 
 
 static func _add(action: String, events: Array, deadzone := 0.4) -> void:
@@ -63,6 +79,12 @@ static func _key(key: Key, shift := false, ctrl := false) -> InputEventKey:
 	ev.shift_pressed = shift
 	ev.ctrl_pressed = ctrl
 	ev.command_or_control_autoremap = ctrl
+	return ev
+
+
+static func _key_right(key: Key) -> InputEventKey:
+	var ev := _key(key)
+	ev.location = KEY_LOCATION_RIGHT
 	return ev
 
 
