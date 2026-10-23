@@ -8,6 +8,7 @@
 #
 #   tools/critters_test.sh [case-regex]
 #   tools/critters_test.sh shots     frames of each critter, runs/critters/shot_*.png, for a look
+#   tools/critters_test.sh slime_look  the sim's render round each slime, runs/critters/cells_slime_*.png
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -16,9 +17,9 @@ export CRIT_ICD="${CRIT_ICD:-/usr/share/vulkan/icd.d/nvidia_icd.json}"
 export ONSCREEN="${ONSCREEN:-0}"
 filter="${1:-.}"
 all="shroom_rest shroom_land shroom_boost shroom_chew shroom_cut shroom_rock decor vine_swing vine_cut vine_climb vine_catch slime_creep slime_bite slime_wade longslug perf"
-# shots is not part of the test: only when asked for by name.
+# shots and slime_look are not part of the test: only when asked for by name.
 cases="$all"
-[[ "$filter" == shots ]] && cases=shots
+[[ "$filter" == shots || "$filter" == slime_look ]] && cases="$filter"
 mkdir -p runs/critters
 touch runs/.gdignore
 

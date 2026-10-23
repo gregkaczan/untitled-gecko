@@ -8,7 +8,11 @@
 #
 # Cases: shroom_rest, shroom_land, shroom_boost, shroom_chew,
 # shroom_cut, shroom_rock, decor, vine_swing, vine_cut, vine_climb, vine_catch,
-# slime_creep, slime_bite, slime_wade, longslug, perf.
+# slime_creep, slime_bite, slime_wade, longslug, perf. Not tests, only
+# when named: shots (frames of each critter) and slime_look (the sim's
+# own render round each slime, a pixel a cell, to judge its texture,
+# with a slime of the editor's largest size and a bigger one beside the
+# lab's own).
 #
 #   (main.gd runs it as GECKO_PROBE=res://tests/critters_test.gd)
 extends Node
@@ -66,6 +70,7 @@ func _run() -> void:
 		"perf": await _perf()
 		"perf_base": await _perf()
 		"shots": await _shots()
+		"slime_look": await _slime_look()
 		_:
 			_check("case", false, "no case " + _case)
 	_finish()
@@ -693,6 +698,35 @@ func _shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img: Image = get_viewport().get_texture().get_image()
 	img.save_png(ProjectSettings.globalize_path("res://runs/critters/shot_%s.png" % name))
+
+
+# Each slime as the sim draws it (unlit, a pixel a cell): resting, a
+# moment later (the texture should ride along with it), and bitten in
+# two. runs/critters/cells_slime_<slime>_<when>.png
+func _slime_look() -> void:
+	var c: Node2D = main.critters
+	c.add_slime(Vector2(1200.0, 770.0), main.slime_radius(5))
+	c.add_slime(Vector2(1480.0, 760.0), 30.0)
+	var ps: float = main.sim.PIXEL_SZ
+	for when in ["rest", "later", "bitten"]:
+		if when == "later":
+			await _ticks(90)
+		elif when == "bitten":
+			for s in c.slimes:
+				main.map.erase_circle(s.centre + Vector2(0.0, -2.0), 3.0)
+			await _ticks(40)
+		else:
+			await _ticks(150)
+		await _ticks(1)
+		for i in c.slimes.size():
+			var s: RefCounted = c.slimes[i]
+			var r: float = s.reach + 6.0
+			var rect := Rect2i(int((s.centre.x - r) / ps), int((s.centre.y - r) / ps), int(r * 2.0 / ps), int(r * 2.0 / ps))
+			main.sim._display_img.get_region(rect).save_png(ProjectSettings.globalize_path("res://runs/critters/cells_slime_%d_%s.png" % [i, when]))
+	var sizes := []
+	for s in c.slimes:
+		sizes.append("reach %.0f mass %d" % [s.reach, s.mass])
+	_check("slime_look", true, "%d slimes saved: %s" % [c.slimes.size(), ", ".join(sizes)])
 
 
 func _shots() -> void:

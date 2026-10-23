@@ -13,6 +13,8 @@ const uint O_P = 0u, O_M = 40u, O_GC = 136u, O_GP = 57736u, O_PT = 1900936u, O_R
 const uint O_WD = 6566536u;
 const uint O_LD = 7084936u;
 const uint O_CD = 7603336u;
+const uint O_CT = 8294670u;    // cell class per pixel (render_write.glsl): 2, 4 to 7 and 16 up are solid, 8 slime
+const uint O_SB = 25039822u;   // slime brains [x, y, reach, pull, drift x, drift y, drift speed, on] (sim.gd set_slime)
 const uint O_SD = 25040014u;   // slime density per cell (render_write.glsl)
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
@@ -22,6 +24,55 @@ float hash11(float p) {
     p *= p + 33.33;
     p *= p + p;
     return fract(p);
+}
+
+float hash21(vec2 p) {
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+}
+
+float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x), mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// The slime's density at a cell, gathered as main() gathers it.
+float slime_gather(int x, int y, uint rw, uint rh) {
+    float d = 0.0;
+    for (int dy = -2; dy <= 2; dy++) {
+        for (int dx = -2; dx <= 2; dx++) {
+            int sx = x + dx, sy = y + dy;
+            if (sx < 0 || sx >= int(rw) || sy < 0 || sy >= int(rh)) continue;
+            uint sd = buf.d[O_SD + uint(sy) * rw + uint(sx)];
+            if (sd > 0u) d += float(sd) * exp(-float(dx * dx + dy * dy) / 2.0);
+        }
+    }
+    return d;
+}
+
+// Something solid in the cell: what a slime rests on or leans against.
+bool cell_solid(int x, int y, uint rw, uint rh) {
+    if (x < 0 || x >= int(rw) || y < 0 || y >= int(rh)) return false;
+    uint cls = buf.d[O_CT + uint(y) * rw + uint(x)];
+    return cls == 2u || (cls >= 4u && cls != 8u);
+}
+
+// Neither solid nor any slime in the cell or the eight about it: the air
+// outside the slime's body.
+bool slime_out(int x, int y, uint rw, uint rh) {
+    if (x < 0 || x >= int(rw) || y < 0 || y >= int(rh)) return true;
+    if (cell_solid(x, y, rw, rh)) return false;
+    if (buf.d[O_SD + uint(y) * rw + uint(x)] > 0u) return false;
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int sx = x + dx, sy = y + dy;
+            if (sx < 0 || sx >= int(rw) || sy < 0 || sy >= int(rh)) continue;
+            if (buf.d[O_SD + uint(sy) * rw + uint(sx)] > 0u) return false;
+        }
+    }
+    return true;
 }
 
 float compute_light(float px, float py) {
@@ -173,17 +224,84 @@ void main() {
         atomicMax(buf.d[O_RN + id], packUnorm4x8(vec4(cr, cg, cb, 0.99)));
     }
 
-    // --- Slime: a gloss of pale green at its rim over a deeper green
-    //     body, a few bright motes inside; drawn over the water ---
+    // --- Slime: banded by depth like a jelly drawn by hand. A bright
+    //     yellow rim a pixel wide where it meets air, a lime band with a
+    //     darker yellow crescent and a pale gleam where the light falls
+    //     (up and to the left), green inside that, licking up into a
+    //     dark green core in tongues that rise slowly. The depth is
+    //     the distance to the nearest air with no slime about it (rock
+    //     counts as more slime), taken over the body's thickness there,
+    //     so a big slime and a puddle band alike. The pattern is laid
+    //     out from its brain's centre and travels with the blob. Drawn
+    //     over the water. ---
     if (has_slime) {
-        float core = clamp((slime_density - 0.9) / 4.0, 0.0, 1.0);
-        float cr = mix(0.62, 0.22, core);
-        float cg = mix(0.95, 0.62, core);
-        float cb = mix(0.48, 0.20, core);
-        float mote = step(0.97, hash11(wx * 0.21 + wy * 0.37)) * core;
-        cr += mote * 0.25; cg += mote * 0.2; cb += mote * 0.15;
-        cr *= light; cg *= light; cb *= light;
-        atomicMax(buf.d[O_RN + id], packUnorm4x8(vec4(clamp(cr, 0.0, 1.0), clamp(cg, 0.0, 1.0), clamp(cb, 0.0, 1.0), 1.0)));
+        bool rim = false;
+        ivec2 side[4] = ivec2[4](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
+        for (int j = 0; j < 4; j++) {
+            ivec2 q = ivec2(px, py) + side[j];
+            if (!cell_solid(q.x, q.y, rw, rh) && slime_gather(q.x, q.y, rw, rh) < 0.9) rim = true;
+        }
+        float depth = 17.0;
+        vec2 out_dir = vec2(0.0, -1.0);
+        for (int k = 1; k <= 16; k++) {
+            if (float(k) >= depth) break;   // a ring k away is no nearer than k
+            for (int i = -k; i <= k; i++) {
+                ivec2 ring[4] = ivec2[4](ivec2(i, -k), ivec2(i, k), ivec2(-k, i), ivec2(k, i));
+                for (int j = 0; j < 4; j++) {
+                    vec2 o = vec2(ring[j]);
+                    float dl = length(o);
+                    if (dl < depth && slime_out(px + ring[j].x, py + ring[j].y, rw, rh)) { depth = dl; out_dir = normalize(o); }
+                }
+            }
+        }
+        vec2 origin = vec2(0.0);
+        float best = 1e9;
+        for (uint i = 0u; i < 16u; i++) {
+            uint o = O_SB + i * 8u;
+            if (rf(o + 7u) < 0.5) continue;
+            vec2 c = vec2(rf(o), rf(o + 1u));
+            float dd = length(vec2(wx, wy) - c);
+            if (dd < rf(o + 2u) && dd < best) { best = dd; origin = c; }
+        }
+        vec2 lp = (vec2(wx, wy) - origin) / psz;   // cells from the centre (a puddle: from the world's corner)
+        float t = rf(O_P + 21u) / 60.0;
+        // Which way this part of the body faces, from its centre (the
+        // nearest edge's way jumps from pixel to pixel): the light falls
+        // up and to the left, the lime is thickest on top, and the green
+        // licks up into the core from below.
+        vec2 face = best < 1e9 ? normalize(lp + vec2(0.0, 0.001)) : -out_dir;
+        // The far side: on from here through the centre. Rock
+        // there is a mirror (the body goes on as far again as it came),
+        // so a mound bands like the top half of a drop, its core on the
+        // floor.
+        float across = 40.0;
+        for (int k = 1; k <= 40; k++) {
+            ivec2 q = ivec2(px, py) + ivec2(round(-face * float(k)));
+            if (cell_solid(q.x, q.y, rw, rh)) { across = 2.0 * float(k) + depth; break; }
+            if (slime_out(q.x, q.y, rw, rh)) { across = float(k); break; }
+        }
+        float thick = depth + across;
+        float u = depth / max(thick * 0.5, 1.0);   // 0 at the edge, 1 midway through
+        float lit = dot(face, normalize(vec2(-0.8, -0.6)));
+        float lime_u = 0.14 + 0.22 * max(0.0, -face.y);
+        float flame = (vnoise(vec2(lp.x * 0.8, lp.y * 0.25 + t * 0.4)) - 0.35) * 0.5 * clamp(0.5 + face.y, 0.15, 1.2);
+        float green_u = lime_u + 0.16 + flame;
+        vec3 col;
+        if (rim) {
+            col = vec3(0.945, 0.949, 0.176);                                // #f1f22d
+        } else if (u < lime_u || depth < 2.5) {
+            col = vec3(0.522, 0.757, 0.0);                                  // #85c100
+            float crescent = 1.5 + min(0.03 * thick, 2.5) * smoothstep(0.45, 0.95, lit);   // tapers off to either side
+            if (thick > 10.0 && lit > 0.45 && depth < crescent) col = vec3(0.875, 0.859, 0.0);                          // #dfdb00, the lit crescent
+            if (thick > 16.0 && lit > 0.85 && depth >= crescent && depth < crescent + 1.2) col = vec3(1.0, 0.988, 0.0);   // #fffc00, the gleam
+        } else if (u < green_u || depth < 3.5) {
+            col = vec3(0.0, 0.624, 0.0);                                    // #009f00
+        } else {
+            col = vec3(0.0, 0.322, 0.024);                                  // #005206
+            if (thick > 16.0 && u < green_u + 0.08 && ((px + py) & 1) == 0) col = vec3(0.0, 0.404, 0.122);   // #00671f
+        }
+        col *= light;
+        atomicMax(buf.d[O_RN + id], packUnorm4x8(vec4(clamp(col, 0.0, 1.0), 1.0)));
     }
 
     // --- Clay metaball (tight 3x3 gather around each particle) ---
