@@ -976,9 +976,7 @@ ceiling, decor cells that stand. The rest scatter.
 **Worm** (`["worm", x, y, size]`, long_slug.gd set_sprite): a long slug
 in the worm's drawn skin, no blobs and no glow, slower (0.55). Each
 sprite pixel rides the body at its place back from the head and its
-height off the belly, lifted by the swelling wave, so the squeeze shows;
-set down at four points a quarter cell about it, so a bend leaves no
-cell empty. Sizes 1 to 3 the small sprite (about the gecko's length), 4
+height off the belly, lifted by the swelling wave, so the squeeze shows. Sizes 1 to 3 the small sprite (about the gecko's length), 4
 and 5 the sprite as drawn (twice that).
 
 **Jellyfish** (`["jelly", x, y, 1]`, jelly.gd): hangs in the water,
@@ -990,8 +988,16 @@ or a melt on it pops it (the pop row, then gone). A faint pink glow.
 The water reads as the cells round it (its particles leave single cells
 empty).
 
-Strands, worms and jellyfish are drawn by `critters.gd` a pixel a cell
-on the 2 px grid.
+Strands, worms and jellyfish are drawn on the GPU (`critter_layer.gd`):
+a worm's sprite as a quad a link of its body, a strand's (baked once in
+its band's colours) as a quad a link whose corners sit at the same
+places on the rope as at rest, a jellyfish as its frame, all into an
+offscreen viewport a pixel a sim cell, laid over the world with nearest
+filtering, so they keep the 2 px grid; its shader gives a pixel in the
+water the water's hue. Drawn a pixel at a time from script they cost
+6.7 ms a frame in the art tunnel; this way 0.2 ms (`tests/packs_test.gd`
+perf case, PACK note lines; critters.gd draw_us). A strand tests only
+the bodies inside its box.
 
 **The water's hue.** A solid pixel the water's gather reaches, or with
 water above it before three open cells, is multiplied toward (0.42,

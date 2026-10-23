@@ -54,6 +54,7 @@ func _run() -> void:
 		"water_tint": await _water_tint()
 		"shots": await _shots()
 		"tour": await _tour()
+		"perf": await _perf()
 		_:
 			_check("case", false, "no case " + _case)
 	print("PACK TEST %s %d" % ["OK" if _fails == 0 else "FAILS", _fails])
@@ -205,7 +206,7 @@ func _worm() -> void:
 	var t0: float = wm.travelled
 	await _ticks(480)
 	_check("worm_creeps", wm.travelled - t0 > 3.0, "crept %.1f px in 8 s" % (wm.travelled - t0))
-	var skin: Array = wm.skin()
+	var skin: Array = wm.skin()   # Where the pixels lie (the drawing's quads follow the same frame)
 	var far := 0.0
 	for px in skin:
 		var best := INF
@@ -306,3 +307,27 @@ func _tour() -> void:
 		_look_at(v[1])
 		await _ticks(40)
 		await _shot(v[0])
+
+
+# The cost of the drawn creatures and threads (critters.gd draw_us) and
+# the critters' tick, and the frame, at each stretch of the art tunnel:
+# PACK note lines, mean over 2 s.
+func _perf() -> void:
+	for v in [["warm", Vector2(300, 300)], ["garden", Vector2(1000, 600)], ["myc", Vector2(1550, 900)]]:
+		_look_at(v[1])
+		await _ticks(60)
+		var n := 0
+		var d := Vector3.ZERO
+		var tick := 0.0
+		var frame := 0.0
+		var sim_t := 0.0
+		for i in 120:
+			await get_tree().process_frame
+			var du: PackedInt32Array = main.critters.draw_us
+			d += Vector3(du[0], du[1], du[2])
+			tick += main.critters.last_us
+			frame += Performance.get_monitor(Performance.TIME_PROCESS) * 1000000.0
+			sim_t += main.sim.t_parts.y
+			n += 1
+		d /= n
+		print("PACK note perf %s: draw strands %d us, worms %d us, jellyfish %d us; critters tick %d us; sim dispatch %d us; process %d us" % [v[0], d.x, d.y, d.z, tick / n, sim_t / n, frame / n])

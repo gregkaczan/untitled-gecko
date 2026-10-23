@@ -6,9 +6,9 @@
 # pinned where the sprite's ends meet rock); a bite across it cuts it
 # there and each part hangs from its own anchor; an anchor whose rock is
 # chewed away lets go, and a strand with neither end held falls and
-# lies where it lands. Each pixel of the sprite rides the rope at its
-# place along it and its offset across it, drawn on the 2 px grid in its
-# band's palette (critters.gd _draw).
+# lies where it lands. The sprite rides the rope: baked once in its
+# band's colours, drawn as a textured quad a link whose corners sit at
+# the same places on the rope as at rest (draw_on, critter_layer.gd).
 extends RefCounted
 
 const DecorPalettes = preload("res://decor_palettes.gd")
@@ -34,6 +34,14 @@ var pin_at := PackedVector2Array()
 var pixels: Array = []              # [t along the rope (px), offset across (px), colour index, cell x, cell y] each
 var asleep := false
 var _thread_col := Color(0, 0, 0, 0)   # The thread's commonest colour, for the links with no pixel
+const PAD := 3                 # Empty cells round the baked texture: the quads reach a cell past the art
+var _tex: ImageTexture         # The sprite at rest (draw_on)
+var _origin := Vector2i.ZERO   # The texture's top left, in cells
+var _rest := PackedVector2Array()
+var _rest_n := PackedVector2Array()
+var _n_lo := 0.0               # px across the rope the art reaches, each side (the drips one way)
+var _n_hi := 0.0
+var _bare := PackedByteArray() # 1 where a link has no art
 var moved := true                   # Drawn again this frame
 var _still := 0
 var _check := 0.0
@@ -113,7 +121,81 @@ func setup(map_in: Node2D, pl: Dictionary) -> bool:
 				var off := p - (pts[i] + ab * t)
 				rec = [i + t, off.dot(along), Vector2(-along.y, along.x).dot(off), int(c[2]) - 16, int(c[0]), int(c[1])]
 		pixels.append(rec)
+	_bake_texture(cell)
 	return not pixels.is_empty()
+
+
+# The sprite as a texture for draw_on: its pixels in their band's colours
+# where they lie at rest, with a border of PAD empty cells; each point's
+# rest place and normal (the texture's frame), how far across the rope
+# the art reaches, and which links have no pixel (an end's reach up to
+# its rock, drawn as a line of the thread's colour).
+func _bake_texture(cell: float) -> void:
+	if pixels.is_empty():
+		return
+	var lo := Vector2i(1 << 30, 1 << 30)
+	var hi := Vector2i(-(1 << 30), -(1 << 30))
+	for px in pixels:
+		lo = Vector2i(mini(lo.x, px[4]), mini(lo.y, px[5]))
+		hi = Vector2i(maxi(hi.x, px[4]), maxi(hi.y, px[5]))
+	_origin = lo - Vector2i(PAD, PAD)
+	var img := Image.create(hi.x - lo.x + 1 + 2 * PAD, hi.y - lo.y + 1 + 2 * PAD, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	_n_lo = 0.0
+	_n_hi = 0.0
+	var has := PackedByteArray()
+	has.resize(pts.size())
+	for px in pixels:
+		img.set_pixel(int(px[4]) - _origin.x, int(px[5]) - _origin.y, DecorPalettes.colour_at(int(px[3]), int(px[4]), int(px[5]), cell))
+		_n_lo = minf(_n_lo, float(px[2]))
+		_n_hi = maxf(_n_hi, float(px[2]))
+		has[clampi(int(floor(px[0])), 0, pts.size() - 2)] = 1
+	_n_lo -= cell
+	_n_hi += cell
+	_tex = ImageTexture.create_from_image(img)
+	_rest = pts.duplicate()
+	_rest_n = _normals(_rest)
+	_bare = PackedByteArray()
+	_bare.resize(pts.size())
+	for i in pts.size() - 1:
+		_bare[i] = 0 if has[i] == 1 else 1
+	_thread_col = _thread_colour(cell)
+
+
+static func _normals(p: PackedVector2Array) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var n := p.size()
+	out.resize(n)
+	for i in n:
+		var t := p[mini(i + 1, n - 1)] - p[maxi(i - 1, 0)]
+		t = t.normalized() if t.length_squared() > 0.0001 else Vector2.RIGHT
+		out[i] = Vector2(-t.y, t.x)
+	return out
+
+
+# The strand on the GPU (critter_layer.gd): a quad a whole link, from
+# _n_lo to _n_hi across the rope at each end, its texture coordinates
+# the same places on the rope at rest, so the art bends with the rope;
+# a link with no art (an end's reach) a line of the thread's colour.
+func draw_on(c: CanvasItem, cell: float) -> void:
+	if _tex == null:
+		return
+	var nrm := _normals(pts)
+	var size := Vector2(_tex.get_size()) * cell
+	var o := Vector2(_origin) * cell
+	var white := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+	for i in pts.size() - 1:
+		if cut[i] == 1:
+			continue
+		if _bare[i] == 1:
+			c.draw_line(pts[i], pts[i + 1], _thread_col, cell)
+			continue
+		var q := PackedVector2Array([pts[i] + nrm[i] * _n_lo, pts[i + 1] + nrm[i + 1] * _n_lo, pts[i + 1] + nrm[i + 1] * _n_hi, pts[i] + nrm[i] * _n_hi])
+		var r := [_rest[i] + _rest_n[i] * _n_lo, _rest[i + 1] + _rest_n[i + 1] * _n_lo, _rest[i + 1] + _rest_n[i + 1] * _n_hi, _rest[i] + _rest_n[i] * _n_hi]
+		var uv := PackedVector2Array()
+		for p in r:
+			uv.append(((p as Vector2) - o) / size)
+		c.draw_primitive(q, white, uv, _tex)
 
 
 func _rock_near(p: Vector2) -> bool:
@@ -132,6 +214,15 @@ func step(dt: float, bodies: Array) -> void:
 			if pinned[i] == 1 and not _rock_near(pin_at[i]):
 				pinned[i] = 0
 				asleep = false
+	# Only the bodies within the rope's box can touch it.
+	var box := Rect2(pts[0], Vector2.ZERO)
+	for p in pts:
+		box = box.expand(p)
+	var near: Array = []
+	for b in bodies:
+		if box.grow(float(b[1]) + PUSH_R).has_point(b[0]):
+			near.append(b)
+	bodies = near
 	var pushed := false
 	for b in bodies:
 		var c: Vector2 = b[0]
@@ -139,6 +230,7 @@ func step(dt: float, bodies: Array) -> void:
 		for i in pts.size():
 			if pinned[i] == 0 and pts[i].distance_squared_to(c) < r * r:
 				pushed = true
+				break
 	if asleep and not pushed:
 		moved = false
 		return
@@ -232,52 +324,3 @@ static func _along(line: PackedVector2Array, dist: float) -> Vector2:
 			return line[i].lerp(line[i + 1], dist / l)
 		dist -= l
 	return line[line.size() - 1]
-
-
-# The pixels where the rope has them now: [cell x, cell y, colour] each
-# on the 2 px grid. A pixel on a cut link's far side rides the point
-# past the cut, so the parts come apart cleanly; the thread itself is
-# drawn as a line along each whole link, so a stretched or turned rope
-# shows no gaps.
-func draw_cells(cell: float) -> Array:
-	var out := {}
-	if _thread_col.a == 0.0:
-		_thread_col = _thread_colour(cell)
-	for px in pixels:
-		var t: float = px[0]
-		var i := clampi(int(floor(t)), 0, pts.size() - 2)
-		var f := t - i
-		if cut[i] == 1:
-			i = i + 1 if f >= 0.5 else i
-			f = 0.0
-			i = mini(i, pts.size() - 2)
-		var a := pts[i]
-		var b := pts[i + 1]
-		var along := (b - a).normalized() if a.distance_squared_to(b) > 0.0001 else Vector2.RIGHT
-		var n := Vector2(-along.y, along.x)
-		var at := a.lerp(b, f) + along * float(px[1]) + n * float(px[2])
-		var col := DecorPalettes.colour_at(int(px[3]), int(px[4]), int(px[5]), cell)
-		out[Vector2i(int(floor(at.x / cell)), int(floor(at.y / cell)))] = col
-		if absf(px[2]) < cell * 0.75 and cut[i] == 0:
-			# On the thread: the cells between this one and the next point.
-			var steps := int(ceil(a.distance_to(b) / cell))
-			for s in steps:
-				var q := a.lerp(b, float(s) / steps) + n * float(px[2])
-				var k := Vector2i(int(floor(q.x / cell)), int(floor(q.y / cell)))
-				if not out.has(k):
-					out[k] = col
-	# The links with no pixel of their own (an end's reach up to its rock)
-	# in the thread's colour.
-	for i in pts.size() - 1:
-		if cut[i] == 1:
-			continue
-		var steps := int(ceil(pts[i].distance_to(pts[i + 1]) / cell))
-		for s in steps + 1:
-			var q := pts[i].lerp(pts[i + 1], float(s) / maxi(steps, 1))
-			var k := Vector2i(int(floor(q.x / cell)), int(floor(q.y / cell)))
-			if not out.has(k):
-				out[k] = _thread_col
-	var arr: Array = []
-	for k in out:
-		arr.append([k.x, k.y, out[k]])
-	return arr

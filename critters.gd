@@ -16,10 +16,10 @@
 # chain a tick and no map queries for the plants (the long slug's head
 # makes one nearest_solid a tick); last_us has the tick's time.
 #
-# Drawn here, a pixel a cell on the 2 px grid: the strands (strand.gd,
-# mycelium threads the bodies brush aside), the worms (long slugs in a
-# drawn skin) and the jellyfish (jelly.gd); a pixel in the water takes
-# the water's hue. The melts the sim saw (sim.gd melts) cut strands, pop
+# Drawn on the GPU layer (critter_layer.gd), on the 2 px grid: the
+# strands (strand.gd, mycelium threads the bodies brush aside), the worms
+# (long slugs in a drawn skin) and the jellyfish (jelly.gd); a pixel in
+# the water takes the water's hue. The melts the sim saw (sim.gd melts) cut strands, pop
 # jellyfish and wake the decor's support check (decor_support.gd).
 extends Node2D
 
@@ -29,11 +29,10 @@ const Slime = preload("res://slime.gd")
 const LongSlug = preload("res://long_slug.gd")
 const Strand = preload("res://strand.gd")
 const Jelly = preload("res://jelly.gd")
+const CritterLayer = preload("res://critter_layer.gd")
 const WORM_SPRITE := "res://decor/critters/worm.png"
 const WORM_SMALL := "res://decor/critters/worm_small.png"   # Half the size (tools/pack_import.py halve): about the gecko's length
 const JELLY_SHEET := "res://decor/critters/jelly.png"
-const WATER_HUE := Color(0.42, 0.72, 1.0)   # A pixel in the water is multiplied toward this
-const WATER_K := 0.55                       # by this much
 const BODY_R := 2.0                         # A gecko chain point's reach when it brushes a strand (strand.gd adds its own)
 
 const LAND_WINDOW := 6         # Ticks after the gecko's landing in which a shroom under its feet takes the landing
@@ -51,7 +50,10 @@ var long_slugs: Array = []
 var strands: Array = []
 var jellies: Array = []
 static var _images := {}       # Path -> Image, the creatures' sprites read once
+var _layer: Node2D             # critter_layer.gd: where the strands, worms and jellyfish are drawn
+var _drawn := false            # Something was drawn last frame (a clear draws the layer empty once)
 var last_us := 0               # The last pre_tick and post_tick together, µs
+var draw_us := PackedInt32Array([0, 0, 0])   # The last _draw's strands, worms and jellyfish, µs
 var parts_us := PackedInt32Array([0, 0, 0, 0, 0])   # Of that: the shrooms, the vines, the slimes, the long slugs, the counts read after the tick
 var held: RefCounted = null    # The shroom or vine the gecko holds this tick
 var _by_chunk := {}            # Chunk id -> its shroom or vine
@@ -66,6 +68,12 @@ func setup(sim_in: Node2D, map_in: Node2D, gecko_in: Node2D) -> void:
 	sim = sim_in
 	map = map_in
 	gecko = gecko_in
+	_layer = CritterLayer.new()
+	add_child(_layer)
+	var cell: float = sim.PIXEL_SZ if sim else 2.0
+	_layer.setup(cell, int(1920.0 / cell), int(1080.0 / cell), _draw_layer)
+	if sim:
+		_layer.set_cells_tex(sim.cells_tex)
 	gecko.landed.connect(func(speed: float) -> void:
 		_land_speed = speed
 		_land_ticks = LAND_WINDOW)
@@ -82,7 +90,8 @@ func clear() -> void:
 	strands.clear()
 	jellies.clear()
 	_by_chunk.clear()
-	queue_redraw()
+	if _layer:
+		_layer.redraw()
 	held = null
 	if map:
 		map.anchored.clear()
@@ -319,8 +328,9 @@ func pre_tick(dt: float) -> void:
 		var bodies := _bodies()
 		for st in strands:
 			st.step(dt, bodies)
-	if not long_slugs.is_empty() or not jellies.is_empty() or not strands.is_empty():
-		queue_redraw()
+	if not long_slugs.is_empty() or not jellies.is_empty() or not strands.is_empty() or _drawn:
+		_layer.redraw()
+		_drawn = not long_slugs.is_empty() or not jellies.is_empty() or not strands.is_empty()
 	var t5 := Time.get_ticks_usec()
 	last_us = t5 - t0
 	parts_us[0] = t2 - t1
@@ -393,37 +403,22 @@ func glows() -> Array:
 	return out
 
 
-# The drawn creatures and threads, a pixel a cell on the world's grid,
-# a pixel in the water toward the water's hue.
-func _draw() -> void:
+# The drawn creatures and threads on the GPU layer (critter_layer.gd),
+# the canvas there taking world px: the strands, the worms, the
+# jellyfish, each a few textured quads.
+func _draw_layer(c: CanvasItem) -> void:
 	var cell: float = sim.PIXEL_SZ if sim else 2.0
-	var sz := Vector2(cell, cell)
+	var t0 := Time.get_ticks_usec()
 	for st in strands:
-		for c in st.draw_cells(cell):
-			draw_rect(Rect2(Vector2(c[0], c[1]) * cell, sz), _in_water(c[0], c[1], c[2]))
+		st.draw_on(c, cell)
+	var t1 := Time.get_ticks_usec()
 	for s in long_slugs:
-		if s.sprite.is_empty():
-			continue
-		var seen := {}
-		for px in s.skin():
-			var at: Vector2 = px[0]
-			var k := Vector2i(int(floor(at.x / cell)), int(floor(at.y / cell)))
-			if seen.has(k):
-				continue
-			seen[k] = true
-			draw_rect(Rect2(Vector2(k) * cell, sz), _in_water(k.x, k.y, px[1]))
+		if not s.sprite.is_empty():
+			s.draw_on(c)
+	var t2 := Time.get_ticks_usec()
 	for j in jellies:
-		for px in j.skin(cell):
-			var at: Vector2 = px[0]
-			var k := Vector2i(int(floor(at.x / cell)), int(floor(at.y / cell)))
-			draw_rect(Rect2(Vector2(k) * cell, sz), _in_water(k.x, k.y, px[1]))
-
-
-func _in_water(cx: int, cy: int, c: Color) -> Color:
-	var cell: float = sim.PIXEL_SZ if sim else 2.0
-	if map and map.is_water_world(Vector2((cx + 0.5) * cell, (cy + 0.5) * cell)):
-		return c.lerp(c * WATER_HUE, WATER_K)
-	return c
+		j.draw_on(c, cell)
+	draw_us = PackedInt32Array([t1 - t0, t2 - t1, Time.get_ticks_usec() - t2])
 
 
 # The vine the gecko hangs on, for main.gd's snap; null for none.

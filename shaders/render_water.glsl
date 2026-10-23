@@ -36,10 +36,17 @@ bool water_above(int x, int y, uint rw) {
         if (y - k < 0) return false;
         uint i = uint(y - k) * rw + uint(x);
         if (buf.d[O_WD + i] > 0u) return true;
-        if (buf.d[O_CT + i] == 0u) {
+        uint cls = buf.d[O_CT + i];
+        if (cls == 0u) {
             open++;
             if (open >= 3) return false;
-        } else open = 0;
+        } else {
+            open = 0;
+            // Deep in the rock: no pool sits on it (a stone or a plant
+            // in the water is a few cells thick at most, and the rock's
+            // own rim is the gather's).
+            if (cls == 2u && k >= 6) return false;
+        }
     }
     return false;
 }

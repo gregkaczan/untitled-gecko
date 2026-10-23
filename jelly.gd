@@ -7,8 +7,8 @@
 # the water (a pulse that would take it out turns back down), and drifts
 # to a stop. Out of the water it falls, and lies as a puddle until it
 # slips back in. A tongue tip or a bite that touches it pops it. A faint
-# pink glow (the light pass). Drawn by critters.gd a pixel a cell, the
-# water's hue over it.
+# pink glow (the light pass). Drawn on the GPU (draw_on,
+# critter_layer.gd), the water's hue over it.
 extends RefCounted
 
 const FRAME := 32              # px of a frame in the sheet
@@ -42,6 +42,7 @@ var _dart_dir := Vector2.UP
 var _darted := false
 var _rng := RandomNumberGenerator.new()
 var _sheet: Image
+var _tex: ImageTexture
 var _bell := Vector2(16.0, 12.0)   # The bell's centre in a frame, px
 
 
@@ -120,10 +121,13 @@ func tick(dt: float, gecko: Node2D, bites: Array) -> void:
 	if in_water and not _water(nxt) and not map.rock_world(nxt) and nxt.y < pos.y:
 		nxt.y = pos.y
 		vel.y = maxf(vel.y, 0.0)
-	# The bell's top 6 px over its centre, the tentacles' ends 14 under it.
-	if map.rock_world(nxt + Vector2(0.0, 14.0 if vel.y > 0.0 else -6.0)) or map.rock_world(nxt + Vector2(6.0 * signf(vel.x), 0.0)):
-		vel *= -0.3
-		nxt = pos
+	# Its body against the rock: the centre, the bell's top 6 px over it
+	# and its sides 8 px out, the tentacles' ends 14 under it.
+	for o in [Vector2.ZERO, Vector2(0.0, -6.0), Vector2(0.0, 14.0), Vector2(-8.0, 0.0), Vector2(8.0, 0.0)]:
+		if map.rock_world(nxt + o):
+			vel *= -0.3
+			nxt = pos
+			break
 	pos = nxt
 	if in_water and _row == PUDDLE_ROW:
 		_row = DRIFT_ROW
@@ -168,6 +172,20 @@ func skin(cell: float) -> Array:
 			var xx := (FRAME - 1 - x) if mirror else x
 			out.append([base + Vector2(xx + 0.5, y + 0.5) * cell, Color(c.r, c.g, c.b)])
 	return out
+
+
+# The jellyfish on the GPU (critter_layer.gd): its frame of the sheet,
+# a sheet pixel a cell, on the cell grid, mirrored when it faces left.
+func draw_on(c: CanvasItem, cell: float) -> void:
+	if not alive or _sheet == null:
+		return
+	if _tex == null:
+		_tex = ImageTexture.create_from_image(_sheet)
+	var f := frame()
+	var base := ((pos - _bell * cell) / cell).floor() * cell
+	var sz := Vector2(FRAME, FRAME) * cell
+	var dst := Rect2(base + Vector2(sz.x, 0.0), Vector2(-sz.x, sz.y)) if mirror else Rect2(base, sz)
+	c.draw_texture_rect_region(_tex, dst, Rect2(f.x * FRAME, f.y * FRAME, FRAME, FRAME))
 
 
 func glow() -> Array:

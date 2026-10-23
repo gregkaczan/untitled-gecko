@@ -49,6 +49,9 @@ var _turn_t := 10.0
 var sprite: Array = []         # A worm's skin: [px back from the head, px up off the belly, colour] each; empty for a blob slug
 var speed_k := 1.0             # Of SPEED it creeps
 var sprite_cell := 2.0         # px a sprite pixel spans
+var _tex: ImageTexture         # The worm's sprite, drawn along the body (draw_on)
+var _x0 := 0                   # Its leftmost column with art (the head's end) and its belly row
+var _y1 := 0
 const WORM_SPEED := 0.55       # A worm's speed_k: slow
 
 
@@ -71,6 +74,9 @@ func set_sprite(img: Image, cell: float) -> void:
 				sprite.append([(x - x0 + 0.5) * cell, (y1 - y + 0.5) * cell, Color(c.r, c.g, c.b)])
 	speed_k = WORM_SPEED
 	sprite_cell = cell
+	_tex = ImageTexture.create_from_image(img)
+	_x0 = x0
+	_y1 = y1
 
 
 func setup(map_in: Node2D, at: Vector2, length: float, seed_v: int) -> void:
@@ -255,6 +261,42 @@ func skin() -> Array:
 			var sw := radius_at(i) / maxf(radii[i], 0.01)
 			out.append([p - nrm * (RIDE - 0.5) + nrm * (float(px[1]) + o.y) * sw, px[2]])
 	return out
+
+
+# The worm on the GPU (critter_layer.gd): its sprite laid along the body
+# as a quad a link, from the belly on the rock to the sprite's top along
+# the body's normal at each point, lifted by the swell there, the
+# sprite's columns along the body from the head back.
+func draw_on(c: CanvasItem) -> void:
+	if _tex == null:
+		return
+	var n := points.size()
+	var w := float(_tex.get_width())
+	var h := float(_tex.get_height())
+	var tall := (_y1 + 1) * sprite_cell
+	var low := RIDE - 0.5 + sprite_cell * 0.5
+	var nrm := PackedVector2Array()
+	nrm.resize(n)
+	for i in n:
+		var t := points[maxi(i - 1, 0)] - points[mini(i + 1, n - 1)]
+		if t.length_squared() < 0.0001:
+			t = Vector2(-up.y, up.x) * dir
+		t = t.normalized()
+		var m := Vector2(-t.y, t.x)
+		nrm[i] = -m if m.dot(up) < 0.0 else m
+	var white := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+	var vb := (_y1 + 1) / h
+	for i in n - 1:
+		var u0 := (_x0 + i * LINK / sprite_cell) / w
+		var u1 := (_x0 + (i + 1) * LINK / sprite_cell) / w
+		if u0 >= 1.0:
+			break
+		var b0 := points[i] - nrm[i] * low
+		var b1 := points[i + 1] - nrm[i + 1] * low
+		var t0 := b0 + nrm[i] * tall * radius_at(i) / maxf(radii[i], 0.01)
+		var t1 := b1 + nrm[i + 1] * tall * radius_at(i + 1) / maxf(radii[i + 1], 0.01)
+		c.draw_primitive(PackedVector2Array([b0, b1, t1, t0]), white,
+				PackedVector2Array([Vector2(u0, vb), Vector2(u1, vb), Vector2(u1, 0.0), Vector2(u0, 0.0)]), _tex)
 
 
 func glow() -> Array:
