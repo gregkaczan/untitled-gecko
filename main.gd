@@ -386,6 +386,8 @@ func _ready() -> void:
 	_panel.overlay_changed.connect(func(on: bool) -> void: gecko.debug = on)
 	_panel.sound_changed.connect(func(on: bool) -> void: AudioServer.set_bus_mute(0, not on))
 	_panel.light_changed.connect(set_light)
+	_panel.shading_changed.connect(blobs.set_shading)
+	_panel.shading_param_changed.connect(blobs.set_shading_param)
 	_panel.anim_requested.connect(play_anim)
 	_panel.pose_editor_requested.connect(_open_pose_editor)
 	_panel.set_poses(PoseAnim.names())

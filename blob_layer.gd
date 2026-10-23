@@ -50,6 +50,7 @@ var _density_canvas: Node2D
 var _over_canvas: Node2D      # The parts on top, drawn first and overwriting: blue holds the highest value there
 var _color_canvas: Node2D
 var _screen: Sprite2D
+var _mat: ShaderMaterial
 var _splat_tex: ImageTexture
 var _blobs: Array = []
 var _marks: Array = []
@@ -85,10 +86,11 @@ func _ready() -> void:
 	_screen.centered = false
 	_screen.scale = Vector2(pixel_sz, pixel_sz)
 	_screen.z_index = 5
-	var mat := ShaderMaterial.new()
-	mat.shader = load("res://shaders/metaball.gdshader")
-	mat.set_shader_parameter("color_tex", _color_vp.get_texture())
-	_screen.material = mat
+	_mat = ShaderMaterial.new()
+	_mat.shader = load("res://shaders/metaball.gdshader")
+	_mat.set_shader_parameter("color_tex", _color_vp.get_texture())
+	set_shading(OS.get_environment("GECKO_SHADE") == "1")
+	_screen.material = _mat
 	add_child(_screen)
 	# Marks are drawn by a child of the screen sprite, in its pixel
 	# units, so they share its transform exactly.
@@ -134,6 +136,22 @@ func _draw_marks() -> void:
 			_marks_canvas.draw_circle(p + n * 0.5, n.x * 0.5, m[2])
 		else:
 			_marks_canvas.draw_rect(Rect2(p, n), m[2])
+
+
+# The bodies' lit crescent and shade on or off (off: flat, as before
+# them, the default); the debug panel's switch, GECKO_SHADE=1 to start with them.
+func set_shading(on: bool) -> void:
+	_mat.set_shader_parameter("shade", 1.0 if on else 0.0)
+
+
+# One of metaball.gdshader's uniforms by name (the debug panel's
+# Shading sliders); light_angle is the light's way in degrees on the
+# screen, 0 to the right and 90 down.
+func set_shading_param(param: String, v: float) -> void:
+	if param == "light_angle":
+		_mat.set_shader_parameter("light_dir", Vector2.from_angle(deg_to_rad(v)))
+	else:
+		_mat.set_shader_parameter(param, v)
 
 
 # Switch the blob grid: both viewports resize and the screen sprite
