@@ -30,6 +30,7 @@ class_name SceneBuilder
 extends RefCounted
 
 const CaveMapScript = preload("res://cave_map.gd")
+const DecorPalettes = preload("res://decor_palettes.gd")
 const PATH := "res://tests/scenes.json"
 const LEVELS_DIR := "res://levels"
 const STAMPS_DIR := "res://decor/stamps"
@@ -340,30 +341,52 @@ static func png_stamps() -> Dictionary:
 	var dir := DirAccess.open(STAMPS_DIR)
 	if dir == null:
 		return _png_stamps
-	var names: Array = []
+	# The stamps at the top are in the sage palette; a folder's are in the
+	# palette of its name (decor_palettes.gd), a name unique across them.
+	var found: Array = []   # [name, path, palette]
 	for f in dir.get_files():
-		if f.ends_with(".png"):
-			names.append(f.trim_suffix(".png"))
-	names.sort()
-	for name in names:
-		var bytes := FileAccess.get_file_as_bytes(STAMPS_DIR + "/" + name + ".png")
-		if bytes.is_empty():
+		if f.ends_with(".png") and not f.ends_with(".glow.png"):
+			found.append([f.trim_suffix(".png"), STAMPS_DIR + "/" + f, "sage"])
+	for sub in dir.get_directories():
+		var sd := DirAccess.open(STAMPS_DIR + "/" + sub)
+		if sd == null:
 			continue
-		var img := Image.new()
-		if img.load_png_from_buffer(bytes) != OK:
+		for f in sd.get_files():
+			if f.ends_with(".png") and not f.ends_with(".glow.png"):
+				found.append([f.trim_suffix(".png"), STAMPS_DIR + "/" + sub + "/" + f, sub])
+	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	for e in found:
+		var img := _png(e[1])
+		if img == null:
 			continue
-		_png_stamps[name] = _stamp_from_image(name, img)
+		_png_stamps[e[0]] = _stamp_from_image(e[0], img, e[2], _png(String(e[1]).trim_suffix(".png") + ".glow.png"))
 	return _png_stamps
 
 
-static func _stamp_from_image(name: String, img: Image) -> Dictionary:
+static func _png(path: String) -> Image:
+	if not FileAccess.file_exists(path):
+		return null
+	var bytes := FileAccess.get_file_as_bytes(path)
+	var img := Image.new()
+	if bytes.is_empty() or img.load_png_from_buffer(bytes) != OK:
+		return null
+	return img
+
+
+# A stamp's cells from its image: each pixel the index of the nearest
+# colour in its palette, glowing where its glow mask (name.glow.png,
+# the pack's emission map cut alike) is lit, or with no mask on the
+# colours GLOW_GROUPS gives its group.
+static func _stamp_from_image(name: String, img: Image, palette := "sage", glow: Image = null) -> Dictionary:
 	img.convert(Image.FORMAT_RGBA8)
+	if glow:
+		glow.convert(Image.FORMAT_RGBA8)
 	var w := img.get_width()
 	var h := img.get_height()
 	var cells := PackedInt32Array()
 	var feet := PackedInt32Array()   # The columns whose art reaches the bottom row: what stands on the ground (decor_brush.gd)
 	var glow_cols: Array = GLOW_GROUPS.get(stamp_group(name), [])
-	var pal: Array[Color] = CaveMapScript.DECOR_PALETTE
+	var pal: Array[Color] = DecorPalettes.colours(palette)
 	for y in h:
 		for x in w:
 			var c := img.get_pixel(x, y)
@@ -376,9 +399,13 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 				if d < bd:
 					bd = d
 					best = i
+			var lit: bool = best in glow_cols
+			if glow and x < glow.get_width() and y < glow.get_height():
+				var g := glow.get_pixel(x, y)
+				lit = g.a > 0.5 and g.get_luminance() > 0.5
 			cells.append(x)
 			cells.append(y)
-			cells.append(CaveMapScript.decor_kind(best, best in glow_cols))
+			cells.append(CaveMapScript.decor_kind(best, lit))
 			if y == h - 1:
 				feet.append(x)
 	# Its parts: the pixels that touch, corners too (a cluster's single
@@ -408,17 +435,32 @@ static func _stamp_from_image(name: String, img: Image) -> Dictionary:
 						parts[j] = id
 						q.append(j)
 		part_n.append(n)
-	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img, "parts": parts, "part_n": part_n}
+	return {"w": w, "h": h, "cells": cells, "feet": feet, "img": img, "parts": parts, "part_n": part_n, "palette": palette}
 
 
 # The decor mushrooms (their groups): in the particle world each is a
 # shroom that bends (main.gd _sim_kinds, critters.gd plan_decor), not
 # cells that stand.
-const SHROOM_GROUPS := ["cluster", "tall_a", "tall_b", "shroom_s"]
+const SHROOM_GROUPS := ["cluster", "tall_a", "tall_b", "shroom_s", "myc_shroom", "warm_brown", "warm_orange", "warm_spot"]
+# The plants that bend the same way: a stem with leaves, no cap
+# (shroom.gd plan is_plant), all of the sprite one plant.
+const PLANT_GROUPS := ["garden_plant"]
+# The strands: a rope hung between two anchors that sways when brushed
+# and is no hold (strand.gd), not cells that stand.
+const STRAND_GROUPS := ["myc_strand"]
 
 
+# A stamp the particle world makes a shroom or a plant that bends.
 static func is_shroom_stamp(name: String) -> bool:
-	return png_stamps().has(name) and stamp_group(name) in SHROOM_GROUPS
+	return png_stamps().has(name) and (stamp_group(name) in SHROOM_GROUPS or stamp_group(name) in PLANT_GROUPS)
+
+
+static func is_plant_stamp(name: String) -> bool:
+	return png_stamps().has(name) and stamp_group(name) in PLANT_GROUPS
+
+
+static func is_strand_stamp(name: String) -> bool:
+	return png_stamps().has(name) and stamp_group(name) in STRAND_GROUPS
 
 
 # The way a stamp on this surface grows off it, in cells (frame's up).
@@ -690,7 +732,9 @@ static func slug_points(scene: Dictionary) -> Array:
 # ["vine", x, y, length], hanging from the first ceiling above (x, y),
 # length px; a shroom ["shroom", x, y, size 1 to 5, variant], on the
 # floor under (x, y); a slime ["slime", x, y, radius]; a long slug
-# ["longslug", x, y, length] on the surface nearest (x, y).
+# ["longslug", x, y, length] on the surface nearest (x, y); a worm
+# ["worm", x, y, size] the same in the worm's drawn skin; a jellyfish
+# ["jelly", x, y, 1] in the water about (x, y).
 static func spawn_lumps(map: Node2D, scene: Dictionary) -> Array:
 	var critters: Array = []
 	for lump in scene.get("lumps", []):
@@ -699,7 +743,7 @@ static func spawn_lumps(map: Node2D, scene: Dictionary) -> Array:
 		match String(lump[0]):
 			"sand":
 				map.spawn_sand(p, r)
-			"vine", "slime", "longslug":
+			"vine", "slime", "longslug", "worm", "jelly":
 				critters.append([String(lump[0]), p, r, 0])
 			"shroom":
 				critters.append(["shroom", p, r, int(lump[4]) if lump.size() > 4 else 0])

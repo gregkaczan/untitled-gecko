@@ -8,6 +8,8 @@
 # chunk edits (push, pull, eat, break, spawn) do nothing.
 extends Node2D
 
+const DecorPalettes = preload("res://decor_palettes.gd")
+
 const W_FULL := 960            # The cell grid: the sim's render grid, 2 px cells
 const H_FULL := 540
 const CELL_FULL := 2.0
@@ -57,8 +59,8 @@ const CELL_MOSS := 10          # Slippery moss: a coat on rock, solid, but the f
 const CELL_CRUMBLE := 11       # Crumbling rock: gives way under a hold of a second (gecko.gd), to grains in the sim
 const CELL_GAS := 12           # A gas pocket: air that bursts when a bite opens it (main.gd)
 const CELL_THORN := 13         # Thorns: a sharp plant on a rock face, solid, but no foot holds it and a touch throws the body off (gecko.gd); a bite takes it
-const CELL_DECOR := 16         # Decor, 16 to 47: a stamp's pixel (tests/scene_builder.gd), its colour DECOR_PALETTE[kind - 16 & 15], a glow from 32 up; solid, ground to the gecko, gone with a bite
-const DECOR_PALETTE: Array[Color] = [   # The decor stamps' 16 colours (decor/palette.png; render_write.glsl holds the same)
+const CELL_DECOR := 16         # Decor, 16 to 47: a stamp's pixel (tests/scene_builder.gd), its colour index kind - 16 & 15 in its band's palette (decor_palettes.gd), a glow from 32 up; solid, ground to the gecko, gone with a bite
+const DECOR_PALETTE: Array[Color] = [   # The first decor palette, sage (decor/palette.png, decor_palettes.gd): what tools and tests that know no bands draw with
 	Color(0.024, 0.043, 0.016),
 	Color(0.114, 0.176, 0.086),
 	Color(0.137, 0.224, 0.118),
@@ -811,7 +813,7 @@ func _repaint(x0: int, y0: int, x1: int, y1: int) -> void:
 						col = THORN.lightened(0.1) if rim else THORN - ROCK_VAR * grain
 					_:
 						if v >= CELL_DECOR:
-							col = DECOR_PALETTE[(v - CELL_DECOR) & 15]   # A stamp's pixel, as drawn
+							col = DecorPalettes.colour_at(v - CELL_DECOR, x, y, CELL)   # A stamp's pixel, as drawn, in its band's palette
 						else:
 							col = RIM if rim else ROCK + ROCK_VAR * grain
 			_img.set_pixel(x, y, col)

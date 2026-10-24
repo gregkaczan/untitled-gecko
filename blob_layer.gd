@@ -111,6 +111,14 @@ func set_marks(marks: Array) -> void:
 	_marks_canvas.queue_redraw()
 
 
+# The sim's cell classes as a texture over the world (sim.gd cells_tex):
+# the body takes the water's hue where it is in the water.
+func set_cells_tex(tex: Texture2D) -> void:
+	var mat := _screen.material as ShaderMaterial
+	mat.set_shader_parameter("cells_tex", tex)
+	mat.set_shader_parameter("water_tint", tex != null)
+
+
 # Anchors the pixel grid: o is a world position on the screen's pixels,
 # modulo pixel_sz (each axis in 0 to pixel_sz). The screen sprite
 # shifts with it, so the grid's pixels still land on whole screen

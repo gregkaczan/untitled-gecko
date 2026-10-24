@@ -19,6 +19,38 @@ const uint O_SD = 25040014u;   // slime density per cell (render_write.glsl)
 
 float rf(uint i) { return uintBitsToFloat(buf.d[i]); }
 
+// Things in the water take its hue (critters.gd WATER_HUE and WATER_K,
+// metaball.gdshader the same for the gecko): a solid pixel the water's
+// gather reaches, or with water above it before any air (a stone on a
+// pool's floor, a plant under the surface).
+const vec3 WATER_HUE = vec3(0.42, 0.72, 1.0);
+const float WATER_K = 0.55;
+const int WATER_UP = 16;
+
+// Water above: a cell of water's density (O_WD, this tick's) before
+// three open cells in a row (the water's particles leave single cells
+// empty between them; three is air over the water).
+bool water_above(int x, int y, uint rw) {
+    int open = 0;
+    for (int k = 1; k <= WATER_UP; k++) {
+        if (y - k < 0) return false;
+        uint i = uint(y - k) * rw + uint(x);
+        if (buf.d[O_WD + i] > 0u) return true;
+        uint cls = buf.d[O_CT + i];
+        if (cls == 0u) {
+            open++;
+            if (open >= 3) return false;
+        } else {
+            open = 0;
+            // Deep in the rock: no pool sits on it (a stone or a plant
+            // in the water is a few cells thick at most, and the rock's
+            // own rim is the gather's).
+            if (cls == 2u && k >= 6) return false;
+        }
+    }
+    return false;
+}
+
 float hash11(float p) {
     p = fract(p * 0.1031);
     p *= p + 33.33;
@@ -152,6 +184,13 @@ void main() {
     bool has_lava = (lava_density >= 0.35);
     bool has_clay = (clay_density >= 0.5);
     bool has_slime = (slime_density >= 0.9);
+
+    {
+        vec4 c = unpackUnorm4x8(buf.d[O_RN + id]);
+        if (c.a > 0.995 && (has_water || water_above(px, py, rw))) {
+            buf.d[O_RN + id] = packUnorm4x8(vec4(mix(c.rgb, c.rgb * WATER_HUE, WATER_K), 1.0));
+        }
+    }
     if (!has_water && !has_lava && !has_clay && !has_slime) return;
 
     float psz = rf(O_P + 18u);

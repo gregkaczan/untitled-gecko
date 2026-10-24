@@ -36,6 +36,7 @@ extends CanvasLayer
 
 const SceneBuilder = preload("res://tests/scene_builder.gd")
 const CaveMap = preload("res://cave_map.gd")
+const Critters = preload("res://critters.gd")
 const WIDTH := 300.0           # The panel's least width; it grows to its text
 const PAINTS := [
 	["Air", 0], ["Rock", 1], ["Hard", 7], ["Bedrock", 8],
@@ -44,8 +45,8 @@ const PAINTS := [
 	["Gas", 12], ["Thorn", 13],
 ]
 const STAMPS := [["Stalactite", "stalactite"], ["Stalagmite", "stalagmite"], ["Vine", "vine"], ["Thorn", "thorn"], ["Slug", "slug"],
-	["Shroom", "shroom"], ["Slime", "slime"], ["Long slug", "longslug"]]
-const STAMP_SIZES := {"stalactite": 5, "stalagmite": 5, "vine": 5, "thorn": 2, "slug": 1, "shroom": 5, "slime": 5, "longslug": 5}
+	["Shroom", "shroom"], ["Slime", "slime"], ["Long slug", "longslug"], ["Worm", "worm"], ["Jellyfish", "jelly"]]
+const STAMP_SIZES := {"stalactite": 5, "stalagmite": 5, "vine": 5, "thorn": 2, "slug": 1, "shroom": 5, "slime": 5, "longslug": 5, "worm": 5, "jelly": 1}
 const STAMP_VARIANTS := {"stalactite": 4, "stalagmite": 4, "shroom": 2}
 const SHAPES := [["Point", "point"], ["Cone", "cone"], ["Strip", "strip"]]
 const ANCHORS := ["nearest", "floor", "ceiling", "wall_left", "wall_right"]
@@ -104,6 +105,10 @@ const CHEAT := [
 		["Strip", "press, drag along the surface, release"],
 		["RMB", "takes the nearest light away"],
 		["Lighting", "off: the whole cave lit flat, every stamp in view"]]],
+	["Bands (palettes)", [
+		["P, Shift+P", "the band under the cursor: next palette, the one before"],
+		["K", "a new band from the cursor's height down"],
+		["Shift+K", "the band border nearest the cursor removed"]]],
 	["Files", [
 		["Save", "a saved version and the head the game loads"],
 		["autosave", "a version a minute while there are strokes, the last 10 kept"],
@@ -619,6 +624,12 @@ static func _stamp_icon(name: String) -> ImageTexture:
 					var dy := (y - 32.0) / 17.0
 					if dx * dx + dy * dy <= 1.0:
 						img.set_pixel(x, y, goo.lightened(0.35) if dx * dx + dy * dy > 0.7 else goo)
+		"worm", "jelly":
+			# The creature's own sprite (its first frame), scaled to fit.
+			var src: Image = Critters.image(Critters.WORM_SPRITE if name == "worm" else Critters.JELLY_SHEET)
+			if src:
+				var fr := src.get_region(Rect2i(0, 0, src.get_width(), src.get_height()) if name == "worm" else Rect2i(0, 0, 32, 32))
+				return _icon(fr)
 		"longslug":
 			var flesh := Color(0.86, 0.62, 0.74)
 			for x in range(2, 34):
@@ -859,6 +870,19 @@ func _input(event: InputEvent) -> void:
 				say("let go")
 			else:
 				_drop_pick()
+		get_viewport().set_input_as_handled()
+	elif (k == KEY_P or k == KEY_K) and not event.ctrl_pressed:
+		# The bands of decor palettes, at the cursor's height.
+		if not event.echo:
+			var at: Vector2 = _main.get_global_mouse_position()
+			_main.edit_begin()
+			if k == KEY_P:
+				say(_main.edit_band_palette(at, -1 if event.shift_pressed else 1))
+			elif event.shift_pressed:
+				say(_main.edit_band_merge(at))
+			else:
+				say(_main.edit_band_split(at))
+			_main.edit_end()
 		get_viewport().set_input_as_handled()
 	elif k == KEY_V and not event.ctrl_pressed:
 		if not event.echo:

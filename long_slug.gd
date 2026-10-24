@@ -8,6 +8,12 @@
 # for a moment and turns away. Too big to swallow. Drawn by the blob
 # layer with the gecko's own blobs (gecko.gd extra_blobs), and a faint
 # glow at its middle (the sim's light pass).
+#
+# A worm (set_sprite) is the same creature in a drawn skin: the sprite's
+# pixels ride the body, each at its place back from the head and its
+# height off the belly, the belly on the rock, and the swelling wave
+# lifts them as it passes, so the worm visibly squeezes along (drawn by
+# critters.gd on the 2 px grid, no blobs, no glow). It creeps slower.
 extends RefCounted
 
 const LINK := 3.6              # px between body points
@@ -45,6 +51,37 @@ var _track := PackedVector2Array()   # The head's places, newest last, LINK / 2 
 var _vel := Vector2.ZERO
 var _rng := RandomNumberGenerator.new()
 var _turn_t := 10.0
+var sprite: Array = []         # A worm's skin: [px back from the head, px up off the belly, colour] each; empty for a blob slug
+var speed_k := 1.0             # Of SPEED it creeps
+var sprite_cell := 2.0         # px a sprite pixel spans
+var _tex: ImageTexture         # The worm's sprite, drawn along the body (draw_on)
+var _x0 := 0                   # Its leftmost column with art (the head's end) and its belly row
+var _y1 := 0
+const WORM_SPEED := 0.55       # A worm's speed_k: slow
+
+
+# The worm's skin from its sprite (decor/critters/worm.png, the head at
+# the left), cell px a sprite pixel; the body's length should be the
+# sprite's width (critters.gd add_worm).
+func set_sprite(img: Image, cell: float) -> void:
+	sprite.clear()
+	var x0 := img.get_width()
+	var y1 := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			if img.get_pixel(x, y).a > 0.5:
+				x0 = mini(x0, x)
+				y1 = maxi(y1, y)
+	for y in img.get_height():
+		for x in img.get_width():
+			var c := img.get_pixel(x, y)
+			if c.a > 0.5:
+				sprite.append([(x - x0 + 0.5) * cell, (y1 - y + 0.5) * cell, Color(c.r, c.g, c.b)])
+	speed_k = WORM_SPEED
+	sprite_cell = cell
+	_tex = ImageTexture.create_from_image(img)
+	_x0 = x0
+	_y1 = y1
 
 
 func setup(map_in: Node2D, at: Vector2, length: float, seed_v: int) -> void:
@@ -142,7 +179,7 @@ func tick(dt: float, gecko: Node2D) -> void:
 			_turn()
 		# The head surges while the wave passes it.
 		var surge := maxf(sin(phase), 0.0)
-		var spd := SPEED * 2.4 * surge * surge * (0.0 if flinch > 0.0 else 1.0)
+		var spd := SPEED * speed_k * 2.4 * surge * surge * (0.0 if flinch > 0.0 else 1.0)
 		var tangent := Vector2(-up.y, up.x) * dir
 		var next := head + tangent * spd * dt
 		if map.solid_within(next, 2.0):
@@ -218,6 +255,71 @@ func blobs() -> Array:
 	for i in points.size():
 		out.append([points[i] + up * 0.4, radius_at(i), COLOR.lightened(0.1 * maxf(sin(phase - i * WAVE), 0.0))])
 	return out
+
+
+# The worm's skin where the body has it now: [world position, colour]
+# each, a pixel's place along the body (between the points either side
+# of it), its height along the body's normal there (the side away from
+# the rock), raised by the swell.
+# Each pixel is set down at four points a quarter of a cell about its
+# centre, so a bend that spreads the pixels apart leaves no cell between
+# them empty (critters.gd draws a cell once whatever lands in it).
+func skin() -> Array:
+	var out: Array = []
+	var n := points.size()
+	var q := sprite_cell * 0.25
+	for px in sprite:
+		for o in [Vector2(-q, -q), Vector2(q, -q), Vector2(-q, q), Vector2(q, q)]:
+			var a: float = (float(px[0]) + o.x) / LINK
+			var i := clampi(int(floor(a)), 0, n - 2)
+			var f := clampf(a - i, 0.0, 1.0)
+			var p := points[i].lerp(points[i + 1], f)
+			var t := points[i] - points[i + 1]
+			if t.length_squared() < 0.0001:
+				t = Vector2(-up.y, up.x) * dir
+			t = t.normalized()
+			var nrm := Vector2(-t.y, t.x)
+			if nrm.dot(up) < 0.0:
+				nrm = -nrm
+			var sw := radius_at(i) / maxf(radii[i], 0.01)
+			out.append([p - nrm * (RIDE - 0.5) + nrm * (float(px[1]) + o.y) * sw, px[2]])
+	return out
+
+
+# The worm on the GPU (critter_layer.gd): its sprite laid along the body
+# as a quad a link, from the belly on the rock to the sprite's top along
+# the body's normal at each point, lifted by the swell there, the
+# sprite's columns along the body from the head back.
+func draw_on(c: CanvasItem) -> void:
+	if _tex == null:
+		return
+	var n := points.size()
+	var w := float(_tex.get_width())
+	var h := float(_tex.get_height())
+	var tall := (_y1 + 1) * sprite_cell
+	var low := RIDE - 0.5 + sprite_cell * 0.5
+	var nrm := PackedVector2Array()
+	nrm.resize(n)
+	for i in n:
+		var t := points[maxi(i - 1, 0)] - points[mini(i + 1, n - 1)]
+		if t.length_squared() < 0.0001:
+			t = Vector2(-up.y, up.x) * dir
+		t = t.normalized()
+		var m := Vector2(-t.y, t.x)
+		nrm[i] = -m if m.dot(up) < 0.0 else m
+	var white := PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE])
+	var vb := (_y1 + 1) / h
+	for i in n - 1:
+		var u0 := (_x0 + i * LINK / sprite_cell) / w
+		var u1 := (_x0 + (i + 1) * LINK / sprite_cell) / w
+		if u0 >= 1.0:
+			break
+		var b0 := points[i] - nrm[i] * low
+		var b1 := points[i + 1] - nrm[i + 1] * low
+		var t0 := b0 + nrm[i] * tall * radius_at(i) / maxf(radii[i], 0.01)
+		var t1 := b1 + nrm[i + 1] * tall * radius_at(i + 1) / maxf(radii[i + 1], 0.01)
+		c.draw_primitive(PackedVector2Array([b0, b1, t1, t0]), white,
+				PackedVector2Array([Vector2(u0, vb), Vector2(u1, vb), Vector2(u1, 0.0), Vector2(u0, 0.0)]), _tex)
 
 
 func glow() -> Array:

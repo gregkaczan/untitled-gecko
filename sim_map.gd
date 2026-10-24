@@ -13,6 +13,9 @@ var sim: Node2D
 var _slot := 0
 var sense_coarse := false      # The senses on the 4 px fold (sim.cells4) instead of the sim's own cells
 var slime_on := false          # A slime lives in the level (critters.gd): only then does slime_near look
+var support := DecorSupport.new()   # The decor's hold on its rock: what of it comes loose when a melt takes the rock (decor_support.gd; critters.gd ticks it)
+
+const DecorSupport = preload("res://decor_support.gd")
 
 
 # The senses' grid: the sim's cells (2 px) or the same folded 2x2 to
@@ -42,6 +45,7 @@ func _process(_dt: float) -> void:
 
 func generate(seed_value: int) -> void:
 	sim.build(seed_value)
+	support.build(sim, PackedByteArray(), sim.RENDER_W, sim.RENDER_H)
 	sim.tick()
 
 
@@ -49,12 +53,14 @@ func generate(seed_value: int) -> void:
 # generator sim.build runs), so the caller keeps the map for the editor.
 func generate_cells(seed_value: int, kinds: PackedByteArray) -> void:
 	sim.build(seed_value, kinds)
+	support.build(sim, kinds, sim.RENDER_W, sim.RENDER_H)
 	sim.tick()
 
 
 # Rebuilds the particles from a cell map (a test scene built on a CaveMap).
 func build_cells(kinds: PackedByteArray) -> void:
 	sim.build(0, kinds)
+	support.build(sim, kinds, sim.RENDER_W, sim.RENDER_H)
 	sim.tick()
 
 

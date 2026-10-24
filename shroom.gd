@@ -39,6 +39,7 @@ const GAP_STEP := 1.5          # px between the rows across the stem read for a 
 const CAP_GONE := 0.15         # A cap with fewer than this is eaten
 const CAP_PIECES := 3          # A stem bitten through: each link above the bite a lump of its own, the cap cut across into this many
 const SPRITE := "tall_b_0"      # The decor take (decor/stamps) every shroom is drawn from: a broad cap on a long bent stem
+const PLANT_MASS := 0.35       # Of a shroom's mass a plant of its height weighs: a stem and leaves, it sways under the gecko
 const MAX_SIZE := 10           # The editor's stamps go to 5; a scene may ask for more (critters_lab's big one)
 
 var sim: Node2D
@@ -61,6 +62,7 @@ var half_w := 3.0              # The stem's half width
 var mass := 1.0
 var _stem_n := -1              # The stem's living particles at the last check
 var weight_at := Vector2.INF   # A weight on it other than the gecko's (a test's), where it bears
+var plant := false             # A stem with leaves and no cap (plan): it bends and sways, it gives a jump nothing
 var _joints := PackedVector2Array()
 var _rest_d := PackedFloat32Array()   # Each joint's bend at rest (the sprite's stem as drawn), the root's from up, the cap's back to up
 var _angles := PackedFloat32Array()
@@ -77,8 +79,10 @@ var _angles := PackedFloat32Array()
 # took it for cap), and the stem's centre on
 # each row (smoothed) cut into SEGS equal links is the chain's rest
 # pose, so a bent stem rests bent. {} when it has no stem to bend (a
-# cap on the surface, a stamp turned over): it stays decor.
-static func plan(cells: Array, up_v: Vector2i, cell: float) -> Dictionary:
+# cap on the surface, a stamp turned over): it stays decor. A plant
+# (is_plant: a stem with leaves, no cap) is stem to its last row, its
+# leaves going with the link beside them, its tip the "cap" bone.
+static func plan(cells: Array, up_v: Vector2i, cell: float, is_plant := false) -> Dictionary:
 	if cells.size() < 6:
 		return {}
 	var along := Vector2i(-up_v.y, up_v.x)
@@ -106,6 +110,8 @@ static func plan(cells: Array, up_v: Vector2i, cell: float) -> Dictionary:
 		if wid[r] >= wid[r - 1] + 3 or wid[r] >= int(ceil(widest * 0.75)):
 			cap_r = r
 			break
+	if is_plant:
+		cap_r = rows - 1 if rows >= 8 else -1
 	if cap_r < 2:
 		return {}
 	var raw := PackedFloat32Array()
@@ -137,7 +143,7 @@ static func plan(cells: Array, up_v: Vector2i, cell: float) -> Dictionary:
 	for i in line.size() - 1:
 		total += line[i].distance_to(line[i + 1])
 	return {"cells": cells, "up": fu, "line": line, "height": total, "half_w": stem_w * cell * 0.5,
-			"cap_w": widest * cell * 0.5, "cap_r": cap_r, "h0": h0, "up_v": up_v, "rows": rows}
+			"cap_w": (2.0 if is_plant else widest * 0.5) * cell, "cap_r": cap_r, "h0": h0, "up_v": up_v, "rows": rows, "plant": is_plant}
 
 
 # A shroom made from its plan (plan above), its mass from its size (1
@@ -149,6 +155,9 @@ func setup_plan(sim_in: Node2D, map_in: Node2D, pl: Dictionary, size: int) -> bo
 	if pl.is_empty():
 		return false
 	mass = 0.5 + clampi(size, 1, MAX_SIZE) * MASS_K
+	plant = bool(pl.get("plant", false))
+	if plant:
+		mass *= PLANT_MASS
 	up = pl.up
 	var line: PackedVector2Array = pl.line
 	base = line[0]
@@ -417,7 +426,7 @@ func _upload() -> void:
 # The speed a jump off the cap gains along the cap's up: the squash's
 # stored spring and the cap's own rise.
 func boost() -> Vector2:
-	if cut or cap_gone:
+	if cut or cap_gone or plant:
 		return Vector2.ZERO
 	var spd := BOOST_K * maxf(squash, 0.0) * sqrt(SQUASH_K) + maxf(-squash_v, 0.0)
 	return cap_up() * minf(spd, BOOST_MAX)
