@@ -1,0 +1,1269 @@
+{
+ "packs": [
+  {
+   "slug": "16x16-shrooms",
+   "name": "16x16-shrooms",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "16x16-shrooms/16x16-shrooms",
+     "title": "16x16-shrooms.png",
+     "file": "assets/16x16-shrooms/16x16-shrooms.png",
+     "w": 160,
+     "h": 128,
+     "keyed": true
+    }
+   ]
+  },
+  {
+   "slug": "dp-complete-v1-0",
+   "name": "DP_Complete_v1.0",
+   "licence": ">>> You can use the Licensed Asset:\r\n-------------------------------------\r\n(a) edit and modify, cut and change the asset used for commercial purposes;\r\n(b) sell works created with the assets (games, animations, movies etc);\r\n(c) publish on websites related to graphics, games and similar.\r\n\r\n>>> A Licence does not allow the Purchaser to:\r\n-------------------------------------\r\n(d) Use the Licensed Asset or Derivative Works in a logo, trademark or service mark\r\n(e) Resell it, original or modified (partial or complete);\r\n\r\nCredit is not required but appreciated.",
+   "sheets": [
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-0-front-layer",
+     "title": "DP_Set1_v1.0/_PNG/0. front layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-0-front-layer.png",
+     "w": 640,
+     "h": 512
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-1-main-platforms",
+     "title": "DP_Set1_v1.0/_PNG/1. main platforms.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-1-main-platforms.png",
+     "w": 1024,
+     "h": 768
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-2-second-layer",
+     "title": "DP_Set1_v1.0/_PNG/2. second layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-2-second-layer.png",
+     "w": 1024,
+     "h": 768
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-3-background-layer",
+     "title": "DP_Set1_v1.0/_PNG/3. background layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-3-background-layer.png",
+     "w": 1152,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-elevator-1",
+     "title": "DP_Set1_v1.0/_PNG/Animated/elevator 1.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-elevator-1.png",
+     "w": 128,
+     "h": 64
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-elevator-2",
+     "title": "DP_Set1_v1.0/_PNG/Animated/elevator 2.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-elevator-2.png",
+     "w": 192,
+     "h": 64
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-activ-1",
+     "title": "DP_Set1_v1.0/_PNG/Animated/fan activ 1.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-activ-1.png",
+     "w": 96,
+     "h": 32
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-activ-2",
+     "title": "DP_Set1_v1.0/_PNG/Animated/fan activ 2.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-activ-2.png",
+     "w": 96,
+     "h": 32
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-opened-1",
+     "title": "DP_Set1_v1.0/_PNG/Animated/fan opened 1.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-opened-1.png",
+     "w": 160,
+     "h": 32
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-opened-2",
+     "title": "DP_Set1_v1.0/_PNG/Animated/fan opened 2.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-fan-opened-2.png",
+     "w": 160,
+     "h": 32
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-teleport-inactivated",
+     "title": "DP_Set1_v1.0/_PNG/Animated/teleport inactivated.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-teleport-inactivated.png",
+     "w": 256,
+     "h": 192
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-animated-teleport",
+     "title": "DP_Set1_v1.0/_PNG/Animated/teleport.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-animated-teleport.png",
+     "w": 256,
+     "h": 192
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-background1",
+     "title": "DP_Set1_v1.0/_PNG/background1.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-background1.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set1-v1-0-png-background2",
+     "title": "DP_Set1_v1.0/_PNG/background2.png",
+     "file": "assets/dp-complete-v1-0/dp-set1-v1-0-png-background2.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-0-front-layer",
+     "title": "DP_Set2_v1.0/_PNG/0. front layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-0-front-layer.png",
+     "w": 1024,
+     "h": 608
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-1-main-platforms",
+     "title": "DP_Set2_v1.0/_PNG/1. main platforms.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-1-main-platforms.png",
+     "w": 992,
+     "h": 768
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-2-second-layer",
+     "title": "DP_Set2_v1.0/_PNG/2. second layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-2-second-layer.png",
+     "w": 1024,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-3-background-layer",
+     "title": "DP_Set2_v1.0/_PNG/3. background layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-3-background-layer.png",
+     "w": 1024,
+     "h": 832
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-animated-elevator2",
+     "title": "DP_Set2_v1.0/_PNG/Animated/elevator2.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-animated-elevator2.png",
+     "w": 128,
+     "h": 64
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-animated-elevator-1",
+     "title": "DP_Set2_v1.0/_PNG/Animated/elevator 1.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-animated-elevator-1.png",
+     "w": 128,
+     "h": 64
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-animated-laser",
+     "title": "DP_Set2_v1.0/_PNG/Animated/laser.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-animated-laser.png",
+     "w": 288,
+     "h": 96
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-background1",
+     "title": "DP_Set2_v1.0/_PNG/background1.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-background1.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set2-v1-0-png-background2",
+     "title": "DP_Set2_v1.0/_PNG/background2.png",
+     "file": "assets/dp-complete-v1-0/dp-set2-v1-0-png-background2.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-0-front-layer",
+     "title": "DP_Set3_v1.0/_PNG/0. front layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-0-front-layer.png",
+     "w": 1024,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-1-main-platforms",
+     "title": "DP_Set3_v1.0/_PNG/1. main platforms.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-1-main-platforms.png",
+     "w": 1024,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-2-second-layer",
+     "title": "DP_Set3_v1.0/_PNG/2. second layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-2-second-layer.png",
+     "w": 1024,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-3-background-layer",
+     "title": "DP_Set3_v1.0/_PNG/3. background layer.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-3-background-layer.png",
+     "w": 1024,
+     "h": 1024
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-background1",
+     "title": "DP_Set3_v1.0/_PNG/background1.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-background1.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-background2",
+     "title": "DP_Set3_v1.0/_PNG/background2.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-background2.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-background3",
+     "title": "DP_Set3_v1.0/_PNG/background3.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-background3.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-background4",
+     "title": "DP_Set3_v1.0/_PNG/background4.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-background4.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "dp-complete-v1-0/dp-set3-v1-0-png-background5",
+     "title": "DP_Set3_v1.0/_PNG/background5.png",
+     "file": "assets/dp-complete-v1-0/dp-set3-v1-0-png-background5.png",
+     "w": 1024,
+     "h": 576
+    }
+   ]
+  },
+  {
+   "slug": "free-slime-sprite-sheets-pixel-art",
+   "name": "Free-Slime-Sprite-Sheets-Pixel-Art",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "free-slime-sprite-sheets-pixel-art/free-slime-sprite-sheets-pixel-art",
+     "title": "Free-Slime-Sprite-Sheets-Pixel-Art.gif (68 frames)",
+     "file": "assets/free-slime-sprite-sheets-pixel-art/free-slime-sprite-sheets-pixel-art.png",
+     "w": 1436,
+     "h": 1484,
+     "parts": [
+      {
+       "name": "frame 0",
+       "x": 0,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 1",
+       "x": 240,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 2",
+       "x": 480,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 3",
+       "x": 720,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 4",
+       "x": 960,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 5",
+       "x": 1200,
+       "y": 0,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 6",
+       "x": 0,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 7",
+       "x": 240,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 8",
+       "x": 480,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 9",
+       "x": 720,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 10",
+       "x": 960,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 11",
+       "x": 1200,
+       "y": 124,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 12",
+       "x": 0,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 13",
+       "x": 240,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 14",
+       "x": 480,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 15",
+       "x": 720,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 16",
+       "x": 960,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 17",
+       "x": 1200,
+       "y": 248,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 18",
+       "x": 0,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 19",
+       "x": 240,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 20",
+       "x": 480,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 21",
+       "x": 720,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 22",
+       "x": 960,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 23",
+       "x": 1200,
+       "y": 372,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 24",
+       "x": 0,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 25",
+       "x": 240,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 26",
+       "x": 480,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 27",
+       "x": 720,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 28",
+       "x": 960,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 29",
+       "x": 1200,
+       "y": 496,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 30",
+       "x": 0,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 31",
+       "x": 240,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 32",
+       "x": 480,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 33",
+       "x": 720,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 34",
+       "x": 960,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 35",
+       "x": 1200,
+       "y": 620,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 36",
+       "x": 0,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 37",
+       "x": 240,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 38",
+       "x": 480,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 39",
+       "x": 720,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 40",
+       "x": 960,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 41",
+       "x": 1200,
+       "y": 744,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 42",
+       "x": 0,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 43",
+       "x": 240,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 44",
+       "x": 480,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 45",
+       "x": 720,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 46",
+       "x": 960,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 47",
+       "x": 1200,
+       "y": 868,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 48",
+       "x": 0,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 49",
+       "x": 240,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 50",
+       "x": 480,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 51",
+       "x": 720,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 52",
+       "x": 960,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 53",
+       "x": 1200,
+       "y": 992,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 54",
+       "x": 0,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 55",
+       "x": 240,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 56",
+       "x": 480,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 57",
+       "x": 720,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 58",
+       "x": 960,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 59",
+       "x": 1200,
+       "y": 1116,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 60",
+       "x": 0,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 61",
+       "x": 240,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 62",
+       "x": 480,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 63",
+       "x": 720,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 64",
+       "x": 960,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 65",
+       "x": 1200,
+       "y": 1240,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 66",
+       "x": 0,
+       "y": 1364,
+       "w": 236,
+       "h": 120
+      },
+      {
+       "name": "frame 67",
+       "x": 240,
+       "y": 1364,
+       "w": 236,
+       "h": 120
+      }
+     ],
+     "keyed": true
+    }
+   ]
+  },
+  {
+   "slug": "jellyfish-sprite-sheet",
+   "name": "Jellyfish Sprite Sheet",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "jellyfish-sprite-sheet/jellyfish-sprite-sheet",
+     "title": "Jellyfish Sprite Sheet.png",
+     "file": "assets/jellyfish-sprite-sheet/jellyfish-sprite-sheet.png",
+     "w": 224,
+     "h": 160
+    }
+   ]
+  },
+  {
+   "slug": "mycelium",
+   "name": "Mycelium",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "mycelium/mycelium-background",
+     "title": "Mycelium/background.png",
+     "file": "assets/mycelium/mycelium-background.png",
+     "w": 272,
+     "h": 160
+    },
+    {
+     "id": "mycelium/mycelium-enviorement",
+     "title": "Mycelium/enviorement.png",
+     "file": "assets/mycelium/mycelium-enviorement.png",
+     "w": 316,
+     "h": 330
+    },
+    {
+     "id": "mycelium/mycelium-ground",
+     "title": "Mycelium/ground.png",
+     "file": "assets/mycelium/mycelium-ground.png",
+     "w": 88,
+     "h": 56
+    }
+   ]
+  },
+  {
+   "slug": "parallax-backgrounds-cave",
+   "name": "Parallax_Backgrounds_Cave",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "parallax-backgrounds-cave/parallax-backgrounds-cave-8-files",
+     "title": "Parallax_Backgrounds_Cave (8 files)",
+     "file": "assets/parallax-backgrounds-cave/parallax-backgrounds-cave-8-files.png",
+     "w": 1160,
+     "h": 656,
+     "parts": [
+      {
+       "name": "0.png",
+       "x": 0,
+       "y": 0,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "1.png",
+       "x": 388,
+       "y": 0,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "2.png",
+       "x": 776,
+       "y": 0,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "3.png",
+       "x": 0,
+       "y": 220,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "4.png",
+       "x": 388,
+       "y": 220,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "5.png",
+       "x": 776,
+       "y": 220,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "6.png",
+       "x": 0,
+       "y": 440,
+       "w": 384,
+       "h": 216
+      },
+      {
+       "name": "7.png",
+       "x": 388,
+       "y": 440,
+       "w": 384,
+       "h": 216
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "slug": "rtb-v1-0",
+   "name": "RTB_v1.0",
+   "licence": "License for Everyone.\r\n\r\nYou can use the Licensed Asset to create Public domain and free to use, personal or commercial.\r\n\r\nYou can use the Licensed Asset:\r\n(a) edit and modify, cut and change the asset used for commercial purposes;\r\n(b) sell works created with the assets;\r\n(c) publish on websites related to graphics, games and similar.\r\n\r\n>>> A Licence does not allow the Purchaser to:\r\n(d) Use the Licensed Asset or Derivative Works in a logo, trademark or service mark\r\n(e) Resell it, original or modified (partial or complete​)​;\r\n\r\nCredit is not required but appreciated.",
+   "sheets": [
+    {
+     "id": "rtb-v1-0/background2",
+     "title": "background2.png",
+     "file": "assets/rtb-v1-0/background2.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "rtb-v1-0/background3",
+     "title": "background3.png",
+     "file": "assets/rtb-v1-0/background3.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "rtb-v1-0/background4",
+     "title": "background4.png",
+     "file": "assets/rtb-v1-0/background4.png",
+     "w": 1024,
+     "h": 576
+    },
+    {
+     "id": "rtb-v1-0/background",
+     "title": "background.png",
+     "file": "assets/rtb-v1-0/background.png",
+     "w": 1024,
+     "h": 576
+    }
+   ]
+  },
+  {
+   "slug": "the-dark-series-trees-roots",
+   "name": "The DARK Series - Trees & Roots",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "the-dark-series-trees-roots/trees-tileset-7-files",
+     "title": "Trees Tileset (7 files)",
+     "file": "assets/the-dark-series-trees-roots/trees-tileset-7-files.png",
+     "w": 868,
+     "h": 2172,
+     "parts": [
+      {
+       "name": "Tree Tileset1.png",
+       "x": 0,
+       "y": 0,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset2.png",
+       "x": 436,
+       "y": 0,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset3.png",
+       "x": 0,
+       "y": 544,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset4.png",
+       "x": 436,
+       "y": 544,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset5.png",
+       "x": 0,
+       "y": 1088,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset6.png",
+       "x": 436,
+       "y": 1088,
+       "w": 432,
+       "h": 540
+      },
+      {
+       "name": "Tree Tileset7.png",
+       "x": 0,
+       "y": 1632,
+       "w": 432,
+       "h": 540
+      }
+     ]
+    },
+    {
+     "id": "the-dark-series-trees-roots/animated-trees-blood-tree-1-sprite-sheet-112x128",
+     "title": "Animated Trees/Blood Tree 1 Sprite Sheet 112x128.png",
+     "file": "assets/the-dark-series-trees-roots/animated-trees-blood-tree-1-sprite-sheet-112x128.png",
+     "w": 1792,
+     "h": 512
+    },
+    {
+     "id": "the-dark-series-trees-roots/animated-trees-blood-tree-2-sprite-sheet-128x96",
+     "title": "Animated Trees/Blood Tree 2 Sprite Sheet 128x96.png",
+     "file": "assets/the-dark-series-trees-roots/animated-trees-blood-tree-2-sprite-sheet-128x96.png",
+     "w": 2048,
+     "h": 384
+    }
+   ]
+  },
+  {
+   "slug": "worm-walk",
+   "name": "Worm Walk",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "worm-walk/worm-walk",
+     "title": "Worm Walk.png",
+     "file": "assets/worm-walk/worm-walk.png",
+     "w": 192,
+     "h": 32
+    }
+   ]
+  },
+  {
+   "slug": "climbing-plants-pack",
+   "name": "climbing plants pack",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "climbing-plants-pack/climbing-plants-pack-27-files",
+     "title": "climbing plants pack (27 files)",
+     "file": "assets/climbing-plants-pack/climbing-plants-pack-27-files.png",
+     "w": 968,
+     "h": 64,
+     "parts": [
+      {
+       "name": "liana_1.png",
+       "x": 0,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_2.png",
+       "x": 36,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_3.png",
+       "x": 72,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_4.png",
+       "x": 108,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_5.png",
+       "x": 144,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_6.png",
+       "x": 180,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_7.png",
+       "x": 216,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_8.png",
+       "x": 252,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_9.png",
+       "x": 288,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_10.png",
+       "x": 324,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_11.png",
+       "x": 360,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_12.png",
+       "x": 396,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_13.png",
+       "x": 432,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_14.png",
+       "x": 468,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_15.png",
+       "x": 504,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_16.png",
+       "x": 540,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_17.png",
+       "x": 576,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_18.png",
+       "x": 612,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_19.png",
+       "x": 648,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_20.png",
+       "x": 684,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_21.png",
+       "x": 720,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_22.png",
+       "x": 756,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_23.png",
+       "x": 792,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_24.png",
+       "x": 828,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_25.png",
+       "x": 864,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_26.png",
+       "x": 900,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      },
+      {
+       "name": "liana_27.png",
+       "x": 936,
+       "y": 0,
+       "w": 32,
+       "h": 64
+      }
+     ]
+    },
+    {
+     "id": "climbing-plants-pack/list",
+     "title": "list.png",
+     "file": "assets/climbing-plants-pack/list.png",
+     "w": 261,
+     "h": 500
+    }
+   ]
+  },
+  {
+   "slug": "magic-forest",
+   "name": "magic_forest",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "magic-forest/magic-forest-background-magic-foreset-background-1",
+     "title": "magic_forest/background/magic_foreset_background_1.png",
+     "file": "assets/magic-forest/magic-forest-background-magic-foreset-background-1.png",
+     "w": 256,
+     "h": 128
+    },
+    {
+     "id": "magic-forest/magic-forest-background-magic-foreset-background-2",
+     "title": "magic_forest/background/magic_foreset_background_2.png",
+     "file": "assets/magic-forest/magic-forest-background-magic-foreset-background-2.png",
+     "w": 256,
+     "h": 128
+    },
+    {
+     "id": "magic-forest/magic-forest-background-magic-foreset-background-3",
+     "title": "magic_forest/background/magic_foreset_background_3.png",
+     "file": "assets/magic-forest/magic-forest-background-magic-foreset-background-3.png",
+     "w": 256,
+     "h": 128
+    },
+    {
+     "id": "magic-forest/magic-forest-magic-forest-enviorement",
+     "title": "magic_forest/magic_forest_enviorement.png",
+     "file": "assets/magic-forest/magic-forest-magic-forest-enviorement.png",
+     "w": 336,
+     "h": 144
+    },
+    {
+     "id": "magic-forest/magic-forest-magic-forest-tilemap",
+     "title": "magic_forest/magic_forest_tilemap.png",
+     "file": "assets/magic-forest/magic-forest-magic-forest-tilemap.png",
+     "w": 88,
+     "h": 56
+    }
+   ]
+  },
+  {
+   "slug": "mushroom-master-file",
+   "name": "mushroom-master-file",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "mushroom-master-file/mushroom-master-file",
+     "title": "mushroom-master-file.png",
+     "file": "assets/mushroom-master-file/mushroom-master-file.png",
+     "w": 813,
+     "h": 1009,
+     "keyed": true
+    }
+   ]
+  },
+  {
+   "slug": "plants",
+   "name": "plants",
+   "licence": "",
+   "sheets": [
+    {
+     "id": "plants/plants",
+     "title": "plants.png",
+     "file": "assets/plants/plants.png",
+     "w": 936,
+     "h": 24,
+     "keyed": true
+    }
+   ]
+  }
+ ]
+}

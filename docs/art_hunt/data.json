@@ -1,0 +1,3782 @@
+{
+ "status": "Round 7: 144 packs across 9 themes, a Music tab with your picks and 22 researched tracks or packs.",
+ "packs": [
+  {
+   "slug": "neorice-pixelart-mushroom-pack",
+   "name": "Neorice Pixelart Mushroom Pack",
+   "artist": "Neoriceisgood",
+   "url": "https://neoriceisgood.itch.io/neorice-pixelart-mushroom-pack",
+   "fit": "strong",
+   "price": "$10+",
+   "license": "Commercial OK, credit required",
+   "size": "Mixed sprite sizes; 16x16 versions of most mushrooms in progress",
+   "covers": [
+    "mushroom clusters",
+    "single caps",
+    "tall shrooms",
+    "wall moss and lichen"
+   ],
+   "notes": "Side view, soft coloured outlines, few shades per cap: the closest look to our shroom stamps. Over 100 species with 4 to 8 variants each, plus 7 mosses and lichens for walls. Warm, autumn palette by default, so it needs a palette swap to our sage greens. Pack is still in development. Same artist sells a Flower pack ($15) in the same style.",
+   "commission": "Takes requests for new pieces in a pack (comments, Bluesky, Discord @Neoriceisgood); Ko-fi linked. No formal commission sheet seen.",
+   "imgs": 0,
+   "scale": {
+    "img": "scale_neo.png",
+    "caption": "Same zoom (3x): our cluster, tall shroom and small cap on the left, Neorice native 1x previews on the right. The caps are about our size, and the pale blue-white group in the third panel is close to our clusters."
+   },
+   "track": "match",
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "lockventure-1-cave",
+   "name": "LockVenture #1: Cave",
+   "artist": "Humble Pixel",
+   "url": "https://humblepixel.itch.io/lockventure-1-cave",
+   "fit": "partial",
+   "price": "$2.50 (50% off $5)",
+   "license": "Commercial OK, credit optional (@Humblepixel)",
+   "size": "16x16 tiles",
+   "covers": [
+    "hanging vines",
+    "animated mushrooms",
+    "grass tufts",
+    "cave tiles"
+   ],
+   "notes": "Side-view cave at our density with coloured outlines and hanging vines. Mushrooms are red toadstools, the palette is warm brick and green. Few flora pieces; it is mostly rooms and props.",
+   "commission": "No. The studio said in the comments that it does not take commissions.",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "flora",
+    "mine"
+   ]
+  },
+  {
+   "slug": "mycelium",
+   "name": "Mycelium",
+   "artist": "Val_DeMar",
+   "url": "https://val-demar.itch.io/mycelium",
+   "fit": "partial",
+   "price": "$1+",
+   "license": "CC0, no credit needed",
+   "size": "8x8 tiles",
+   "covers": [
+    "glowing tall mushrooms",
+    "grass and moss tufts",
+    "dark cave tiles"
+   ],
+   "notes": "Bioluminescent underworld with emission maps for glow. Tall thin glowing stalks are close to our tall shrooms in shape. Glow-cyan look and 8x8 density are smaller and colder than ours.",
+   "commission": "Unknown, checking",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "mushroom-caves",
+   "name": "Pixel art Mushroom Caves",
+   "artist": "Mr Granade",
+   "url": "https://luizguilherme-a.itch.io/mushroom-caves",
+   "fit": "off",
+   "price": "$5+",
+   "license": "Commercial OK, modify OK",
+   "size": "32x32 tiles",
+   "covers": [
+    "tall mushrooms",
+    "cave tiles",
+    "background"
+   ],
+   "notes": "Side-view metroidvania cave, but blue and crimson with dark outlines, and a 32x32 grid, so props are twice our density.",
+   "commission": "Unknown",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "bg",
+    "flora"
+   ]
+  },
+  {
+   "slug": "mossy-cavern",
+   "name": "Mossy Cavern",
+   "artist": "Maaot",
+   "url": "https://maaot.itch.io/mossy-cavern",
+   "fit": "off",
+   "price": "Free (pay what you want)",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "Hand-painted, high resolution (not pixel art)",
+   "covers": [
+    "moss",
+    "ferns",
+    "hanging plants",
+    "glow puffballs"
+   ],
+   "notes": "The mood is right: dark teal cave, mossy and glowing. But it is painted at high resolution, so it cannot sit on our 2 px cell grid without redrawing.",
+   "commission": "Asked in comments, no public answer",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "bg",
+    "flora"
+   ]
+  },
+  {
+   "slug": "shroom-cave-asset-pack",
+   "name": "Shroom Cave Asset Pack",
+   "artist": "Auru",
+   "url": "https://aurusenth.itch.io/shroom-cave-asset-pack",
+   "fit": "off",
+   "price": "Free (name your price)",
+   "license": "Commercial OK with credit",
+   "size": "16x16, top-down",
+   "covers": [
+    "glowing shrooms",
+    "cave walls"
+   ],
+   "notes": "Top-down RPG view in purple. The glowing shrooms are nice, but the view is wrong for side-on placement.",
+   "commission": "Unknown",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "16x16-rpg-cave",
+   "name": "16x16 RPG Cave Tiles",
+   "artist": "Sun Dog Games",
+   "url": "https://sun-dog-games.itch.io/16x16-rpg-cave",
+   "fit": "off",
+   "price": "$7.50+",
+   "license": "Commercial OK, no AI training, no NFTs",
+   "size": "16x16, top-down",
+   "covers": [
+    "moss",
+    "mushroom ground",
+    "vines",
+    "stalagmites",
+    "crystals"
+   ],
+   "notes": "Covers our list on paper, but it is a top-down RPG set.",
+   "commission": "Unknown",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "crystals",
+    "flora"
+   ]
+  },
+  {
+   "slug": "cave-dwellers",
+   "name": "Cave Dwellers",
+   "artist": "ScriptLine Studios",
+   "url": "https://scriptline-studios.itch.io/cave-dwellers",
+   "fit": "off",
+   "price": "$5+",
+   "license": "CC BY 4.0 (credit required)",
+   "size": "16x16, side view",
+   "covers": [
+    "stalactites",
+    "cobwebs",
+    "one mushroom"
+   ],
+   "notes": "Right view and density, wrong world: a red rock mine with torches and carts, almost no flora.",
+   "commission": "Unknown",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "slinking-skinks",
+   "name": "Slinking Skinks",
+   "artist": "sovietshnuckums",
+   "url": "https://sovietshnuckums.itch.io/slinking-skinks",
+   "fit": "off",
+   "price": "$2+",
+   "license": "Unlicense (public domain)",
+   "size": "16x16, top-down",
+   "covers": [
+    "gecko"
+   ],
+   "notes": "The only gecko pack found so far. Top-down and rough; nowhere near our 42 px side-view gecko.",
+   "commission": "Unknown",
+   "imgs": 0,
+   "track": "match",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "seeker-moss-grotto",
+   "name": "The Seeker: Moss Grotto",
+   "artist": "c12hz (The Seeker team)",
+   "url": "https://c12hz.itch.io/seeker-moss-grotto",
+   "fit": "partial",
+   "price": "$1+",
+   "license": "CC BY 4.0 (credit line given)",
+   "size": "6x6 tiles, decor about 8 to 30 px",
+   "covers": [
+    "moss tufts",
+    "sprouts",
+    "small flowers",
+    "berry clusters",
+    "rocks"
+   ],
+   "notes": "The closest palette found: flat sage, olive and grey-green on near-black, no outlines, few shades. No mushrooms or vines. The game repo says some sprites come from Python tools, so check how hand-made it is. A Fauna pack adds two plant creatures. At the same zoom its pixels are about half the size of ours (6x6 tiles), so it reads finer-grained.",
+   "commission": "No. Contact on X @c12hz.",
+   "track": "match",
+   "imgs": 0,
+   "scale": {
+    "img": "scale_seeker.png",
+    "caption": "Same zoom (3x): our cluster, tall shroom, small cap, fern and white moss on the left; the pack brought down to its native 1x on the right. Its plants come out at about half our size: the palette is right but the grain is finer than our cells."
+   },
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "fantasy-caves",
+   "name": "Fantasy Caves",
+   "artist": "aamatniekss",
+   "url": "https://aamatniekss.itch.io/fantasy-caves-pixel-art-tileset",
+   "fit": "strong",
+   "price": "$12",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "16x16 tiles",
+   "covers": [
+    "pale sage mushrooms",
+    "tall thin shroom",
+    "hanging vines",
+    "mossy ledges",
+    "crystals"
+   ],
+   "notes": "Polished hi-bit cave with pale sage mushrooms (a tall thin one like ours), hanging vines and leafy sprouts. More shades than our sprites; purple-brown rock would need a recolour. Also a strong fantasy-cave mood.",
+   "commission": "Has declined in itch comments (\"too busy\"). X @Namatnieks.",
+   "track": "match",
+   "imgs": 0,
+   "scale": {
+    "img": "scale_fantasy.png",
+    "caption": "Same zoom (3x): our cluster, tall shroom, small cap, fern and white moss on the left; the pack brought down to its native 1x on the right. The pale mushroom and the hanging moss sit at our size. This is the right density."
+   },
+   "themes": [
+    "crystals",
+    "flora"
+   ]
+  },
+  {
+   "slug": "lot-of-mushrooms",
+   "name": "A Lot of Mushrooms",
+   "artist": "sanctumpixel",
+   "url": "https://sanctumpixel.itch.io/a-lot-of-mushroom-pixel-art",
+   "fit": "strong",
+   "price": "$3.50 (sale, normally $5)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "About 8 to 20 px",
+   "covers": [
+    "mushroom clusters",
+    "single caps",
+    "tall thin shrooms"
+   ],
+   "notes": "235 side-view mushrooms in 23 colour schemes, including teal and white-cream. Darker outlines, 3 to 4 shades. The nearest thing to a ready-made replacement for every shroom stamp.",
+   "commission": "Not now: \"unable to work on individual projects\". sanctumpixel@gmail.com",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "overgrown-cave",
+   "name": "Alien Worlds: Overgrown Cave",
+   "artist": "Dustin Auxier",
+   "url": "https://dustinaux.itch.io/overgrown-cave",
+   "fit": "partial",
+   "price": "$4",
+   "license": "Commercial OK, credit required, no resale",
+   "size": "16x16 tiles",
+   "covers": [
+    "tiny sprouts",
+    "leaf litter",
+    "thorn vines",
+    "overgrown walls"
+   ],
+   "notes": "Flat olive, teal and khaki on near-black, no outlines, 3 to 4 shades. Art from his game Jetscout. Few mushrooms. A sister pack, Mossy Cave, is greener.",
+   "commission": "None advertised. Contact page at okshur.com, X @dustinaux.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "mossy-cave",
+   "name": "Alien Worlds: Mossy Cave",
+   "artist": "Dustin Auxier",
+   "url": "https://dustinaux.itch.io/mossy-cave",
+   "fit": "partial",
+   "price": "$4",
+   "license": "Commercial OK, credit required",
+   "size": "16x16 tiles",
+   "covers": [
+    "small ferns",
+    "sprouts",
+    "giant mushroom",
+    "moss-edged tiles"
+   ],
+   "notes": "Same flat, no-outline style as Overgrown Cave, greener with brown rock. Includes a bonus recolour.",
+   "commission": "As above.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "cavelands",
+   "name": "Cavelands (Mushroom Caves)",
+   "artist": "Electric Lemon",
+   "url": "https://electriclemon.itch.io/cavelands",
+   "fit": "partial",
+   "price": "$6.95",
+   "license": "Commercial OK, credit required, no resale",
+   "size": "16x16 tiles",
+   "covers": [
+    "pale mint caps",
+    "hanging vines and roots",
+    "stalactites",
+    "parallax background"
+   ],
+   "notes": "Pale mint mushrooms and pale moss are close to our colours; the rock is pinkish-brown on navy. Outlines are a darker shade of each colour. A crystal version adds lavender clusters in floors, walls and ceilings on muted mauve rock.",
+   "commission": "Nothing found.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "bg",
+    "crystals",
+    "flora"
+   ]
+  },
+  {
+   "slug": "oga-flowers",
+   "name": "Flowers (78 plants)",
+   "artist": "SpiderDave",
+   "url": "https://opengameart.org/content/flowers",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0, no credit needed",
+   "size": "12x24 grid, right at our scale",
+   "covers": [
+    "flowers",
+    "weeds",
+    "fungi",
+    "vines",
+    "grass"
+   ],
+   "notes": "Free and at our exact scale, no outlines, 2 to 3 shades. Bright DB32 palette, so it needs a recolour to sage.",
+   "commission": "Unknown. spiderdave.me",
+   "track": "match",
+   "imgs": 0,
+   "scale": {
+    "img": "scale_oga.png",
+    "caption": "Same zoom (3x): our cluster, tall shroom, small cap, fern and white moss on the left; the pack brought down to its native 1x on the right. Plants come out 10 to 24 px, the same size as ours."
+   },
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "climbing-plants",
+   "name": "Climbing Plants Pack",
+   "artist": "Danaida",
+   "url": "https://danaida.itch.io/free-pixel-climbing-plants-pack-32x64",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, edits OK, no redistribution",
+   "size": "32x64 per vine",
+   "covers": [
+    "27 hanging and climbing vines"
+   ],
+   "notes": "Flat, no outlines, 2 to 3 greens; includes willow-like hanging leaves and a pale blue-white vine.",
+   "commission": "No contact listed.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "morbifungi",
+   "name": "Morbifungi",
+   "artist": "poltergasm",
+   "url": "https://poltergasm.itch.io/morbifungi",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no AI training",
+   "size": "32x32 cells",
+   "covers": [
+    "glowing clusters",
+    "single caps"
+   ],
+   "notes": "8 bright mushrooms with separate glow layers. Too saturated and large for drop-in use, but a good reference for how glow could be drawn.",
+   "commission": "None listed.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "flora"
+   ]
+  },
+  {
+   "slug": "cute-caves",
+   "name": "Cute Caves",
+   "artist": "Glint Games",
+   "url": "https://glintgames.itch.io/cute-caves-platformer-pixel-art-tileset",
+   "fit": "off",
+   "price": "$12",
+   "license": "Commercial OK, no credit needed",
+   "size": "16x16",
+   "covers": [
+    "stalactites",
+    "hanging vines",
+    "glowing blue shrooms",
+    "crystals"
+   ],
+   "notes": "Navy cave with dark-outlined cobbles; only the vines are close.",
+   "commission": "None found. X @GlintGames.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "crystals",
+    "flora"
+   ]
+  },
+  {
+   "slug": "super-grotto",
+   "name": "Super Grotto Escape",
+   "artist": "ansimuz",
+   "url": "https://ansimuz.itch.io/super-grotto-escape-pack",
+   "fit": "off",
+   "price": "Free",
+   "license": "CC0",
+   "size": "16x16",
+   "covers": [
+    "ferns",
+    "leafy sprouts",
+    "crystal cave"
+   ],
+   "notes": "Saturated SNES blues and purples with heavy shading. Only the ferns are of use.",
+   "commission": "No (\"No I dont\" in comments).",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "crystals",
+    "flora"
+   ]
+  },
+  {
+   "slug": "boss-gecko",
+   "name": "Pixel Art Boss: Gecko",
+   "artist": "HD Production",
+   "url": "https://hd-production.itch.io/pixel-art-boss-gecko",
+   "fit": "off",
+   "price": "$2.99 (sale)",
+   "license": "Commercial OK, no credit, no resale",
+   "size": "About 60 px long",
+   "covers": [
+    "gecko (side view, animated)"
+   ],
+   "notes": "Side-view leopard gecko with idle, walk, attack and death. Black outline, cream and orange, bigger than ours. Only useful as reference, since our gecko is drawn by code.",
+   "commission": "By email (see profile).",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "lizard-enemy",
+   "name": "Lizard Enemy",
+   "artist": "Niliv_art",
+   "url": "https://niliv-art.itch.io/lizard-enemy",
+   "fit": "off",
+   "price": "Free",
+   "license": "Commercial OK, no credit",
+   "size": "29x21 frames",
+   "covers": [
+    "lizard (side view, animated)"
+   ],
+   "notes": "Chunky green lizard with dark outlines, close to our gecko in size. Reference only.",
+   "commission": "Unknown.",
+   "track": "match",
+   "imgs": 0,
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "dark-platformer",
+   "name": "Dark Platformer Complete",
+   "artist": "Szadi art",
+   "url": "https://szadiart.itch.io/dark-platformer-complete",
+   "fit": "strong",
+   "price": "$7.99 (sale, normally $19.99)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "32x32 tiles drawn at 1x",
+   "covers": [
+    "derelict machinery halls",
+    "pipes and gantries",
+    "fog",
+    "teal glyph lights",
+    "fan, elevator, switch, portal ring"
+   ],
+   "notes": "The closest to the Rain World mood: ruined megastructures, dim teal glyph-lights, fog layers. 32 px tiles make the halls read huge next to a 42 px gecko, which suits a mine built by something bigger. Animated fan, elevator and switch could become the machines that still run.",
+   "commission": "None stated. Discord (linked from the itch profile).",
+   "track": "wild",
+   "scale": {
+    "img": "scale_darkplat.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right (middle crop). Fine grain, close to ours; the structures are just big."
+   },
+   "themes": [
+    "bg",
+    "mine"
+   ]
+  },
+  {
+   "slug": "static-caves",
+   "name": "Sci-fi Static Caves",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/sci-fi-static-caves-tileset",
+   "fit": "strong",
+   "price": "$3",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "About 16 px tiles",
+   "covers": [
+    "dark teal cave",
+    "glowing-eyed electric tree",
+    "floating motes",
+    "animated objects"
+   ],
+   "notes": "Near-black teal cave with a strange glowing tree and drifting motes. Strange, melancholy and quiet, at our density. Small pack: a mood piece more than a full set.",
+   "commission": "Patreon lists a digital commission reward; status not stated. Discord, X @penusbmic.",
+   "track": "wild",
+   "scale": {
+    "img": "scale_static.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right (middle crop). Our grain, slightly chunkier."
+   },
+   "themes": [
+    "flora",
+    "mine"
+   ]
+  },
+  {
+   "slug": "biomes-4500",
+   "name": "Metroidvania Biomes 4500+",
+   "artist": "Sam (samvieten)",
+   "url": "https://samvieten.itch.io/metroidvania-pixelart-tileset-biomes",
+   "fit": "strong",
+   "price": "$10",
+   "license": "Not stated on the page; ask",
+   "size": "8x8 grid, 16x16 tiles from 4",
+   "covers": [
+    "copper-pink temple ruins",
+    "glowing flora",
+    "algae thickets",
+    "underwater station parts"
+   ],
+   "notes": "Copper ruins and small glowing plants on near-black navy: the nearest thing to ash caves lit by copper veins. 9 sub-biomes; the underwater station parts fit flooded machinery. The artist openly takes commissions, so this is the best lead for a custom set.",
+   "commission": "Open for commissions (itch profile). samvieten.com, X @samvieten.",
+   "track": "wild",
+   "scale": {
+    "img": "scale_biomes.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right (middle crop). Right at our grain."
+   },
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "w-pixel-fantasy-caves",
+   "name": "Pixel Fantasy Caves",
+   "artist": "Szadi art",
+   "url": "https://szadiart.itch.io/pixel-fantasy-caves",
+   "fit": "strong",
+   "price": "Free",
+   "license": "Personal and commercial OK",
+   "size": "16x16 tiles, 4-layer parallax",
+   "covers": [
+    "flooded cave water",
+    "timber mine scaffolds",
+    "brick ruin columns",
+    "teal background"
+   ],
+   "notes": "Free, rated 4.9 from 132 ratings. Flooded caves with mine supports and ruin columns, close to the GDD's flooded shafts. Timber and brick are a bit human-made for the never-shown makers.",
+   "commission": "As Dark Platformer.",
+   "track": "wild",
+   "themes": [
+    "bg",
+    "mine"
+   ]
+  },
+  {
+   "slug": "w-deep-cave",
+   "name": "Fantasy Pack: Deep Cave",
+   "artist": "Anokolisa",
+   "url": "https://anokolisa.itch.io/fantasy-pack-vli-deep-cave",
+   "fit": "partial",
+   "price": "$5 (sale, normally $10)",
+   "license": "Commercial OK, credit optional",
+   "size": "16x16, 300+ sprites",
+   "covers": [
+    "mine scaffolds",
+    "hanging chains",
+    "lanterns",
+    "glowing crystals",
+    "background"
+   ],
+   "notes": "The best mine prop kit at our density: scaffolds, chains, lanterns, crystals. Slate cave reads dark; pink crystals and the human-sized doors and chests would need trimming or a recolour.",
+   "commission": "None stated. X @anokolisa, Patreon.",
+   "track": "wild",
+   "scale": {
+    "img": "scale_deepcave.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right (middle crop). Our grain."
+   },
+   "themes": [
+    "crystals",
+    "mine"
+   ]
+  },
+  {
+   "slug": "w-ancient-caves",
+   "name": "The DARK Series: Ancient Caves",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-ancient-caves-tileset",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "About 16 px tiles",
+   "covers": [
+    "moss drips",
+    "vines",
+    "ancient pipes",
+    "animated smoke",
+    "relic silhouettes",
+    "big tree"
+   ],
+   "notes": "Near-black cave, flat yellow-green moss drips (1 to 3 px, close to our hanging leaves), pipes that connect, animated smoke and giant relic silhouettes. The relics are swords and spears, which clash with the GDD rule of no tools sized for hands. Green, autumn and purple variants.",
+   "commission": "As Static Caves.",
+   "track": "wild",
+   "scale": {
+    "img": "scale_penusbmic.png",
+    "caption": "Same zoom (3x): our cluster, tall shroom, small cap, fern and white moss on the left; the pack brought down to its native 1x on the right. The moss drips and grass tufts are at our grain."
+   },
+   "themes": [
+    "flora",
+    "mine"
+   ]
+  },
+  {
+   "slug": "red-gothic-factory",
+   "name": "Red Gothic Factory",
+   "artist": "Gueira",
+   "url": "https://gueira.itch.io/red-gothic-factory",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "16x16, 250+ tiles, parallax",
+   "covers": [
+    "smelter chambers",
+    "molten metal",
+    "furnace brick",
+    "lit arches"
+   ],
+   "notes": "Smelter halls with molten metal. Hot, not cold; a recolour to dead greys and embers would make the GDD's cold smelters. Gothic arches lean human.",
+   "commission": "No info.",
+   "track": "wild",
+   "scale": {
+    "img": "scale_redfactory.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right (middle crop). Coarse blocks at our grain."
+   },
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "admurin-caves-bg",
+   "name": "Parallax Backgrounds: Caves",
+   "artist": "Admurin",
+   "url": "https://admurin.itch.io/parallax-backgrounds-caves",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, no credit, no AI training",
+   "size": "384x216, 7 layers",
+   "covers": [
+    "stalactite background"
+   ],
+   "notes": "Moody grey-violet stalactite background in 7 layers. Fits black ash caves behind the particle world.",
+   "commission": "Fiverr, and requests on Discord (linktr.ee/admurin).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "dark-parallax",
+   "name": "The DARK Series: Parallax Background",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/sci-fi-dark-edition-parallax-background",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK, credit optional",
+   "size": "314x100",
+   "covers": [
+    "greyscale cave background",
+    "light shafts",
+    "hanging roots"
+   ],
+   "notes": "Very sombre greyscale cave with light shafts. A good far layer.",
+   "commission": "As Static Caves.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "elthen-critters",
+   "name": "Cave critters (6 small packs)",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-dung-beetle-sprites",
+   "fit": "partial",
+   "price": "Free to $3 each",
+   "license": "Commercial OK (full terms on Patreon)",
+   "size": "32x32 slices, bodies 10 to 24 px",
+   "covers": [
+    "dung beetle rolling a ball",
+    "bug larva",
+    "small slime that splits",
+    "snail",
+    "crustacean",
+    "claw critter"
+   ],
+   "notes": "Cute-first critters at gecko scale. The dung beetle rolling a ball could be the ore hauler; the small slime splits from a bigger one, like our merging blobs. Outlined and brighter than the caves above.",
+   "commission": "Patreon has commission tiers (custom medium and big characters).",
+   "track": "wild",
+   "themes": [
+    "creatures",
+    "slimes"
+   ]
+  },
+  {
+   "slug": "squishy-slug",
+   "name": "Squishy Slug",
+   "artist": "CodeLaboratory",
+   "url": "https://codelaboratory.itch.io/pixel-art-enemy-squishy-slug",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, credit appreciated",
+   "size": "64x48 frames, side view",
+   "covers": [
+    "slug, 4 variants"
+   ],
+   "notes": "Cute big-eyed slug; recolour pale for the glow slugs.",
+   "commission": "No info.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "old-pipes",
+   "name": "Old Pipes",
+   "artist": "ACTG",
+   "url": "https://actg.itch.io/old-pipes-tileset",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0",
+   "size": "About 16 px",
+   "covers": [
+    "copper and iron pipes",
+    "grates",
+    "metal blocks"
+   ],
+   "notes": "Pipe runs and grates for pump rooms, in copper or iron. The carved stone faces break the no-makers-shown rule; leave them out.",
+   "commission": "No info.",
+   "track": "wild",
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "industrial-0x72",
+   "name": "16x16 Industrial",
+   "artist": "0x72",
+   "url": "https://0x72.itch.io/16x16-industrial-tileset",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0",
+   "size": "16x16",
+   "covers": [
+    "girders",
+    "scaffolds",
+    "lattice towers"
+   ],
+   "notes": "Minimal dark-blue girders and lattices: a clean frame for derelict halls.",
+   "commission": "No info.",
+   "track": "wild",
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "abandoned-outpost",
+   "name": "Abandoned Outpost",
+   "artist": "schwarnhild",
+   "url": "https://schwarnhild.itch.io/abandoned-outpost-16x16-sci-fi-platformer-asset-pack",
+   "fit": "off",
+   "price": "Free",
+   "license": "Commercial OK, no AI use, credit appreciated",
+   "size": "16x16",
+   "covers": [
+    "derelict facility",
+    "props",
+    "small critters"
+   ],
+   "notes": "Derelict sci-fi facility; doors, rails and consoles are human-scaled.",
+   "commission": "Contact by email on the page. X @schwarnhild.",
+   "track": "wild",
+   "themes": [
+    "mine"
+   ]
+  },
+  {
+   "slug": "mine-tileset",
+   "name": "Mine Tileset",
+   "artist": "Atomic Realm",
+   "url": "https://atomicrealm.itch.io/mine-tileset",
+   "fit": "off",
+   "price": "Free (PLUS version paid)",
+   "license": "Commercial OK, credit with link required",
+   "size": "16x16 and 32x32, 699+ tiles",
+   "covers": [
+    "ore and crystal veins",
+    "girders",
+    "minecarts",
+    "pipes"
+   ],
+   "notes": "Bright and busy; useful for ore-vein parts, not the mood.",
+   "commission": "No info.",
+   "track": "wild",
+   "themes": [
+    "crystals",
+    "mine"
+   ]
+  },
+  {
+   "slug": "stylized-bg",
+   "name": "Pixel Art Stylized Background",
+   "artist": "Edermunizz",
+   "url": "https://edermunizz.itch.io/pixel-art-stylized-background",
+   "fit": "off",
+   "price": "$9",
+   "license": "Commercial OK, no redistribution",
+   "size": "9 backgrounds, 640x320",
+   "covers": [
+    "misty layered depth"
+   ],
+   "notes": "Not caves, but the blue fog sets could be vistas for a great shaft.",
+   "commission": "Ko-fi (ko-fi.com/edermuniz).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "power-crystals",
+   "name": "Gothicvania Power Crystals",
+   "artist": "ansimuz",
+   "url": "https://ansimuz.itch.io/gothicvania-power-crystals",
+   "fit": "off",
+   "price": "$5",
+   "license": "Not stated",
+   "size": "8 to 32 px, 140 sprites",
+   "covers": [
+    "crystal and ore clusters"
+   ],
+   "notes": "Glowing crystal and ore props; saturated.",
+   "commission": "No (\"No I dont\" on another page).",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "zanzindorf-crystal",
+   "name": "Crystal Cave Platformer Tileset",
+   "artist": "zanzindorf",
+   "url": "https://zanzindorf.itch.io/crystal-cave-2d-platformer-tileset",
+   "fit": "strong",
+   "price": "$3",
+   "license": "Commercial OK, no credit needed, no redistribution",
+   "size": "16x16, 140 tiles",
+   "covers": [
+    "crystals on floor, wall and ceiling",
+    "hanging crystal 32 to 48 px",
+    "stalactites",
+    "sparkle animation"
+   ],
+   "notes": "Grey layered stone on a dark purple cave, crystals in few tones that recolour easily. Grows in all three orientations. The moodiest crystal set found.",
+   "commission": "Not stated. zanzindorf.com/art.html",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "craftpix-crystals",
+   "name": "Free Crystals Pack",
+   "artist": "CraftPix.net",
+   "url": "https://craftpix.net/freebies/free-crystals-pixel-art-asset-pack/",
+   "fit": "strong",
+   "price": "Free",
+   "license": "Royalty-free, commercial OK (CraftPix license)",
+   "size": "8 types x 5 sizes, about 5 to 75 px",
+   "covers": [
+    "copper-orange cluster",
+    "sulphur-yellow cluster",
+    "near-black",
+    "white quartz",
+    "blue, pink, green"
+   ],
+   "notes": "Floor clusters in five sizes each. The orange and yellow ones are the GDD's copper and sulphur almost as they stand. Clean outlines, flat shading. No glow or animation.",
+   "commission": "A studio, not an artist for hire.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "pozac-caverns",
+   "name": "Crystal Caverns",
+   "artist": "Pozac",
+   "url": "https://pozac.itch.io/crystal-caverns-2d-platformer-asset-pack",
+   "fit": "partial",
+   "price": "$1.99 (sale, normally $3.99)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "24x24 tiles (and a 32x32 set)",
+   "covers": [
+    "floor clusters",
+    "hanging crystals",
+    "glowing crystals",
+    "glow orbs",
+    "parallax background"
+   ],
+   "notes": "Glowing crystal variants and separate glow orbs that act as light sources. Magenta on purple with dithering: brighter than the brief, needs a recolour.",
+   "commission": "Commissions \"temporarily closed\". instagram.com/drawpozac",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_pozac.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Slightly coarser than ours (24 px tiles)."
+   }
+  },
+  {
+   "slug": "crystal-world",
+   "name": "Crystal World Platformer Set",
+   "artist": "Szadi art",
+   "url": "https://szadiart.itch.io/crystal-world-platformer-set",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "16x16",
+   "covers": [
+    "wall and ceiling crystal spikes",
+    "crystal pillars",
+    "3-layer parallax"
+   ],
+   "notes": "Chunky teal and lavender crystal spikes on walls and ceilings. The peach background would need a darker palette.",
+   "commission": "Discord (Szadi).",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "toneve-crystal",
+   "name": "Crystal Cave",
+   "artist": "ToonEve (greenpixels_)",
+   "url": "https://greenpixels.itch.io/crystal-cave",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Not stated; ask before buying",
+   "size": "16x16",
+   "covers": [
+    "ice and stone walls",
+    "teal crystal decor",
+    "tall crystal on a pedestal"
+   ],
+   "notes": "Teal ice crystals on dark navy: the GDD's pale ice. Rated 2/5 on the page.",
+   "commission": "Not stated. X @e_Pics_",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "jorle-crystal",
+   "name": "Pixel Crystal Cave Tileset",
+   "artist": "Jorl_e",
+   "url": "https://jorl-e.itch.io/crystal-cave-tileset",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no resale, no NFT or generative-AI use",
+   "size": "32x32",
+   "covers": [
+    "growths on floor, ceiling and wall",
+    "floating clumps",
+    "background crystals"
+   ],
+   "notes": "Best all-orientation coverage, but rainbow candy crystals on pale blue rock. Recolour the crystals and darken the rock.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_jorle.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. 32 px tiles, but the crystals sit at our grain."
+   }
+  },
+  {
+   "slug": "joe777-mine",
+   "name": "Crystal Mine Tile Set",
+   "artist": "Joe777",
+   "url": "https://joe777.itch.io/crystal-mine-tile-set",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Commercial OK, no resale",
+   "size": "16x16",
+   "covers": [
+    "floor clusters",
+    "spike pit",
+    "ceiling clump",
+    "dark rock",
+    "ladder"
+   ],
+   "notes": "Very dark rock with magenta clusters. Mood fits; recolour the crystals. Small pack.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_joe777.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Our grain."
+   }
+  },
+  {
+   "slug": "pekschi-crystal",
+   "name": "Pixel Crystal Animation",
+   "artist": "Pekschi",
+   "url": "https://pekschi.itch.io/crystal-animation",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, may modify, no resale",
+   "size": "64x64 canvas, crystal about 20x48",
+   "covers": [
+    "floating crystal with shimmer, 5 colours"
+   ],
+   "notes": "Animated shimmer on a single floating crystal. A pickup or a waking lamp rather than a growth.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_pekschi.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Our grain; each crystal is about 48 px tall."
+   }
+  },
+  {
+   "slug": "scrawlhive",
+   "name": "Green, Blue and Purple Crystals",
+   "artist": "TheScrawlHive",
+   "url": "https://thescrawlhive.itch.io/purple-crystals",
+   "fit": "partial",
+   "price": "$1 CAD each",
+   "license": "CC BY 4.0 (credit required)",
+   "size": "Clusters about 16 to 24 px",
+   "covers": [
+    "crystals on rock bases",
+    "loose shards",
+    "diagonal wall cluster"
+   ],
+   "notes": "Thick outlines, few colours: very easy to recolour. Cute and chunky. Three separate packs (green, blue, purple).",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_scrawl.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Our size."
+   }
+  },
+  {
+   "slug": "lilcthulhu",
+   "name": "Crystals",
+   "artist": "Lil Cthulhu",
+   "url": "https://lil-cthulhu.itch.io/crystalls",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "16x16",
+   "covers": [
+    "upright, diagonal and shard crystals in 4 colours"
+   ],
+   "notes": "Small set with diagonal crystals that suit wall growth. Aseprite files.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_lilc.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Our grain."
+   }
+  },
+  {
+   "slug": "joytree-ore",
+   "name": "Caves and Mines Tileset",
+   "artist": "JoyTree Studios",
+   "url": "https://joytree-studios.itch.io/caves-and-mines-tileset-2d-asset-pack",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit needed, no redistribution",
+   "size": "16x16",
+   "covers": [
+    "12 ore types as veins in stone",
+    "orange copper-like vein",
+    "ingots"
+   ],
+   "notes": "The only real ore veins inside wall tiles (Terraria style). Flat and simple; a base to repaint copper veins from.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals",
+    "mine"
+   ]
+  },
+  {
+   "slug": "senmou-ore",
+   "name": "Stones and Ore/Gem Veins 16x16",
+   "artist": "Senmou (OpenGameArt)",
+   "url": "https://opengameart.org/content/various-stones-and-oregem-veins-16x16",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0",
+   "size": "16x16",
+   "covers": [
+    "ore lumps: copper, iron, gold, coal, gems",
+    "nuggets and ingots"
+   ],
+   "notes": "Grey rock lumps with coloured flecks, 5 shapes per ore. Standalone ore nodes rather than wall veins.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ],
+   "scale": {
+    "img": "scale_senmou.png",
+    "caption": "Same zoom (3x): our sprites on the left, the pack at its native pixels on the right. Our grain."
+   }
+  },
+  {
+   "slug": "opp2017",
+   "name": "OPP2017 Cave and Mine Cart",
+   "artist": "Hapiel and the Open Pixel Project",
+   "url": "https://opengameart.org/content/opp2017-cave-and-mine-cart",
+   "fit": "off",
+   "price": "Free",
+   "license": "CC0 (among others)",
+   "size": "32x32, 400+ tiles, DB32 palette",
+   "covers": [
+    "blue crystal clusters",
+    "mine-cart track",
+    "slopes"
+   ],
+   "notes": "Dark navy cave with blue crystals, but 32x32 and cartoony.",
+   "commission": "A collective.",
+   "track": "wild",
+   "themes": [
+    "crystals",
+    "mine"
+   ]
+  },
+  {
+   "slug": "klaibeda",
+   "name": "Crystal Cave Platformer Tileset",
+   "artist": "Klaibeda",
+   "url": "https://klaibeda.itch.io/crystal-cave-platformer-tileset",
+   "fit": "off",
+   "price": "$3",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "16x16, 40+ tiles",
+   "covers": [
+    "purple, blue and yellow floor crystals",
+    "ice clump on the ceiling"
+   ],
+   "notes": "Soft navy cave, crystals as small accents. Cosy rather than eerie.",
+   "commission": "tatianadev.carrd.co; status not stated.",
+   "track": "wild",
+   "themes": [
+    "crystals"
+   ]
+  },
+  {
+   "slug": "pixelpinion-slimes",
+   "name": "Animated Pixel Slimes in NES Colors",
+   "artist": "PixelPinion",
+   "url": "https://pixelpinion.itch.io/animated-pixel-slimes-in-nes-colors",
+   "fit": "strong",
+   "price": "$2",
+   "license": "No license text on the page; ask",
+   "size": "13 slimes, body about 18x12",
+   "covers": [
+    "opaque and semi-transparent versions",
+    "outlined and unoutlined",
+    "idle, inch, jump, hurt, death",
+    "overlap frames"
+   ],
+   "notes": "The best match for translucent slimes: every slime comes semi-transparent as well as opaque. The demo shows one slime over another, which reads like a merge. Cute, pale cyan, pink and green.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_pixelpinion-slimes.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Slimes a bit smaller than half the gecko."
+   }
+  },
+  {
+   "slug": "elthen-giant-slime",
+   "name": "Giant Slime",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-giant-slime-sprites",
+   "fit": "strong",
+   "price": "$5",
+   "license": "Commercial OK, no crypto",
+   "size": "64x96 slices, big body about 45x25, splits into about 10 px slimes",
+   "covers": [
+    "idle, move, acid, slam, damage",
+    "split into small slimes",
+    "death"
+   ],
+   "notes": "Pale sky-blue slime as big as the gecko that splits into small ones: the closest thing to our merge and split. Dark outline, dopey face, side view.",
+   "commission": "Patreon commission tiers (see Artists).",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_elthen-giant-slime.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. A big slime the size of the gecko."
+   }
+  },
+  {
+   "slug": "grass-slimes",
+   "name": "x4 Animated Grass Slimes",
+   "artist": "sovietshnuckums",
+   "url": "https://sovietshnuckums.itch.io/slimez",
+   "fit": "strong",
+   "price": "Free (name your price)",
+   "license": "Commercial OK and modify OK per profile; no redistribution unless modified",
+   "size": "About 10 to 21 px, 4 sizes",
+   "covers": [
+    "small, medium, cube, gordo",
+    "translucent sheets by default",
+    "overlapping blob heap"
+   ],
+   "notes": "Pale washed green, softly see-through where blobs overlap; the cover heap looks like a merged colony. Front-facing. The artist openly takes commissions.",
+   "commission": "Open: sovietshnuckums@gmail.com, X @SovietShnuckums",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_grass-slimes.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. A heap of overlapping blobs."
+   }
+  },
+  {
+   "slug": "tienlev-slime",
+   "name": "2D Pixel Slime Set",
+   "artist": "tienlev",
+   "url": "https://tienlev.itch.io/slime-pixel-set",
+   "fit": "strong",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, modify OK, no redistribution",
+   "size": "About 10 to 12 px",
+   "covers": [
+    "3 idles, move, jump, hit",
+    "swallow (engulf)",
+    "die melts to a puddle",
+    "7 colours incl. grey"
+   ],
+   "notes": "Tiny soft slimes with a swallow animation, our engulf-and-drag, and a death that melts into a puddle. Grey version recolours easily.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_tienlev-slime.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Tiny: about a quarter of the gecko."
+   }
+  },
+  {
+   "slug": "lin-slime",
+   "name": "Dungeon Mobs Slime",
+   "artist": "Lin_Ain",
+   "url": "https://lin-ain.itch.io/dungeon-mobs-slime",
+   "fit": "partial",
+   "price": "$1.50 (sale); free Jelly Slime companion",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "Small bodies about 14x9, plus a giant boss",
+   "covers": [
+    "7 variants",
+    "stretch-move",
+    "pop into droplets"
+   ],
+   "notes": "Glossy jelly with a dark outline, mostly opaque. The pop into three droplets that turn to bubble rings works as a splatter.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_lin-slime.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Title card at native size."
+   }
+  },
+  {
+   "slug": "danieru-slime",
+   "name": "Slime Pack 32x32",
+   "artist": "DanieruArt",
+   "url": "https://danieruart.itch.io/slimepack",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "No license stated; ask before use",
+   "size": "32x32 frames, body about 18 px",
+   "covers": [
+    "attack, hurt, throw, walk",
+    "big-mouth open"
+   ],
+   "notes": "Pale mint with a light rim and darker core that reads as jelly. The big open mouth is a reference for eat or absorb.",
+   "commission": "Not stated. X @DanieruArt",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_danieru-slime.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native 1x frame."
+   }
+  },
+  {
+   "slug": "pixelsnorf-slimes",
+   "name": "Free Platformer Slimes",
+   "artist": "Pixelsnorf",
+   "url": "https://pixelsnorf.itch.io/platformer-slimes",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC BY 4.0 (credit required)",
+   "size": "16x16 and 32x32 sheets, bodies about 8 to 10 px",
+   "covers": [
+    "idle, jump, walk, death",
+    "7 colours, soft and hard outlines"
+   ],
+   "notes": "Tiny pastel slimes with soft or hard outlines.",
+   "commission": "Not stated. Ko-fi, Bluesky.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ]
+  },
+  {
+   "slug": "world-of-slimes",
+   "name": "The World of Slimes",
+   "artist": "nonEnglishPaperBag",
+   "url": "https://nonenglishpaperbag.itch.io/the-world-of-slimes-red-and-blue-slime-animations",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC BY-SA 4.0 (share-alike: a catch for a commercial game)",
+   "size": "32x32, body about 20 px",
+   "covers": [
+    "bounce, dash, eating, sleeping, dying"
+   ],
+   "notes": "Very cute swirly slimes with eating and sleeping animations. The share-alike license makes it reference only.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_world-of-slimes.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Blue slimes at about half the gecko."
+   }
+  },
+  {
+   "slug": "tecopena-slime",
+   "name": "Pixel Art Slime",
+   "artist": "tecopena",
+   "url": "https://tecopena.itch.io/pixel-art-slime",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "18x14",
+   "covers": [
+    "idle, move, attack (17 frames), hurt",
+    "death bursts to droplets",
+    "shadow sprite, .ase"
+   ],
+   "notes": "Muted teal, cute, side view. The artist is a freelance illustrator.",
+   "commission": "Likely: freelance, artstation.com/tecopena",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_tecopena-slime.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native size."
+   }
+  },
+  {
+   "slug": "elthen-ooze",
+   "name": "Mini Ooze Cube",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-mini-ooze-cube-sprites",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Elthen Patreon license",
+   "size": "64x32 slices, body about 18x12",
+   "covers": [
+    "idle, move, attack, damage, death"
+   ],
+   "notes": "Pale ice-blue gel wedge with a faint face; pale more than see-through.",
+   "commission": "Patreon commission tiers.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_elthen-ooze.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native size."
+   }
+  },
+  {
+   "slug": "odiurd-cave",
+   "name": "Minimalist Cave Tileset & Slime",
+   "artist": "odiurd",
+   "url": "https://odiurd.itch.io/tileset",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Credit appreciated, no formal license",
+   "size": "16x16 tiles, slime about 8 px",
+   "covers": [
+    "dark indigo cave",
+    "tiny pale slime"
+   ],
+   "notes": "A mood reference: dark indigo cave with a tiny pale slime, close to the melancholy brief.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "mine",
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_odiurd-cave.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Our grain."
+   }
+  },
+  {
+   "slug": "noah-ooze",
+   "name": "Orange Slime / Ooze Monster Pack",
+   "artist": "Noah Longsfellow",
+   "url": "https://noahlongsfellow.itch.io/orange-slime-pack",
+   "fit": "partial",
+   "price": "$2",
+   "license": "No license text",
+   "size": "Big Grub, Small Ooze Grub, Fly Grub, Ooze Momma",
+   "covers": [
+    "idle, walk, jump, fall, hit, death",
+    "attacks"
+   ],
+   "notes": "The \"weird second\" option: drooping, oozing grubs. Tagged Creepy, Dark, Gore; check the Corpse sprite against the no-gore rule.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures",
+    "slimes"
+   ],
+   "scale": {
+    "img": "scale_noah-ooze.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Ooze grub at native size."
+   }
+  },
+  {
+   "slug": "craftpix-slime",
+   "name": "Free Slime Sprite Sheets",
+   "artist": "CraftPix.net",
+   "url": "https://craftpix.net/freebies/free-slime-sprite-sheets-pixel-art/",
+   "fit": "off",
+   "price": "Free",
+   "license": "Royalty-free (CraftPix license)",
+   "size": "Body about 50 to 60 px (too big)",
+   "covers": [
+    "translucent shell with an inner nucleus",
+    "idle, walk, run, jump, hurt, dead"
+   ],
+   "notes": "Too big to use, but the translucent shell around a visible core is a strong reference for a metaball slime with a nucleus.",
+   "commission": "A studio.",
+   "track": "wild",
+   "themes": [
+    "slimes"
+   ]
+  },
+  {
+   "slug": "helionlf-slug",
+   "name": "Enemy Pack: Slug, Plant & Wasp",
+   "artist": "helionlf",
+   "url": "https://helionlf.itch.io/pixel-art-enemy-pack-slug-plant-wasp-32x32",
+   "fit": "partial",
+   "price": "$1",
+   "license": "See page",
+   "size": "32x32",
+   "covers": [
+    "shadowy purple tentacle slug",
+    "idle, walk, attack, hurt, death"
+   ],
+   "notes": "A shadowy, Rain World-ish slug.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_helionlf-slug.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. A tall shadow slug next to the gecko."
+   }
+  },
+  {
+   "slug": "hunter-micromobs",
+   "name": "Micro Mobs: Underground",
+   "artist": "Hunter_Art",
+   "url": "https://hunter-art.itch.io/micro-mobs-pack-2",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no AI training",
+   "size": "Micro mobs",
+   "covers": [
+    "worm: idle, walk, attack, dig, hide, appear, hit",
+    "molerat"
+   ],
+   "notes": "A worm that digs, hides and reappears: a creature that lives in chewable rock. The artist takes paid freelance work.",
+   "commission": "Open: artstation.com/rafal_hunter",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_hunter-micromobs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native size."
+   }
+  },
+  {
+   "slug": "elthen-jellyfish",
+   "name": "Jellyfish",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-jellyfish-sprites",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK",
+   "size": "32x32",
+   "covers": [
+    "idle, move, damage, death, washed ashore"
+   ],
+   "notes": "Pale pink drifting blobs: a reference for floating or glowing slime.",
+   "commission": "Patreon commission tiers.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_elthen-jellyfish.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Small drifters."
+   }
+  },
+  {
+   "slug": "myla-worm",
+   "name": "Worm Sprite",
+   "artist": "Myla_Doodles",
+   "url": "https://myla-doodles.itch.io/worm-sprite",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "No license text",
+   "size": "64x32",
+   "covers": [
+    "aggro, walk, bite, death"
+   ],
+   "notes": "Pale cream maggot, cute and weird: a model for a glow grub.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_myla-worm.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native size, close to the gecko."
+   }
+  },
+  {
+   "slug": "brysia-snail",
+   "name": "Snail 18x16",
+   "artist": "Brysia",
+   "url": "https://brysiaa.itch.io/snail-enemy-18x16px",
+   "fit": "partial",
+   "price": "$2",
+   "license": "Any project, credit optional",
+   "size": "18x16",
+   "covers": [
+    "walk, hide, unhide, alarmed, jump, death"
+   ],
+   "notes": "Cute surface crawler with hide and alarmed animations.",
+   "commission": "Contact: brysiart@o2.pl, Discord brysiaa.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "craftpix-1bit-cave",
+   "name": "1-Bit Underground Cave Backgrounds",
+   "artist": "CraftPix.net",
+   "url": "https://craftpix.net/product/1-bit-underground-cave-pixel-backgrounds/",
+   "fit": "strong",
+   "price": "Paid (about $10, or CraftPix Premium)",
+   "license": "CraftPix license: commercial OK",
+   "size": "4 backgrounds, 576x324, loopable",
+   "covers": [
+    "cave parallax",
+    "dithered black and grey stalactites"
+   ],
+   "notes": "Dithered black-and-grey stalactite rows over pure black: the closest thing to black volcanic ash. Recolour the light tone toward copper. Slightly finer than our 480x270 screen.",
+   "commission": "A studio.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "rengo-cave",
+   "name": "Cave + Flooded Cave Parallax",
+   "artist": "Rengo",
+   "url": "https://rengodev.itch.io/flooded-cave-pa",
+   "fit": "strong",
+   "price": "$1.99 each",
+   "license": "No license text; ask before use",
+   "size": "512x288, 4 and 5 layers, tileable",
+   "covers": [
+    "cave parallax",
+    "dark teal-black rock",
+    "still water floor",
+    "stalactites"
+   ],
+   "notes": "Very dark teal-black rock masses, moody and muted. The flooded set has a still water floor: the GDD's flooded shafts. Right density. A plain cave version is at rengodev.itch.io/cave-p.",
+   "commission": "None (profile).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_rengo-cave.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Our grain."
+   }
+  },
+  {
+   "slug": "codecrackers-cave",
+   "name": "Cave Background",
+   "artist": "codecrackers",
+   "url": "https://codecrackers.itch.io/cave-background",
+   "fit": "strong",
+   "price": "$1",
+   "license": "Any project, no credit needed",
+   "size": "4 layers, 320x180, pans on x and y",
+   "covers": [
+    "cave parallax",
+    "copper and rust rims on near-black",
+    "vertical pan"
+   ],
+   "notes": "Jagged rock rims in peach, copper and rust on near-black: already dark rock edged with copper light. Pans vertically, which matters for a vertical climb. 320x180 is a bit coarse; tile it.",
+   "commission": "Not stated. Ko-fi, X @MarcosMonti4.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_codecrackers-cave.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Slightly coarser than ours."
+   }
+  },
+  {
+   "slug": "cavernous-bg",
+   "name": "Cavernous Background",
+   "artist": "spring-spring (OpenGameArt)",
+   "url": "https://opengameart.org/content/cavernous-background",
+   "fit": "strong",
+   "price": "Free",
+   "license": "CC0",
+   "size": "512x288, 16 colours",
+   "covers": [
+    "cave parallax",
+    "navy-black cavern",
+    "purple-lit ledges"
+   ],
+   "notes": "Dark navy cavern with textured stalactite masses. Fits as is. Probably a flat image, not layers.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_cavernous-bg.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Our grain."
+   }
+  },
+  {
+   "slug": "myaumya-cave",
+   "name": "Cave Background",
+   "artist": "Myaumya",
+   "url": "https://myaumya.itch.io/cave-background",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK, modify OK, no resale",
+   "size": "6 layers, 640x360 files drawn on a 320x180 grid",
+   "covers": [
+    "cave parallax",
+    "muted purple and green stalactites",
+    "small crystals",
+    "wet floor"
+   ],
+   "notes": "Muted dusty stalactite rows, dark. Published ten days ago. The same artist's Foggy Ruins has angel statues (human figures), so skip that one.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_myaumya-cave.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Drawn at 2x: coarser than ours."
+   }
+  },
+  {
+   "slug": "lilc-cave-bg",
+   "name": "Pixel Art Cave Background",
+   "artist": "Lil Cthulhu",
+   "url": "https://lil-cthulhu.itch.io/pixel-art-cave-background",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no redistribution",
+   "size": "640x250, separate layers, 4 colourways",
+   "covers": [
+    "cave parallax",
+    "flat stalactite silhouette bands"
+   ],
+   "notes": "Plain flat silhouette bands, very easy to recolour into ash black: a good fog and depth base. Only 250 tall; extend upward.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_lilc-cave-bg.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Our grain."
+   }
+  },
+  {
+   "slug": "marvyra-caves",
+   "name": "Unique Cave Parallax Landscapes",
+   "artist": "Marvyra",
+   "url": "https://marvyra.itch.io/unique-cave-landscape",
+   "fit": "partial",
+   "price": "$14.99",
+   "license": "Commercial OK, credit requested, no AI use",
+   "size": "10 caves x 5 layers, 320x180",
+   "covers": [
+    "cave parallax",
+    "crystal, ruins, mushroom, misty, lava caves"
+   ],
+   "notes": "Rich hand-made art but bright and saturated; needs a heavy palette swap. Skip the Bones biome. Commissions are open.",
+   "commission": "Open: marvyra.business@gmail.com",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "exice-red-cave",
+   "name": "Parallax Red Cave",
+   "artist": "Exice",
+   "url": "https://exice.itch.io/red-lava-cave",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Tagged royalty free; no license text",
+   "size": "About 512x256, flat layers",
+   "covers": [
+    "cave parallax",
+    "flat stalactite silhouette layers"
+   ],
+   "notes": "Pure flat-colour silhouette layers in reds: as a hazy depth stack, perfect to recolour to grey and black with copper accents.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_exice-red-cave.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Flat shapes, about our grain."
+   }
+  },
+  {
+   "slug": "saurabh-cave",
+   "name": "Cave Environment",
+   "artist": "saukgp (Saurabh)",
+   "url": "https://saurabhkgp.itch.io/2d-cave-environment",
+   "fit": "off",
+   "price": "Free (name your price)",
+   "license": "No license text",
+   "size": "1280x720 layered (2.7x finer)",
+   "covers": [
+    "cave parallax",
+    "misty blue cave",
+    "light shafts",
+    "haze"
+   ],
+   "notes": "Limbo and Inside mood, light shafts and haze: the best mood here, but painterly and far finer than our grain. Reference or a far fog layer only.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "ruined-temple",
+   "name": "Background Ruined Temple",
+   "artist": "Szadi art",
+   "url": "https://szadiart.itch.io/background-ruined-temple",
+   "fit": "strong",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit needed, no resale",
+   "size": "4 layers, about 1024x576",
+   "covers": [
+    "window vista",
+    "dark pillars framing a lit hazy void",
+    "ruin silhouettes",
+    "long arch"
+   ],
+   "notes": "The closest to the window idea: dark stone pillars frame openings onto a bright, hazy void with silhouetted ruins. Built masonry rather than machinery, and the haze is warm; recolour to cold smoky copper.",
+   "commission": "Discord (Szadi).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_ruined-temple.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Pillar and haze at native pixels."
+   }
+  },
+  {
+   "slug": "industrial-parallax",
+   "name": "Industrial Parallax Background",
+   "artist": "ansimuz",
+   "url": "https://ansimuz.itch.io/industrial-parallax-background",
+   "fit": "strong",
+   "price": "Free",
+   "license": "CC0 / no attribution",
+   "size": "Layered, about 272x160, PSD",
+   "covers": [
+    "window vista",
+    "scaffold towers, gantries, tanks, pipes",
+    "glowing lamps"
+   ],
+   "notes": "Night silhouettes of scaffolds, gantries, tanks and pipes with a few lamps: a derelict-machinery skyline once recoloured. Short; extend vertically. Lit windows need painting out.",
+   "commission": "No (ansimuz).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_industrial-parallax.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Coarse 2x at our zoom."
+   }
+  },
+  {
+   "slug": "bulkhead",
+   "name": "Bulkhead Walls Environment",
+   "artist": "ansimuz",
+   "url": "https://ansimuz.itch.io/bulkhead-walls-environment",
+   "fit": "strong",
+   "price": "Free",
+   "license": "Commercial OK, no credit needed",
+   "size": "Layered PSD and PNG plus tiles",
+   "covers": [
+    "window vista",
+    "huge girder gantry",
+    "hanging cables",
+    "near-black hangar"
+   ],
+   "notes": "A near-black hangar with a huge girder gantry and hanging cables in dark teal: girders, gantries and chains as a mid layer seen through a window.",
+   "commission": "No (ansimuz).",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_bulkhead.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Girders and cables at our grain."
+   }
+  },
+  {
+   "slug": "dark-parallaxes",
+   "name": "The DARK Series: Parallax Backgrounds",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-parallax-backgrounds",
+   "fit": "strong",
+   "price": "$3",
+   "license": "Commercial OK, credit optional",
+   "size": "About 288 wide, Aseprite",
+   "covers": [
+    "window vista",
+    "Field of Gears (3 colours)",
+    "Caged Swamps",
+    "huge gears in haze"
+   ],
+   "notes": "Huge gear silhouettes fading into pale haze: the best giant-machinery-in-haze layer found. The gears carry engraved runes, which break the no-writing rule; paint them out. The hanging cages could be crane hooks.",
+   "commission": "Patreon commission reward.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "craftpix-industrial",
+   "name": "Industrial Zone Backgrounds",
+   "artist": "CraftPix.net",
+   "url": "https://craftpix.net/product/industrial-zone-pixel-art-backgrounds/",
+   "fit": "partial",
+   "price": "Paid (about $10)",
+   "license": "CraftPix license",
+   "size": "4 backgrounds, 576x324, layered",
+   "covers": [
+    "window vista",
+    "pipe runs, towers, tanks",
+    "smokestacks"
+   ],
+   "notes": "Grey hazy plant silhouettes, muted and dark, right density. The smoke implies outdoors; paint the plumes out.",
+   "commission": "A studio.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "yanvs-industrial",
+   "name": "Dark Green Industrial Zone",
+   "artist": "YanVS",
+   "url": "https://yanvictor.itch.io/industrial-pixel-bg-dark-green",
+   "fit": "partial",
+   "price": "$1.79",
+   "license": "CC0",
+   "size": "Layered template",
+   "covers": [
+    "window vista",
+    "tanks, domes, chimneys, a crane",
+    "fog band",
+    "lamps"
+   ],
+   "notes": "Dark green silhouettes with a crane and fog band. A recolour candidate.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "joe777-scifi",
+   "name": "Sci-Fi Parallax Backgrounds",
+   "artist": "Joe777",
+   "url": "https://joe777.itch.io/scifiparalax",
+   "fit": "partial",
+   "price": "$3",
+   "license": "No license text; ask",
+   "size": "320 wide, including a 320x576 vertical scene",
+   "covers": [
+    "window vista",
+    "lattice girders",
+    "pipe loops",
+    "tall machinery shaft"
+   ],
+   "notes": "Dark indigo interiors with a tall vertical shaft of stacked machinery decks: a great shaft seen through a window, and one of only two picks built for vertical scrolling.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ],
+   "scale": {
+    "img": "scale_joe777-scifi.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the background at its native pixels on the right (middle crop). Our grain."
+   }
+  },
+  {
+   "slug": "lost-city",
+   "name": "Lost City 5-Layer",
+   "artist": "Skye & Moss",
+   "url": "https://skyemoss.itch.io/lost-city-5-layer",
+   "fit": "partial",
+   "price": "$2",
+   "license": "Personal and commercial",
+   "size": "5 layers",
+   "covers": [
+    "window vista",
+    "hazy grey tower-block silhouettes"
+   ],
+   "notes": "Dark grey hazy megastructure stacks with almost no light; reads as a city unless the tops are cropped.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "post-apoc-bg",
+   "name": "Post-apocalyptic Background",
+   "artist": "LittleSmith",
+   "url": "https://littlesmith.itch.io/post-apocalyptic-background",
+   "fit": "off",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no redistribution",
+   "size": "5 layers, 480x180",
+   "covers": [
+    "window vista",
+    "orange haze depth stack",
+    "ruined skyline"
+   ],
+   "notes": "Exactly our width; a good example of graded haze layers to recolour, but the motifs (Ferris wheel, towers) are a human city.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "bg"
+   ]
+  },
+  {
+   "slug": "dark-animals",
+   "name": "The DARK Series: Animal Pack 1",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-animal-pack-1",
+   "fit": "strong",
+   "price": "$3",
+   "license": "Commercial OK, credit optional",
+   "size": "Elk about 40 px tall, deer 28, rat 13, crow 10",
+   "covers": [
+    "elk and deer: eat, walk, look, death",
+    "crow, rat, fox",
+    "glowing orbs",
+    "red and blue variants"
+   ],
+   "notes": "Near-black silhouettes with glowing cyan eyes and antlers, no outline: the closest thing to \"dark, melancholy, cute-weird\" in the whole search. The elk and deer read as big gentle grazers or haulers on fixed routes; rat and crow as scavengers; the orbs as glow motes.",
+   "commission": "Not found; Patreon and Discord.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_dark-animals.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Silhouettes at our grain."
+   }
+  },
+  {
+   "slug": "strange-companion",
+   "name": "The DARK Series: A Strange Companion",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-a-strange-companion",
+   "fit": "strong",
+   "price": "$3.99",
+   "license": "Commercial OK, credit optional",
+   "size": "126x25 frames, body about 36x15",
+   "covers": [
+    "sleep, wake up, sniff and eat, bark",
+    "jump, fall, land, move, sit",
+    "roll into a ball and roll",
+    "black, red, teal"
+   ],
+   "notes": "A shaggy burrowing scavenger that naps and curls into a rolling ball, at gecko size. Pairs with the Animal Pack. Could be a follower or a rideable animal.",
+   "commission": "As above.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_strange-companion.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. About the gecko's size."
+   }
+  },
+  {
+   "slug": "mole-rat",
+   "name": "Naked Mole Rat",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-naked-mole-rat-sprites",
+   "fit": "strong",
+   "price": "$1",
+   "license": "Commercial OK (terms on Patreon)",
+   "size": "32x32, body about 16x8",
+   "covers": [
+    "idle, move, dig, go underground, dig out",
+    "attack, damage, death"
+   ],
+   "notes": "A burrower that competes with the gecko's tunnelling, or a tunnel worker the makers bred. Dark outline, soft pink, cute.",
+   "commission": "Declines commissions (itch replies).",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_mole-rat.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Small burrower."
+   }
+  },
+  {
+   "slug": "geonid",
+   "name": "Geonid",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-geonid-sprites",
+   "fit": "strong",
+   "price": "$1",
+   "license": "Commercial OK (terms on Patreon)",
+   "size": "32x32, body about 12x8",
+   "covers": [
+    "emerge, hide, peek",
+    "idle, move, attack, damage, death"
+   ],
+   "notes": "A rock-shelled critter that passes for a stone and hides when disturbed: the perfect \"is that a rock?\" ambient creature for a world made of rock.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_geonid.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Pebble-sized."
+   }
+  },
+  {
+   "slug": "mushlings",
+   "name": "Mosslight Series: Mushlings",
+   "artist": "Givty",
+   "url": "https://givty.itch.io/mosslight-series-mushroom-character-pack",
+   "fit": "strong",
+   "price": "$4",
+   "license": "Commercial OK, modify OK",
+   "size": "Baby about 10 px, medium about 13x22",
+   "covers": [
+    "hide underground, peek, jump up",
+    "idle, walk, hurt, death"
+   ],
+   "notes": "Mushroom creatures that pop out of the floor: skittish prey or ambient life. Pale body under a red cap, few colours, quiet and eerie-cute. Skip the Mushroom Sorcerer.",
+   "commission": "Not found.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_mushlings.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Tiny."
+   }
+  },
+  {
+   "slug": "seethingswarm",
+   "name": "Lil Axolotl, Batpack, Frogpack and more",
+   "artist": "seethingswarm",
+   "url": "https://seethingswarm.itch.io/lil-axolotl",
+   "fit": "strong",
+   "price": "$11.99 each",
+   "license": "Commercial OK, modify OK, credit optional, no blockchain",
+   "size": "Axolotl about 14x8, bat 8 folded, frog 12",
+   "covers": [
+    "axolotl: swim, wall climb, wall grab, sneak, sleep (20 anims)",
+    "bat: hang upside down, land, sleep (15)",
+    "frog: swim, croak, tongue attacks (18)",
+    "turtle, mouse, owl, hedgehog, otter"
+   ],
+   "notes": "Deep animation sets at gecko scale: an axolotl that climbs walls, bats that roost upside down, a frog with a tongue (a rival to the gecko). Minimal black outline, flat colours. Pricey per animal.",
+   "commission": "Mostly closed. X @SeethingSwarm.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_seethingswarm.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Axolotls at our grain."
+   }
+  },
+  {
+   "slug": "admurin-bosses",
+   "name": "Bosses: Badger and Gollux",
+   "artist": "Admurin",
+   "url": "https://admurin.itch.io/bosses-badger",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no AI training",
+   "size": "384x128 frames; badger about 105x50, Gollux about 70x60",
+   "covers": [
+    "idle, move, two attacks, ability, hurt"
+   ],
+   "notes": "Large animals dangerous the way a big animal is. Gollux, a rock beast, could be a boulder hauler. Chunky shading. Also see Enemy Galore I (free): rat, bat, crab, a tiny Pebble rock critter, golems, cave bears.",
+   "commission": "Fiverr shows unavailable until mid 2028.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_admurin-bosses.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Badger, more than twice the gecko."
+   }
+  },
+  {
+   "slug": "giant-toad",
+   "name": "Giant Toad",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-giant-toad-sprites",
+   "fit": "partial",
+   "price": "$6",
+   "license": "Commercial OK (terms on Patreon)",
+   "size": "128x96, body about 90x70",
+   "covers": [
+    "idle x2, move, swallow attack, damage, death"
+   ],
+   "notes": "A big pond predator that eats smaller frogs. The swallow has a small red splash; tone it down.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "armadillo-hedgehog",
+   "name": "Armadillo and Hedgehog",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-armadillo-sprites",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK",
+   "size": "32x32; armadillo about 24x10, hedgehog 13x6",
+   "covers": [
+    "armadillo: curl",
+    "hedgehog: idle, move, attack, death"
+   ],
+   "notes": "Shelled grazers that curl up as a defence.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_armadillo-hedgehog.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Armadillos at our grain."
+   }
+  },
+  {
+   "slug": "octopus-crab",
+   "name": "Octopus and Hermit Crab",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-hermit-crab-sprites",
+   "fit": "partial",
+   "price": "Free and $1",
+   "license": "Commercial OK",
+   "size": "32x32, bodies about 12 px",
+   "covers": [
+    "octopus: eat, dig into silt",
+    "hermit crab: hide, get out"
+   ],
+   "notes": "Pool and seep life.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_octopus-crab.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Small crabs."
+   }
+  },
+  {
+   "slug": "chameleon",
+   "name": "Chameleon",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-chameleon-sprites",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Commercial OK",
+   "size": "64x32, body about 25 px plus tail",
+   "covers": [
+    "idle, move, tongue",
+    "disappear, appear"
+   ],
+   "notes": "A camouflaged tongue predator: a cousin of the gecko that hunts the same bugs.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_chameleon.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. A bit smaller than the gecko."
+   }
+  },
+  {
+   "slug": "owls",
+   "name": "Owls 16px",
+   "artist": "Peak Pixels",
+   "url": "https://peakpixels.itch.io/owls",
+   "fit": "partial",
+   "price": "$5",
+   "license": "Commercial OK, no resale",
+   "size": "16 px scale on 64x64",
+   "covers": [
+    "six owls incl. burrowing owl",
+    "idle, walk, take off, fly"
+   ],
+   "notes": "Roosting birds near shaft openings; the burrowing owl suits a cave. Layered .aseprite files.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "popshop",
+   "name": "Axolotl, Cave Bat, Frogs",
+   "artist": "Pop Shop Packs",
+   "url": "https://pop-shop-packs.itch.io/axolotl-pixel-asset-pack",
+   "fit": "partial",
+   "price": "$2 axolotl, bats and frogs free",
+   "license": "Commercial OK, credit optional, no AI upload",
+   "size": "Axolotl about 30 px, bat 20",
+   "covers": [
+    "axolotl: rest, bubbles, rise, float",
+    "bats: fly, death",
+    "frog: idle, croak, jump"
+   ],
+   "notes": "The floating axolotl doubles as a drifter for pools. Pastel and chunky; needs a palette pass.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "micromobs-river",
+   "name": "Micro Mobs: Riverside and Volants",
+   "artist": "Hunter_Art",
+   "url": "https://hunter-art.itch.io/micro-mobs-pack-1",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, no AI use",
+   "size": "About 16 to 24 px",
+   "covers": [
+    "frog, beaver",
+    "bat, dragonfly"
+   ],
+   "notes": "Matches the Underground pack already listed. Clean outline on its own layer.",
+   "commission": "Open: artstation.com/rafal_hunter",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "mudling-golem",
+   "name": "Mudling and Mini Golem",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-mudling-sprites",
+   "fit": "partial",
+   "price": "$3 and free",
+   "license": "Commercial OK",
+   "size": "About 16 to 20 px",
+   "covers": [
+    "idle, move, attack, damage, death"
+   ],
+   "notes": "Clay and stone creatures: cute golem workers the makers could have bred.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "turtle",
+   "name": "Turtle",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-turtle-sprites",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK",
+   "size": "32x32, body about 20x10",
+   "covers": [
+    "yawn, idle, move, sleep, bite, withdraw"
+   ],
+   "notes": "A slow shelled grazer.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "worker-mole",
+   "name": "Worker Mole",
+   "artist": "Kimbulworks",
+   "url": "https://kimbulworks.itch.io/worker-mole",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK, no credit needed",
+   "size": "Body about 16x14",
+   "covers": [
+    "4 animation states"
+   ],
+   "notes": "A mole in a hard hat: on the nose for \"bred to do the work\", if the hat reads as the makers' gear rather than a human's. Cute, saturated. The artist takes commissions.",
+   "commission": "Open: kimbulworks@gmail.com, VGen",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "sand-worm",
+   "name": "Sand Worm",
+   "artist": "Akari21",
+   "url": "https://akari21.itch.io/sand-worm",
+   "fit": "partial",
+   "price": "$1",
+   "license": "Commercial OK, credit appreciated",
+   "size": "48x48 canvas, about 40 px tall",
+   "covers": [
+    "idle, bite, burrow and emerge, spit"
+   ],
+   "notes": "An ambush worm that bursts out of the ground. Toothy, creepy-cute.",
+   "commission": "Open: email on the itch page.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ]
+  },
+  {
+   "slug": "tazzina",
+   "name": "Endangered Species",
+   "artist": "hello_tazzina",
+   "url": "https://hello-tazzina.itch.io/animals",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Use and modify freely, credit appreciated",
+   "size": "About 20 to 30 px",
+   "covers": [
+    "salamander, toad, bog turtle",
+    "otter, penguin, salmon"
+   ],
+   "notes": "Soft naturalistic animals, no heavy outline. The salamander, toad and turtle work as quiet ambient life.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_tazzina.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native 1x."
+   }
+  },
+  {
+   "slug": "elthen-bats",
+   "name": "Bat Sprite Pack",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/bat-sprite-pack",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK",
+   "size": "About 8 px",
+   "covers": [
+    "flying bats"
+   ],
+   "notes": "Tiny bats for ceilings and swarms.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "creatures"
+   ],
+   "scale": {
+    "img": "scale_elthen-bats.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Tiny."
+   }
+  },
+  {
+   "slug": "crystal-bugs",
+   "name": "Crystal Beetles and Crystal Ants",
+   "artist": "sovietshnuckums",
+   "url": "https://sovietshnuckums.itch.io/beetles",
+   "fit": "strong",
+   "price": "$2+ each",
+   "license": "Commercial OK, modify OK; no resale unless modified",
+   "size": "16x16 frames, bodies 8 to 14 px",
+   "covers": [
+    "beetles rolling mineral balls (crystal, amber, gold, stone...)",
+    "ants with and without crystal growths",
+    "idle, walk"
+   ],
+   "notes": "Dark bodies with small glowing eyes, mineral colours, no outline: the best tone match. Beetles rolling ore balls are tiny haulers; ants growing crystals are mine life. Same artist sells Crystal Crustaceans and takes commissions.",
+   "commission": "Open: X @SovietShnuckums",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_crystal-bugs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Bugs at gecko-food size."
+   }
+  },
+  {
+   "slug": "quill-bugs",
+   "name": "Fantasy Enemy: Flies and Spiders 16x16",
+   "artist": "QuillGrafit",
+   "url": "https://quillgrafit.itch.io/fantasy-enemy-flies-16x16-px",
+   "fit": "strong",
+   "price": "Free (name your price)",
+   "license": "Not stated; ask",
+   "size": "16x16; flies 5 to 8 px, spider 14 px",
+   "covers": [
+    "glowing pale flies",
+    "cute side-view spider",
+    "looping animation"
+   ],
+   "notes": "Pale blue-white flies with a soft glow on a dark ground: fireflies or glowing gnats. A cute spider too.",
+   "commission": "Not stated. t.me/QuillGrafit",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "redshrike-bugs",
+   "name": "Platformer Bugs from Last Escape",
+   "artist": "Redshrike (OpenGameArt)",
+   "url": "https://opengameart.org/content/platformer-bugs-from-last-escape",
+   "fit": "strong",
+   "price": "Free",
+   "license": "CC BY 3.0 / OGA-BY (credit required)",
+   "size": "About 16 to 32 px",
+   "covers": [
+    "centipede crawler",
+    "worms, beetles, wasps, moth",
+    "glowing teal larva",
+    "armoured pill bug"
+   ],
+   "notes": "Dark muted greens and teals, soft shading, no hard outline, slightly eerie: a good cave fit. Old (2011) with loose sheets.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_redshrike-bugs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Crawlers next to the gecko."
+   }
+  },
+  {
+   "slug": "madameberry-bugs",
+   "name": "Ambient Pixel Art Insects",
+   "artist": "madameberry (OpenGameArt)",
+   "url": "https://opengameart.org/content/ambient-pixel-art-insects",
+   "fit": "strong",
+   "price": "Free",
+   "license": "CC0",
+   "size": "8x8",
+   "covers": [
+    "tiny fliers with glowing green dots"
+   ],
+   "notes": "Muted teal and green, no outline: faint glowing life in the dark. Possibly top-down, which hardly matters at 8 px for fliers.",
+   "commission": "Not stated. contact@madameberry.com",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "admurin-insects",
+   "name": "Monster Pack 20 (ants) and 74 (insects)",
+   "artist": "Admurin",
+   "url": "https://admurin.itch.io/monster-pack-74",
+   "fit": "partial",
+   "price": "5 CAD and 1 CAD",
+   "license": "Commercial OK, no credit, no AI training",
+   "size": "Ants 16 to 24 px; beetle, dragonfly, firefly 4 to 6 px",
+   "covers": [
+    "glowing green-abdomen ant",
+    "food-dot sized bugs",
+    "idle, move, attack"
+   ],
+   "notes": "True food-dot sizes and a natural glow ant. White RPG outline that may need removing on black.",
+   "commission": "Fiverr unavailable until 2028.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "sack-insects",
+   "name": "Insect Enemy Pack V.1",
+   "artist": "Sack_Pixel",
+   "url": "https://sack-pixel.itch.io/pack-enemies-v1",
+   "fit": "strong",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no resale",
+   "size": "16x16 on 48x48",
+   "covers": [
+    "tall walker, small crawler, flier",
+    "idle, walk, attack, hit, death"
+   ],
+   "notes": "Very dark desaturated purples, no outline, side view: creepy-cute and cave-dark. Enemy-like rather than ambient.",
+   "commission": "Not stated. sack.pixelart@gmail.com",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_sack-insects.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Dark purple bugs."
+   }
+  },
+  {
+   "slug": "popshop-bugs",
+   "name": "Bugs and Critters",
+   "artist": "Pop Shop Packs",
+   "url": "https://pop-shop-packs.itch.io/bugs-and-critters-pixel-asset-pack",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no AI use",
+   "size": "Bees 4 px, spiders 12 px, large set 32 px",
+   "covers": [
+    "bees, beetles, butterflies",
+    "small and large spiders (top-down)",
+    "snails"
+   ],
+   "notes": "Flat colours, cute, animated. Spiders are top-down.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "elthen-bugs",
+   "name": "Ladybug, Dragonfly, Spider, Giant Fly",
+   "artist": "Elthen",
+   "url": "https://elthen.itch.io/2d-pixel-art-spider-sprites",
+   "fit": "partial",
+   "price": "Free to $2",
+   "license": "Commercial OK",
+   "size": "32x32, bodies 8 to 14 px",
+   "covers": [
+    "spider: emerge, jump, shoot web",
+    "ladybug: fly, two deaths",
+    "dragonfly",
+    "small flies"
+   ],
+   "notes": "Clean style, dark outline. The spider emerges and shoots webs.",
+   "commission": "Declines commissions.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_elthen-bugs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Our grain."
+   }
+  },
+  {
+   "slug": "ethan-bugs",
+   "name": "Bugs Animation 32x32",
+   "artist": "Ethan (Pixel asset)",
+   "url": "https://ethan-pixel-asset.itch.io/bugs-animation-pixel-32x32",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Use freely, no resale, credit appreciated",
+   "size": "32x32, dragonflies about 20 px",
+   "covers": [
+    "worm, dragonfly, ladybug",
+    "firefly",
+    "grasshopper"
+   ],
+   "notes": "Side view, no outline, soft natural colours. A firefly and a cave-cricket-like grasshopper.",
+   "commission": "Open to requests (profile).",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_ethan-bugs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Grasshopper next to the gecko."
+   }
+  },
+  {
+   "slug": "hunter-volants",
+   "name": "Micro Mobs: Volants",
+   "artist": "Hunter_Art",
+   "url": "https://hunter-art.itch.io/micro-mobs-pack-4",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no AI",
+   "size": "About 20 px",
+   "covers": [
+    "dragonfly: idle, attacks, hit, dead",
+    "bat"
+   ],
+   "notes": "Chunky outline, very cute. Matches the other Micro Mobs packs.",
+   "commission": "Open: artstation.com/rafal_hunter",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "roach-flies-ants",
+   "name": "16x16 Flies and Ant Enemies",
+   "artist": "ARoachIFoundOnMyPillow (OpenGameArt)",
+   "url": "https://opengameart.org/content/16x16-flies",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0",
+   "size": "16x16",
+   "covers": [
+    "flies with a flying loop",
+    "ants with a walk"
+   ],
+   "notes": "DB32 palette, dark outline, plain and cute. Free and CC0.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_roach-flies-ants.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Small flies."
+   }
+  },
+  {
+   "slug": "dragonflypack",
+   "name": "Dragonflypack",
+   "artist": "seethingswarm",
+   "url": "https://seethingswarm.itch.io/dragonflypack",
+   "fit": "partial",
+   "price": "$11.99",
+   "license": "Commercial OK, no NFT",
+   "size": "About 16 px",
+   "covers": [
+    "4 colours, 14 animations incl. land, fright, walk"
+   ],
+   "notes": "The richest animation set of any small bug here.",
+   "commission": "Mostly closed.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_dragonflypack.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Dragonflies at our grain."
+   }
+  },
+  {
+   "slug": "lilc-fly-web",
+   "name": "Fly Enemy and Spider Web",
+   "artist": "Lil Cthulhu",
+   "url": "https://lil-cthulhu.itch.io/pixel-art-spider-web",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, no credit, no resale",
+   "size": "Fly 16x16; web 32x32, 15 frames",
+   "covers": [
+    "fly and death",
+    "animated corner cobweb"
+   ],
+   "notes": "A pale cute fly and an animated corner cobweb (decor as well).",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_lilc-fly-web.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Native size."
+   }
+  },
+  {
+   "slug": "deirk-bugs",
+   "name": "Bugs / Insect Pack: Pixel Universe",
+   "artist": "Deirk",
+   "url": "https://deirkart.itch.io/pixel-universe-bugs",
+   "fit": "partial",
+   "price": "$2+",
+   "license": "Not stated; ask",
+   "size": "16, 24 and 32 px",
+   "covers": [
+    "silverfish, earwig, millipede, centipede, termite",
+    "moth, cricket, firefly, mantis, tarantula"
+   ],
+   "notes": "Best species coverage, but static (no animation) and the 16 px set is top-down. A base to animate or a commission reference.",
+   "commission": "Not stated. X @deirkart",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_deirk-bugs.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. Larger bugs at native size."
+   }
+  },
+  {
+   "slug": "stick-bug",
+   "name": "Stick-bug Enemy",
+   "artist": "Game Between The Lines",
+   "url": "https://gamebetweenthelines.itch.io/animated-side-scroller-stick-bug-enemy",
+   "fit": "partial",
+   "price": "Free (name your price)",
+   "license": "Commercial OK, credit \"Jephed, Game Between The Lines\"",
+   "size": "About 40 px long",
+   "covers": [
+    "disguised as a twig, reveal, squashed"
+   ],
+   "notes": "A stick bug that poses as a twig: weird-cute. No AI disclosure on the page.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ],
+   "scale": {
+    "img": "scale_stick-bug.png",
+    "caption": "Same zoom (3x): our gecko and small cap on the left, the pack at its native pixels on the right. About the gecko's length."
+   }
+  },
+  {
+   "slug": "enjl-critters",
+   "name": "Friendly Small Platformer Critters",
+   "artist": "Enjl",
+   "url": "https://enjl.itch.io/friendly-small-platformer-critters-by-enjl",
+   "fit": "partial",
+   "price": "$1+",
+   "license": "Not stated",
+   "size": "About 4 to 12 px",
+   "covers": [
+    "firefly, blue spark, red wisps",
+    "butterflies, bat, rat, birds, fish"
+   ],
+   "notes": "Tiny flat ambient life; the firefly and wisps suit glowing motes.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "insects",
+    "creatures"
+   ]
+  },
+  {
+   "slug": "pozac-forest",
+   "name": "Fantasy Forest Enemies",
+   "artist": "Pozac",
+   "url": "https://pozac.itch.io/fantasy-forest-enemies-2d-pixel-art-asset-pack",
+   "fit": "off",
+   "price": "On sale",
+   "license": "Commercial OK, credit appreciated",
+   "size": "About 24 to 32 px",
+   "covers": [
+    "glowing blue-shell beetle",
+    "fire beetle, bee"
+   ],
+   "notes": "Glossy outlined enemies; the glowing beetle fits.",
+   "commission": "Commissions temporarily closed.",
+   "track": "wild",
+   "themes": [
+    "insects"
+   ]
+  },
+  {
+   "slug": "roots-trees",
+   "name": "The DARK Series: Roots & Trees",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-roots-trees",
+   "fit": "strong",
+   "price": "$3",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "Root pieces about 15 to 60 px, 16 px tileset",
+   "covers": [
+    "hanging root clumps with glowing pods",
+    "corner, side and ceiling drapes",
+    "6 animated trees",
+    "7 recolours incl. fungus white"
+   ],
+   "notes": "The strongest decor match: near-black hanging roots dotted with faint glowing pods in white, cyan, red or yellow. Reads as ash caves with copper or spore glints, nothing human.",
+   "commission": "Patreon and Discord; no commissions stated.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "flora"
+   ],
+   "scale": {
+    "img": "scale_roots-trees.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. Roots and pods at our grain."
+   }
+  },
+  {
+   "slug": "dream-catchers",
+   "name": "The DARK Series: Dream Catchers Realm",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-dream-catchers-realm-tileset",
+   "fit": "strong",
+   "price": "$5.99",
+   "license": "Commercial OK, credit optional",
+   "size": "16x16 tiles",
+   "covers": [
+    "vines with seed pods",
+    "silhouette branches",
+    "thorn-hook growths",
+    "spoked eye totems on poles",
+    "woven hanging charms"
+   ],
+   "notes": "Dark and melancholy, close to Hollow Knight. The eye totems and woven charms are strange monuments the makers could have left, with no writing. Skip the hut with its NPC; use the snowless variant.",
+   "commission": "As above.",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ]
+  },
+  {
+   "slug": "alienscape",
+   "name": "Hexany's Alienscape",
+   "artist": "Hexany Ives",
+   "url": "https://hexany-ives.itch.io/hexanys-alienscape",
+   "fit": "strong",
+   "price": "Free",
+   "license": "CC0",
+   "size": "8x8 and 16x16, NES palette",
+   "covers": [
+    "biomechanical altars with hanging orbs",
+    "ribbed pillars",
+    "pod spheres, egg-sac lump",
+    "hanging strands",
+    "alien sprouts"
+   ],
+   "notes": "Ancient alien machinery grown into rock: nests in old machines. All magenta, so recolour. Still in development.",
+   "commission": "Contact: hexany.ives@hotmail.com",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ],
+   "scale": {
+    "img": "scale_alienscape.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. Biomechanical bits at our grain."
+   }
+  },
+  {
+   "slug": "fungi-mutation",
+   "name": "Fungi Mutation: Cave Biome",
+   "artist": "Visceral Melon",
+   "url": "https://visceral-melon.itch.io/fungi-mutation-cave-biome-asset-pack",
+   "fit": "partial",
+   "price": "$3 (free demo)",
+   "license": "Commercial OK, no resale",
+   "size": "8x8 scale",
+   "covers": [
+    "hanging roots and vines with glow points",
+    "leaf, flower and spore particles",
+    "sparkle and glow animations",
+    "still water",
+    "glowing mushrooms"
+   ],
+   "notes": "Dark ground with glowing vines; the spore particles fill the ambient-particle gap. 8x8, pastel and outlined. Skip the cabin and furniture.",
+   "commission": "Private requests via Discord.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "flora"
+   ]
+  },
+  {
+   "slug": "fleshbound",
+   "name": "Fleshbound",
+   "artist": "Gayapon",
+   "url": "https://gayapon.itch.io/fleshbound-16x16-organic-horror-side-scroller-tileset",
+   "fit": "partial",
+   "price": "$5.99 for commercial (free version non-commercial)",
+   "license": "Paid: commercial OK, credit optional",
+   "size": "16x16",
+   "covers": [
+    "ivory fangs and horns",
+    "bulbous pods and lumps",
+    "drips",
+    "3-layer background"
+   ],
+   "notes": "Organic weird growths, softer than gore. Pink; recolour toward ash and copper. Check each piece against the no-body-horror rule.",
+   "commission": "Not stated. X @Gayaponn",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ],
+   "scale": {
+    "img": "scale_fleshbound.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. Pods and horns at our grain."
+   }
+  },
+  {
+   "slug": "spore-plant",
+   "name": "Spore Shooting Plant",
+   "artist": "Lil Cthulhu",
+   "url": "https://lil-cthulhu.itch.io/spore-shooting-plant",
+   "fit": "strong",
+   "price": "Free",
+   "license": "Commercial OK, credit optional, no resale",
+   "size": "16x16; spore 4x4",
+   "covers": [
+    "puffing plant, 19 frames",
+    "ceiling version",
+    "spore burst"
+   ],
+   "notes": "A small living prop that hangs from ceilings and puffs spores. Pairs with the animated cobweb from the same artist.",
+   "commission": "Not stated.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "flora"
+   ]
+  },
+  {
+   "slug": "karsiori-pipes",
+   "name": "Pipes, Cables and Gear Wheels",
+   "artist": "Karsiori",
+   "url": "https://karsiori.itch.io/pixel-art-pipes-and-cables-modular",
+   "fit": "strong",
+   "price": "Free / name your price",
+   "license": "CC0",
+   "size": "Pipes on 32, 16, 8 px; gears 26 to 59 px",
+   "covers": [
+    "modular pipes in silver and bronze",
+    "cables",
+    "11 animated gears"
+   ],
+   "notes": "Clean and readable. The bronze pipes match the copper, and turning gears say \"the mine keeps running\".",
+   "commission": "Custom colours or small changes on request; artstation.com/karsiori",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ]
+  },
+  {
+   "slug": "waterfalls-gears",
+   "name": "Animated Waterfalls and Gears",
+   "artist": "Heosphorus",
+   "url": "https://heosphorus.itch.io/animated-waterfalls",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK",
+   "size": "Waterfalls 48 and 64 px, 8 frames; gears 128 px",
+   "covers": [
+    "20 waterfalls incl. a machine breaking through the ground",
+    "brass gear loops"
+   ],
+   "notes": "Waterfalls for flooded shafts; the water is bright blue, so darken it.",
+   "commission": "instagram.com/heosphorus",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ],
+   "scale": {
+    "img": "scale_waterfalls-gears.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. A waterfall at native size."
+   }
+  },
+  {
+   "slug": "cocoon",
+   "name": "Creature Cocoon",
+   "artist": "CatDev Pixelarts",
+   "url": "https://catdev-pixelarts.itch.io/creature-cocoon",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, no resale",
+   "size": "16x16, animated",
+   "covers": [
+    "cocoon that cracks and hatches in 5 stages"
+   ],
+   "notes": "Eggs and cocoons for nests. Warm peach and cute.",
+   "commission": "Not found.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "creatures"
+   ]
+  },
+  {
+   "slug": "beneath",
+   "name": "The DARK Series: Beneath",
+   "artist": "Penusbmic",
+   "url": "https://penusbmic.itch.io/the-dark-series-beneath-tileset",
+   "fit": "partial",
+   "price": "$3",
+   "license": "Commercial OK, credit optional",
+   "size": "16 px",
+   "covers": [
+    "piping, wires, coils",
+    "hanging chains, cages",
+    "spiky flora, fog layers"
+   ],
+   "notes": "Grey industrial gloom, half usable: skip the bookshelves, chairs and chandeliers (human furniture).",
+   "commission": "As above.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ]
+  },
+  {
+   "slug": "saronin-pipes",
+   "name": "Pipes, Cables and Junction Boxes",
+   "artist": "Saronin Jayhart",
+   "url": "https://saronin-jayhart.itch.io/pipes-cables-and-junction-boxes",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK",
+   "size": "36x36 tiles (awkward)",
+   "covers": [
+    "copper pipes, grates, tank",
+    "junction boxes, piston machine"
+   ],
+   "notes": "The copper colour fits; the 36 px grid does not.",
+   "commission": "Not found.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ]
+  },
+  {
+   "slug": "shadow-mines",
+   "name": "Shadow Mines",
+   "artist": "waxx and ANtY",
+   "url": "https://waxx.itch.io/shadow-mines-asset-pack",
+   "fit": "partial",
+   "price": "Free",
+   "license": "Commercial OK, no redistribution",
+   "size": "194 sprites",
+   "covers": [
+    "giant mushroom silhouettes",
+    "glowing red mushrooms",
+    "mine timbers, cobwebs, cables"
+   ],
+   "notes": "Strong foreground silhouettes from a shelved game. Screenshots use dynamic lighting; check the raw sprites are crisp.",
+   "commission": "None found.",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ]
+  },
+  {
+   "slug": "tentacles",
+   "name": "Land of Tentacles",
+   "artist": "pixelitum",
+   "url": "https://pixelitum.itch.io/land-of-tentacles",
+   "fit": "partial",
+   "price": "$2",
+   "license": "License text not found",
+   "size": "32 and 64 px tilesets",
+   "covers": [
+    "tentacle rising from the ground: idle, attack, death"
+   ],
+   "notes": "Weird. Teal and crimson stripes; recolour.",
+   "commission": "X @pixelitum",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ]
+  },
+  {
+   "slug": "pixelina-vines",
+   "name": "Vines Pixel Asset Pack",
+   "artist": "Pixelina",
+   "url": "https://pixelina-art.itch.io/vines-asset-pack-by-pixelina",
+   "fit": "partial",
+   "price": "$3",
+   "license": "CC0",
+   "size": "Not stated",
+   "covers": [
+    "hanging and flowering vines",
+    "sagging garland",
+    "hanging moss curtain"
+   ],
+   "notes": "Plain green; recolour to lichen. The artist openly takes commissions.",
+   "commission": "Open: pixelinaart@pm.me",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "flora"
+   ]
+  },
+  {
+   "slug": "the-nest",
+   "name": "The Nest (Adventure Below)",
+   "artist": "Zaebucca",
+   "url": "https://zaebucca.itch.io/adventure-below-the-nest",
+   "fit": "partial",
+   "price": "$2.99 (sale)",
+   "license": "Commercial OK, may be adapted",
+   "size": "16x16, top-down",
+   "covers": [
+    "husks, rib-like shells",
+    "webs, tube shells",
+    "spiky lichen"
+   ],
+   "notes": "Arthropod and fungal nest, right on the subject; drawn top-down, but many props are face-on enough to try in side view.",
+   "commission": "X and Patreon.",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ],
+   "scale": {
+    "img": "scale_the-nest.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. Nest props at our grain."
+   }
+  },
+  {
+   "slug": "warped-caves",
+   "name": "Warped Caves",
+   "artist": "ansimuz",
+   "url": "https://ansimuz.itch.io/warped-caves",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC0",
+   "size": "16 px",
+   "covers": [
+    "organic alien growths",
+    "backdrop"
+   ],
+   "notes": "Alien organic cave in pink and purple; recolour.",
+   "commission": "Cannot take commissions (comments).",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ]
+  },
+  {
+   "slug": "cavern-set",
+   "name": "Cavern Set",
+   "artist": "Draconimous",
+   "url": "https://draconimous.itch.io/cavern-set",
+   "fit": "partial",
+   "price": "Free",
+   "license": "CC BY 4.0 (credit required)",
+   "size": "32x32",
+   "covers": [
+    "very dark cave",
+    "glowing green specks",
+    "ropes, ladders, murky water"
+   ],
+   "notes": "Very dark, with glowing specks and murky water. Skip the pink crystals.",
+   "commission": "X @Draconimous13",
+   "track": "wild",
+   "themes": [
+    "decor",
+    "mine"
+   ],
+   "scale": {
+    "img": "scale_cavern-set.png",
+    "caption": "Same zoom (3x): our gecko and shroom cluster on the left, the pack at its native pixels on the right. Coarser than ours (32 px)."
+   }
+  },
+  {
+   "slug": "alien-flora",
+   "name": "Big Alien Environment: Flora",
+   "artist": "pixelShmak",
+   "url": "https://pixelshmak.itch.io/big-environment-flora-pack-pixel-art",
+   "fit": "off",
+   "price": "$1.20",
+   "license": "Commercial OK, no credit",
+   "size": "37 flora elements",
+   "covers": [
+    "bulb-studded alien growths",
+    "stones, pits"
+   ],
+   "notes": "Likely top-down.",
+   "commission": "None found.",
+   "track": "wild",
+   "themes": [
+    "decor"
+   ]
+  }
+ ],
+ "artists": [
+  {
+   "name": "Tomáš Dvořák (Floex)",
+   "url": "https://floex.cz/contact.html",
+   "where": "ahoj@floex.cz (live booking: production@indies.eu)",
+   "notes": "Composer of Machinarium, Samorost 2 and 3, Pilgrims and Phonopolis (Amanita Design); also Papetura, Shoulders of Giants and the film Je Suis Karl. No commission page or rates; takes outside game work and picks projects for kinship. Estimate for 10 tracks (25 to 35 min): roughly $25,000 to $90,000, more with live players.",
+   "kind": "music"
+  },
+  {
+   "name": "Sam (samvieten)",
+   "url": "https://samvieten.itch.io",
+   "where": "itch profile, samvieten.com, X @samvieten",
+   "notes": "Says \"open for commissions\" for pixel art. Their Biomes pack has copper ruins and glow flora at our grain: the best lead for a custom mine set."
+  },
+  {
+   "name": "sovietshnuckums",
+   "url": "https://sovietshnuckums.itch.io",
+   "where": "sovietshnuckums@gmail.com, X @SovietShnuckums",
+   "notes": "Profile says \"Contact me for commissions!\". Makes soft translucent slimes; a lead for the merging blobs."
+  },
+  {
+   "name": "Neoriceisgood",
+   "url": "https://linktr.ee/neoriceisgood",
+   "where": "Discord @Neoriceisgood, Bluesky, Ko-fi",
+   "notes": "Adds requested pieces to their packs. The best fit on style so far, so the first person to ask about a sage cave set."
+  },
+  {
+   "name": "Elthen",
+   "url": "https://www.patreon.com/elthen",
+   "where": "Patreon (patreon.com/elthen)",
+   "notes": "Has turned commission requests down in itch replies since 2020; Patreon gives three new assets a month. Best source of cheap gecko-scale animals."
+  },
+  {
+   "name": "Penusbmic",
+   "url": "https://www.patreon.com/penusbmic",
+   "where": "Patreon, Discord, X @penusbmic",
+   "notes": "Patreon lists a digital commission reward. The darkest and strangest mood of anyone here."
+  },
+  {
+   "name": "Admurin",
+   "url": "https://linktr.ee/admurin",
+   "where": "Fiverr and admurin.com, listed under Commissions",
+   "notes": "Fiverr gig shows unavailable until mid 2028; Patreon votes choose new enemies. Free boss animals (Badger, Gollux)."
+  },
+  {
+   "name": "Penzilla",
+   "url": "https://www.penzilladesign.com/commisions",
+   "where": "Commission page linked from itch",
+   "notes": "Mushroom Forest tileset ($4, 16x16) is red and cream with heavy outlines."
+  },
+  {
+   "name": "cuddle bug",
+   "url": "https://cuddle-bug.itch.io",
+   "where": "itch profile, X and Instagram @cuddleebug",
+   "notes": "Profile says commissions are open for projects big or small. Only one pack (post-apocalyptic), so the nature work is unknown."
+  },
+  {
+   "name": "Brysia",
+   "url": "https://brysiaa.itch.io/mushroom-forest-pixel-tileset-16x16px",
+   "where": "brysiart@o2.pl, Discord brysiaa",
+   "notes": "Cute outlined 16x16 mushroom forest ($2). Contact listed; commission terms not stated."
+  },
+  {
+   "name": "Hunter_Art",
+   "url": "https://www.artstation.com/rafal_hunter",
+   "where": "ArtStation",
+   "notes": "\"Open for paid freelance collaborations\". Micro mobs including a digging worm."
+  },
+  {
+   "name": "tecopena",
+   "url": "https://www.artstation.com/tecopena",
+   "where": "ArtStation",
+   "notes": "Freelance illustrator; cute muted slime."
+  },
+  {
+   "name": "Marvyra",
+   "url": "https://marvyra.itch.io",
+   "where": "marvyra.business@gmail.com",
+   "notes": "Commissions open. Ten 320x180 five-layer cave parallaxes; bright, but the right experience for custom cave backgrounds."
+  },
+  {
+   "name": "SeeOne",
+   "url": "https://seeone.itch.io",
+   "where": "Discord seeone_1, rubaltomar950@gmail.com",
+   "notes": "\"Currently open to commissions\". Makes 320x180 six-layer backgrounds (dungeon, sewer)."
+  },
+  {
+   "name": "brullov",
+   "url": "https://x.com/brullov_art",
+   "where": "X @brullov_art",
+   "notes": "Said yes to commissions in an itch comment a year ago. No relevant background pack."
+  },
+  {
+   "name": "Kimbulworks",
+   "url": "https://kimbulworks.itch.io",
+   "where": "kimbulworks@gmail.com, VGen",
+   "notes": "Commissions open. Cute enemy collections, including a worker mole."
+  },
+  {
+   "name": "Akari21",
+   "url": "https://akari21.itch.io",
+   "where": "Email on the itch page",
+   "notes": "Takes commissions by email. One-dollar monster series."
+  },
+  {
+   "name": "Pixelina",
+   "url": "https://pixelina-art.itch.io",
+   "where": "pixelinaart@pm.me",
+   "notes": "\"For commissions, freelance or special requests email me.\" Vines and moss curtains."
+  },
+  {
+   "name": "Karsiori",
+   "url": "https://www.artstation.com/karsiori",
+   "where": "ArtStation",
+   "notes": "Custom colours and small changes on request. CC0 pipes, cables and gears."
+  },
+  {
+   "name": "Josie Brechner (Visager)",
+   "url": "https://josiebrechner.com/commissions",
+   "where": "Commission page",
+   "notes": "Composer. Per-minute quotes, exclusive license, 3 revisions, FMOD/Wwise. Puzzle World is the closest style fit for the music.",
+   "kind": "music"
+  },
+  {
+   "name": "Rob Cawley (robcaw)",
+   "url": "https://robcaw.itch.io",
+   "where": "rob@robcawley.com",
+   "notes": "Composer. Dark ambient and drone; exclusive use and scoring.",
+   "kind": "music"
+  },
+  {
+   "name": "Aleksis Tristan Shaw",
+   "url": "https://aleksis-tristan-shaw.itch.io",
+   "where": "aleksisshaw@gmail.com",
+   "notes": "Composer. Dark ambient, piano, orchestral.",
+   "kind": "music"
+  },
+  {
+   "name": "Darren Curtis",
+   "url": "https://darrencurtismusic.com/faqs/",
+   "where": "Contact form",
+   "notes": "Composer. Asks for budget, length and exclusivity.",
+   "kind": "music"
+  },
+  {
+   "name": "Eric Matyas (Soundimage)",
+   "url": "https://soundimage.org",
+   "where": "ematyas@aol.com",
+   "notes": "Composer. \"Very affordably\". For scale: itch composers quote $25 to $45 a minute; experienced indie composers $200 to $1,000.",
+   "kind": "music"
+  }
+ ],
+ "gaps": {
+  "crystals": "Not found: hand-pixelled crystals with a separate glow layer or light map, and copper veins drawn into side-view rock at a good level. Both look like commission work.",
+  "bg": "Only codecrackers (pans on x and y) and Joe777 (a 320x576 shaft) are built for vertical scrolling; the climb needs tall or tiling layers. No pack shows derelict machinery without human cues (lit windows, runes, smoke), so a window vista is a commission or a repaint.",
+  "slimes": "No pack has merge, glow or light-up-on-eat animations. Nearest pieces: split (Elthen Giant Slime), overlap (PixelPinion, sovietshnuckums), engulf (tienlev swallow), eat (World of Slimes), splatter (Lin_Ain).",
+  "insects": "Nothing pairs glowing cave bugs with full side-view crawl animations on walls and ceilings. Closest: sovietshnuckums crystal bugs (tone), QuillGrafit and madameberry (glow), Redshrike (crawlers).",
+  "decor": "Not found as good human-made art: steam vents, ambient dust or particle loops, drips and puddles (Fungi Mutation's spores aside). Commission (Pixelina, Hexany Ives) or generate them."
+ },
+ "music": [
+  {
+   "title": "Katabasis, Anabasis, Machina, Memories Of Stone",
+   "composer": "Scott Buckley",
+   "url": "https://www.scottbuckley.com.au/library/katabasis-i/",
+   "fit": "strong",
+   "use": "descent, climb, machinery, ending",
+   "price": "Free (paid no-credit license exists)",
+   "license": "CC BY 4.0. Credit in the description or YouTube claims it (Smart Content ID).",
+   "length": "Through-composed tracks, not loops",
+   "listen": "https://youtu.be/hmF5P5SgaOY",
+   "notes": "Katabasis (descent) and Anabasis (ascent) from The Weight of Air: slow dark low strings, on theme by name. Machina and Computations (no-cello mix) for machinery halls; Memories Of Stone (\"deep time, ruins of a lost civilisation\") for the ending. The YouTube link is Shadows and Dust.",
+   "commission": "Contact form; nothing stated."
+  },
+  {
+   "title": "Puzzle World (Loops)",
+   "composer": "Visager (Josie Brechner)",
+   "url": "https://freemusicarchive.org/music/Visager/puzzle-world-loops",
+   "fit": "strong",
+   "use": "mid bands, flooded shafts, stairs",
+   "price": "Free",
+   "license": "Track pages say CC BY 4.0, album text says CC BY-ND: confirm in writing.",
+   "length": "20 loops, about 62 min, loopable",
+   "listen": "https://freemusicarchive.org/music/Visager/puzzle-world-loops",
+   "notes": "Atmospheric electronics and crafted recordings, \"dreamlike architecture, submerged memories\": the best match for cute first, weird second. Titles: Subterranean Stairs, Fissure Break, Sunk In, Moss Underfoot, Where is Everybody. Released June 2026.",
+   "commission": "Yes: josiebrechner.com/commissions, per-minute quote, FMOD/Wwise. Award-winning (Rift of the NecroDancer)."
+  },
+  {
+   "title": "Ossuary, Shadowlands, Industrial Music Box, Brittle Rille",
+   "composer": "Kevin MacLeod",
+   "url": "https://incompetech.com/music/royalty-free/",
+   "fit": "strong",
+   "use": "deep ambient, machinery, nests",
+   "price": "Free (paid no-credit license)",
+   "license": "CC BY 4.0. Pre-registered in Content ID since 2026-04: streamers must credit and dispute.",
+   "length": "Tracks of 2 to 4 min, not loops",
+   "listen": "https://youtu.be/5XWfQ2G6sbo",
+   "notes": "Ossuary 1 and 5: slow drones with an ethereal line. Shadowlands 3 \"Machine\" (part pipe organ, part broken pipe organ) and 5 \"Antechamber\" (\"the alien machine that sustains our life is slowly breaking down\"). Industrial Music Box and Brittle Rille for nests. Audition the Shadowlands for horror creep. Link: Ossuary 1.",
+   "commission": "No."
+  },
+  {
+   "title": "Cylinders",
+   "composer": "Chris Zabriskie",
+   "url": "https://chriszabriskie.com/cylinders/",
+   "fit": "strong",
+   "use": "nests, quiet climb",
+   "price": "Free",
+   "license": "CC BY 4.0, monetized use OK; \"if you receive a claim, it did not come from me\".",
+   "length": "9 tracks, 37 min",
+   "listen": "https://www.youtube.com/watch?v=ye6fxEeZm2g",
+   "notes": "Minimal, melancholy synth and piano. Cylinder Seven (8:52) is a long bed for a rest point.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Erased Places",
+   "composer": "drmseq",
+   "url": "https://drmseq.itch.io/erased-places",
+   "fit": "strong",
+   "use": "deep bands, cold smelters",
+   "price": "Free (name your price)",
+   "license": "Commercial games and streams OK, credit optional, no Content ID registration.",
+   "length": "10 tracks, each a seamless loop plus full version",
+   "listen": "https://soundcloud.com/drmseq/erased-places-preview",
+   "notes": "Slow drones, cold synth, wind and static, no beats or melodies, recorded live on a modular synth. New (15 days old) and the page has an AI-assisted graphics tag, so the no-AI audio claim rests on the declaration.",
+   "commission": "None stated."
+  },
+  {
+   "title": "Darkeyes Ambient",
+   "composer": "robcaw (Rob Cawley)",
+   "url": "https://robcaw.itch.io/darkeyes-ambient",
+   "fit": "strong",
+   "use": "deepest bands",
+   "price": "Free (name your price)",
+   "license": "Unlimited commercial use, looping allowed, streamers may monetize, no Content ID; credit appreciated.",
+   "length": "7 tracks, 47 min, 5 to 9 min beds",
+   "listen": "https://robcaw.itch.io/darkeyes-ambient",
+   "notes": "Dark ambient and drone for exploration and slow scenes. No preview on the page.",
+   "commission": "Yes: rob@robcawley.com (exclusive use and scoring)."
+  },
+  {
+   "title": "Dark/Ominous and Puzzle music",
+   "composer": "Eric Matyas (Soundimage)",
+   "url": "https://soundimage.org/dark-ominous/",
+   "fit": "partial",
+   "use": "underground beds, weird-cute moments",
+   "price": "Free with in-game credit; $30 per track without",
+   "license": "Credit \"Music by Eric Matyas www.soundimage.org\" inside the game.",
+   "length": "Many tracks; OGG versions made as game loops",
+   "listen": "https://soundimage.org/dark-ominous/",
+   "notes": "Secret Tunnels, The Darkness Below, Strangeness, Drafty Places; for the cute side Mysterious Puzzle and Puzzle Dreams 2. States \"No A.I., not now, not ever\".",
+   "commission": "Yes, \"very affordably\": ematyas@aol.com"
+  },
+  {
+   "title": "Solo Music Box and Remixes",
+   "composer": "Niko Chantzis",
+   "url": "https://nikochantzis.itch.io/solo-music-box-and-remixes",
+   "fit": "partial",
+   "use": "nests, makers' machines",
+   "price": "$19.99",
+   "license": "Not stated: ask before buying.",
+   "length": "18 WAV loops (music box, remixes, stems)",
+   "listen": "https://nikochantzis.itch.io/solo-music-box-and-remixes",
+   "notes": "Music box with ethereal synth remixes; a music box can read as one of the makers' machines. Tagged Creepy, so audition.",
+   "commission": "None stated."
+  },
+  {
+   "title": "Free ambient library",
+   "composer": "Darren Curtis",
+   "url": "https://darrencurtismusic.com/ambient",
+   "fit": "partial",
+   "use": "deep water, factory, ending",
+   "price": "Free",
+   "license": "Commercial games OK, credit \"(Track) By Darren Curtis\"; not in Content ID; signed release included.",
+   "length": "Single tracks",
+   "listen": "https://www.youtube.com/watch?v=S7_GC9VCG3w",
+   "notes": "Sounds of the Deep, Dark Factory (linked), Navigating the Hive, Transcending Consciousness for the ending. \"No AI Used!\"",
+   "commission": "Yes, via the contact form."
+  },
+  {
+   "title": "Ethereal Ambiance and Dark Ambient Soundscapes",
+   "composer": "Aleksis Tristan Shaw",
+   "url": "https://aleksis-tristan-shaw.itch.io/ethereal-ambiance",
+   "fit": "partial",
+   "use": "nests, ending; deep (audition)",
+   "price": "$2 and $7",
+   "license": "Not on the pages; ask (a snippet said CC BY 4.0).",
+   "length": "10 loops each, 26 and 38 min",
+   "listen": "https://aleksis-tristan-shaw.itch.io/ethereal-ambiance",
+   "notes": "Soft pads for save rooms and credits; the dark pack leans horror (\"hellscape\"), so audition.",
+   "commission": "Yes: aleksisshaw@gmail.com"
+  },
+  {
+   "title": "Futuristic Atmospheres Vol 1",
+   "composer": "Joel Steudler",
+   "url": "https://joelsteudler.itch.io/futuristic-atmospheres-vol-1",
+   "fit": "partial",
+   "use": "machinery halls",
+   "price": "$12.99",
+   "license": "Commercial games OK per comments; no resale, no Content ID.",
+   "length": "15 soundscapes",
+   "listen": "https://joelsteudler.itch.io/futuristic-atmospheres-vol-1",
+   "notes": "\"Abandoned spaceships\". No preview on the page.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "The Factory: Industrial Soundscapes",
+   "composer": "Audible Dread",
+   "url": "https://audible-dread.itch.io/the-factory-industrial-soundscapes",
+   "fit": "partial",
+   "use": "sorting halls, smelters",
+   "price": "$6.23 (sale)",
+   "license": "Commercial OK, no credit.",
+   "length": "20 tracks",
+   "listen": "https://audible-dread.itch.io/the-factory-industrial-soundscapes",
+   "notes": "\"The machines of the long abandoned factory still echo here.\" Part ambience, part music.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Spectral Dusk",
+   "composer": "Carlos Chowell",
+   "url": "https://carloschowell.itch.io/spectral-dusk",
+   "fit": "partial",
+   "use": "hum layers by height",
+   "price": "Free (name your price)",
+   "license": "CC BY 4.0 (author in comments).",
+   "length": "10 pieces x 3 intensities, 40 loops",
+   "listen": "https://youtube.com/playlist?list=PLT3_VY5qE7WgUXPfqVvbLBZMF3T-OLdg1",
+   "notes": "Calm, mid and high intensity of each piece: layers that could rise with the hum as the gecko climbs. One commenter had WAVs that would not play on Windows.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Ambient Game Music",
+   "composer": "Glitch Labs",
+   "url": "https://glitchlabs.itch.io/ambient-game-music",
+   "fit": "partial",
+   "use": "deep bands",
+   "price": "$9.99 (sale)",
+   "license": "\"Use them freely in your game projects\".",
+   "length": "4 albums",
+   "listen": "https://glitchlabs.itch.io/ambient-game-music",
+   "notes": "Modular ambient and drone; no previews (better quality on Bandcamp as modularindustries).",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Lullaby (Cozy Fears OST)",
+   "composer": "Aila Scott",
+   "url": "https://ailascott.itch.io/lullaby-free-to-use-loops-from-cozy-fears-ost",
+   "fit": "partial",
+   "use": "a nest",
+   "price": "Free",
+   "license": "CC BY 4.0, credit \"Lullaby by Aila Scott\".",
+   "length": "One looping music box lullaby",
+   "listen": "https://ailascott.itch.io/lullaby-free-to-use-loops-from-cozy-fears-ost",
+   "notes": "A music box lullaby for a rest point.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Yet Another Free Music Pack",
+   "composer": "Clement Panchout",
+   "url": "https://clement-panchout.itch.io/yet-another-free-music-pack",
+   "fit": "partial",
+   "use": "exploration, nests",
+   "price": "Free",
+   "license": "CC BY 4.0, \"100% safe for YouTube, no claims\".",
+   "length": "49 tracks",
+   "listen": "https://clement-panchout.itch.io/yet-another-free-music-pack",
+   "notes": "Picks: Tiny World Insects (Layer Exploration), Contemplative, A look at what has been lost.",
+   "commission": "panchoutclement@gmail.com"
+  },
+  {
+   "title": "Deep Humidity; The Seeing Pool",
+   "composer": "TinyWorlds; Umplix (OpenGameArt)",
+   "url": "https://opengameart.org/content/deep-humidity",
+   "fit": "partial",
+   "use": "cave ambient, pools",
+   "price": "Free",
+   "license": "CC0, no credit.",
+   "length": "Single pieces",
+   "listen": "https://opengameart.org/content/deep-humidity",
+   "notes": "Cave ambient tagged cave and mine (2014); The Seeing Pool for underground pools, with and without SFX.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Emotive Ambience Licensing Pack",
+   "composer": "Ketsa",
+   "url": "https://freemusicarchive.org/music/independent-music-licensing-collective-imlc/emotive-ambience-licensing-pack-ketsa",
+   "fit": "partial",
+   "use": "general ambient",
+   "price": "£80 for commercial use",
+   "license": "CC BY-NC-ND free; commercial needs the IMLC pack license.",
+   "length": "10 tracks, 23 min",
+   "listen": "https://freemusicarchive.org/music/independent-music-licensing-collective-imlc/emotive-ambience-licensing-pack-ketsa",
+   "notes": "Emotive ambient; free only for non-commercial use.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Ambient Video Game Music: Caves",
+   "composer": "PhatPhrogStudios",
+   "url": "https://phatphrogstudios.itch.io/ambient-video-game-music-caves",
+   "fit": "partial",
+   "use": "caves",
+   "price": "$15",
+   "license": "Not stated; ask.",
+   "length": "10 tracks plus one-hour loops",
+   "listen": "https://phatphrogstudios.itch.io/ambient-video-game-music-caves",
+   "notes": "Cave-themed; no preview or license text on the page.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Cave Ambience (sound, not music)",
+   "composer": "Gravity Sound",
+   "url": "https://gravity-sound.itch.io/cave-ambience",
+   "fit": "partial",
+   "use": "ambience bed",
+   "price": "$9.99",
+   "license": "Not stated.",
+   "length": "27 one-minute seamless loops",
+   "listen": "https://soundcloud.com/gravitysoundbeats/sets/cave-ambience-pack-1",
+   "notes": "Room tone and drips to lay under the music.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Caves and Dungeons",
+   "composer": "Sonus Novum",
+   "url": "https://sonusnovum.itch.io/caves-and-dungeons",
+   "fit": "off",
+   "use": "dungeon",
+   "price": "Free",
+   "license": "\"Completely free to use however you wish\".",
+   "length": "14 loops",
+   "listen": "https://sonusnovum.itch.io/caves-and-dungeons",
+   "notes": "Fantasy dungeon flavour; no preview.",
+   "commission": "Not stated."
+  },
+  {
+   "title": "Nostalgic Music Box Pack",
+   "composer": "VGMesque",
+   "url": "https://vgmesque.itch.io/nostalgic-music-box-pack",
+   "fit": "off",
+   "use": "nests",
+   "price": "$5",
+   "license": "Not stated.",
+   "length": "8 loops, 10.5 min",
+   "listen": "https://vgmesque.itch.io/nostalgic-music-box-pack",
+   "notes": "No AI disclosure and no license on the page.",
+   "commission": "Not stated."
+  }
+ ]
+}
