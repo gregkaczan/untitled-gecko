@@ -24,6 +24,7 @@ const SceneBuilder = preload("res://tests/scene_builder.gd")
 const OUT := "res://runs/save"
 const LEVEL := "savetest"
 const MASK_GROW := 4           # Cells a settling cell's exclusion reaches
+const WATER_TINT := 16         # Cells under the water its hue reaches (render_water.glsl WATER_UP)
 const SETTLE := 90             # Ticks the world runs after the edits, and again after the load
 const VIEW := Vector2(960.0, 700.0)   # The camera for the shots: the island and the cave floor under it
 const ISLAND := Vector2(940.0, 650.0)
@@ -327,6 +328,21 @@ func _check_pixels(a: Dictionary, b: Dictionary) -> void:
 				var yy := y + dy
 				if yy < 0 or yy >= H:
 					continue
+				for dx in range(-MASK_GROW, MASK_GROW + 1):
+					var xx := x + dx
+					if xx >= 0 and xx < W:
+						grown[yy * W + xx] = 1
+	# Under the water the rock takes the water's hue as far down as
+	# render_water.glsl's water_above looks, so it moves with the
+	# water's top.
+	for i in n:
+		if _cls(a.cells, i) == 1 or _cls(b.cells, i) == 1:
+			var x := i % W
+			var y := i / W
+			for dy in range(1, WATER_TINT + 1):
+				var yy := y + dy
+				if yy >= H:
+					break
 				for dx in range(-MASK_GROW, MASK_GROW + 1):
 					var xx := x + dx
 					if xx >= 0 and xx < W:
