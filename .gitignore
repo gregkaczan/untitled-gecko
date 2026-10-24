@@ -10,3 +10,16 @@ levels/**/*.import
 
 # Steam capture frames: large, kept out of git.
 /steam/capture/
+
+# The art hunt: the downloaded packs and the images scraped for the page are
+# other people's files, kept here and never published. The page (index.html)
+# is built from data.json by tools/art_hunt_build.py.
+/art/
+/docs/art_hunt/assets/
+/docs/art_hunt/img/
+/docs/art_hunt/ref/
+/docs/art_hunt/cuts/
+/docs/art_hunt/index.html
+
+# Steam login, for the wizard only.
+/steam/steam.env
