@@ -57,6 +57,7 @@ const DRAG_COL := Color(1.0, 0.55, 0.2)
 const PREV_COL := Color(0.4, 0.6, 1.0, 0.4)
 const NEXT_COL := Color(1.0, 0.6, 0.3, 0.4)
 const EYE_COL := Color(0.1, 0.1, 0.12)
+const JAW_COL := Color(0.80, 0.42, 0.48)   # The chin's handle, the tongue's pink
 const POINT_NAMES := ["head", "neck (front hip)", "chest", "belly (back hip)", "rump", "tail root", "tail", "tail", "tail", "tail tip"]
 const FOOT_NAMES := ["front near foot", "front far foot", "back near foot", "back far foot"]
 
@@ -73,7 +74,8 @@ const CHEAT := [
 		["Ctrl+drag", "the whole pose"],
 		["drag a foot", "where it is drawn (its anchor sits under)"],
 		["drag the look", "the orange handle off the head"],
-		["drag the eye", "the dark handle on the head, kept on its disc; Eye to look hands it back to the look"]]],
+		["drag the eye", "the dark handle on the head, kept on its disc; Eye to look hands it back to the look"],
+		["drag the chin", "the pink handle under the snout opens and shuts the jaw (Jaw open)"]]],
 	["Play", [
 		["Space, Play", "the frames blended; Loop, Reverse (the curl), Speed"],
 		["slider", "scrubs; a click in the world edits again"],
@@ -171,6 +173,7 @@ var _dur_spin: SpinBox
 var _tension_spin: SpinBox
 var _bias_spin: SpinBox
 var _lid_spin: SpinBox
+var _jaw_spin: SpinBox
 var _lock_c: CheckButton
 var _onion_c: CheckButton
 var _zoom_label: Label
@@ -456,6 +459,14 @@ func _set_lid(v: float) -> void:
 	_changed()
 
 
+func _set_jaw(v: float) -> void:
+	if absf(float(_frame().get("jaw", PoseAnim.JAW_SHUT)) - v) < 0.0005:
+		return
+	_snapshot()
+	_frame().jaw = v
+	_changed()
+
+
 # The selected frame's tension and bias on every frame.
 func _flow_all() -> void:
 	var f := _frame()
@@ -608,6 +619,10 @@ func _pick(m: Vector2) -> Dictionary:
 	if d < best_d * 0.8:
 		best = {"kind": "eye", "i": 0}
 		best_d = d
+	d = m.distance_to(_to_world(_chin(f)))
+	if d < best_d * 0.8:
+		best = {"kind": "jaw", "i": 0}
+		best_d = d
 	d = m.distance_to(_to_world(pts[0] + look * LOOK_HANDLE))
 	if d < best_d:
 		best = {"kind": "look", "i": 0}
@@ -626,6 +641,13 @@ func _pick(m: Vector2) -> Dictionary:
 	return best
 
 
+# The chin's handle, in the gecko's frame: the lower jaw's tip.
+func _chin(f: Dictionary) -> Vector2:
+	var pts: PackedVector2Array = f.points
+	var lk: Vector2 = f.look
+	return pts[0] + PoseAnim.jaw_hinge(lk) + PoseAnim.jaw_dir(lk, float(f.get("jaw", PoseAnim.JAW_SHUT))) * PoseAnim.JAW_LEN
+
+
 func _handle_name(h: Dictionary) -> String:
 	if h.is_empty():
 		return ""
@@ -638,6 +660,8 @@ func _handle_name(h: Dictionary) -> String:
 			return "the look" + ("" if bool(_frame().get("eye_free", false)) else " (the eye rides with it)")
 		"eye":
 			return "the eye, on the head's disc"
+		"jaw":
+			return "the chin: drag it down to open the jaw"
 	return "the whole pose"
 
 
@@ -693,6 +717,11 @@ func _drag_to(m: Vector2, shift: bool) -> void:
 			var pts: PackedVector2Array = f.points
 			f.eye = (local - pts[0]).limit_length(PoseAnim.EYE_MAX)
 			f.eye_free = true
+		"jaw":
+			var pts: PackedVector2Array = f.points
+			var lk: Vector2 = f.look
+			f.jaw = PoseAnim.jaw_for(lk, local - pts[0] - PoseAnim.jaw_hinge(lk))
+			_jaw_spin.set_value_no_signal(float(f.jaw))
 		"body":
 			PoseAnim.moved(f, local - _drag_last)
 			_drag_last = local
@@ -795,6 +824,8 @@ func _draw_overlay() -> void:
 	c.draw_arc(head, PoseAnim.EYE_MAX, 0.0, TAU, 24, Color(EYE_COL, 0.35), w)
 	c.draw_circle(ew, hr * 0.9, HOVER_COL if _is(_hover, "eye", 0) else Color(0.95, 0.93, 0.85))
 	c.draw_circle(ew, hr * 0.55, DRAG_COL if (_is(_hover, "eye", 0) and _drag_kind != "") else EYE_COL)
+	var cw := _to_world(_chin(_shown))
+	c.draw_circle(cw, hr * 0.7, HOVER_COL if _is(_hover, "jaw", 0) else JAW_COL)
 	var lk := head + look * LOOK_HANDLE
 	var lcol := LOOK_COL
 	if _is(_hover, "look", 0):
@@ -1085,6 +1116,7 @@ func _refresh_frame_card() -> void:
 	_tension_spin.set_value_no_signal(float(f.tension))
 	_bias_spin.set_value_no_signal(float(f.get("bias", 0.0)))
 	_lid_spin.set_value_no_signal(float(f.get("lid", PoseAnim.LID_OPEN)))
+	_jaw_spin.set_value_no_signal(float(f.get("jaw", PoseAnim.JAW_SHUT)))
 
 
 # --- Building the panel ---
@@ -1146,6 +1178,7 @@ func _build_panel() -> void:
 	all_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fc.add_child(all_b)
 	_lid_spin = _spin_row(fc, "Eye open: 0 shut (asleep), 1 open", 0.0, 1.0, 0.1, _set_lid)
+	_jaw_spin = _spin_row(fc, "Jaw open: 0 shut, 1 the yawn's widest", 0.0, 1.0, 0.05, _set_jaw)
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 4)

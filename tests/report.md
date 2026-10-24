@@ -1,13 +1,11 @@
 # Movement suite report
 
-Runs: 206, passing: 202, failing: 4. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
+Runs: 206, passing: 204, failing: 2. Columns are event counts; * marks informational metrics; travel is the body's path length in px, a check that the scene was exercised.
 
 | run | result | draw | head | chain | bunch | lag | dance | upflip | uposc | state | stall | ftog | fslide | fjump | sink | float | cjerk | shake | tube | body* | stuck* | creep* | settle* | travel | outcome |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | clutch_pit:cl_pit | FAIL | 1 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 4 |  |  |  | 628 | ok |
-| crumble_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 661 | ends at (1085, 387), expected x 880..1130 y 700..800 |
 | dig_45:dig_45 | FAIL |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 186 | never reaches x 0..1920 y 900..1080 |
-| moss_wall:climb_wall | FAIL |  |  |  |  |  |  |  |  | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  | 554 | ok |
 | ball_hang:ball_round | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 7 |  |  | 816 | ok |
 | ball_hang:bounce | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 464 | ok |
 | boulder_120:boulder_big | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1385 | ok |
@@ -47,6 +45,7 @@ Runs: 206, passing: 202, failing: 4. Columns are event counts; * marks informati
 | crumb_perch_8_790:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 415 | ok |
 | crumb_perch_8_816:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 308 | ok |
 | crumb_perch_8_850:leap_still | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 325 | ok |
+| crumble_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 837 | ok |
 | dig_level_wall:dig_level | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 335 | ok |
 | dig_shaft:dig_shaft | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 215 | ok |
 | dig_turns:dig_turns | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 2 | 1 | 520 | ok |
@@ -100,6 +99,7 @@ Runs: 206, passing: 202, failing: 4. Columns are event counts; * marks informati
 | jump_flat:jump_up | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 124 | ok |
 | jump_wall:jump_right | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 213 | ok |
 | moss_bitten:bite_climb | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 652 | ok |
+| moss_wall:climb_wall | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1 | 579 | ok |
 | notch_1:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1165 | ok |
 | notch_2:traverse | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 1166 | ok |
 | notch_climb:bite_climb | pass |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | 652 | ok |
@@ -216,12 +216,6 @@ Runs: 206, passing: 202, failing: 4. Columns are event counts; * marks informati
 ### clutch_pit:cl_pit
 - draw_jump: 1 events, worst 4.09: t86 (4.09)
 
-### crumble_wall:climb_wall
-- outcome: ends at (1085, 387), expected x 880..1130 y 700..800
-
 ### dig_45:dig_45
 - outcome: never reaches x 0..1920 y 900..1080
-
-### moss_wall:climb_wall
-- state_flicker: 2 events, worst 8: t225 (8), t300 (8)
 

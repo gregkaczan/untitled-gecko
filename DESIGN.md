@@ -186,20 +186,55 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   point in rock is no longer in a passage outside a squeeze.
 - Input is projected onto the surface tangent: the key pressed moves the
   gecko that way on screen. Jump pushes away along the normal.
+- Falling onto rock, the front feet reach for it. The arc is run on a
+  tick at a time from the snout (`_update_touch`); within 0.2 s of the
+  rock it will meet, the front legs reach out under the chin, 14 px
+  below the snout toward that rock and a little ahead of it, and in
+  the last 0.1 s come down onto the spot just past the snout's touch
+  point. Aimed at the spot alone, a leg in a dive pointed down the
+  body line and hid behind the head; stretched along the rock, it came
+  out over the head, the hip being above the snout. A front
+  foot within 5 px of rock at the landing plants where it touched, so
+  the front feet are down first; the rest are set under the body as
+  before. Only a slide of more than 20 px/s along the surface turns
+  the gecko at a landing: met head on, a wall's tilt left a few px/s
+  either way and a facing picked at random, which flipped back a few
+  ticks on with the tail whipping round (clutch_leap). A blocked fall
+  leaves a rounding's worth of speed into the rock; read as going in,
+  it held the landing off a tick with the body already stopped on the
+  floor (LAND_EPS). A jump with a throw's arc (faster down than up, a
+  hang at the top), a push along the surface, air leg poses and a
+  head flare were tried on 2026-10-24 and taken out: the hang read as
+  gliding and the flare as the body correcting itself in the air.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
   planted. Fewer than two for 0.2 s and the gecko drops, unless the
   surface is right under it, in which case the feet step again. An
   unplanted foot closes on its rest spot at a set speed, never in one
   snap, and a stretched leg keeps enough blobs along it to stay one limb.
+  Of a pair due to step, the one farther from the spot goes first: the
+  step threshold, halved while the diagonal foot steps, let a front
+  foot step twice running while its partner was dragged out behind the
+  hip (after a landing, 23 px).
 - Chewing is eating: a bite every 0.4 s, the mouth opening through the
   cycle and the bite (a circle of about 11 px, a little off and a
   little different each time) landing as it shuts, toward the cursor.
-  A bite only parts the lips (the mouth mark opens to 3 px): the snout
-  stays put and no jaw drops, so the head keeps its shape through the
-  chew. The yawn's lifted snout and dropped jaw, used for the bite at
-  first, swelled the head every 0.4 s, which read as a swallow's
-  bulge; the gecko chews rock, it does not swallow it, and the bulge
-  down the body is the tongue's swallow alone.
+  A bite opens the jaw only to CHEW_JAW (0.3): the lips part, the
+  snout stays put and the head keeps its shape through the chew. A
+  jaw that dropped as the yawn's does, used for the bite at first,
+  swelled the head every 0.4 s, which read as a swallow's bulge; the
+  gecko chews rock, it does not swallow it, and the bulge down the
+  body is the tongue's swallow alone.
+- The mouth is one hinged jaw (`_face`, PoseAnim's jaw geometry): 0
+  shut, 1 the yawn's widest, the most any of its users asks for (a
+  bite 0.3, the tongue out 0.45, a swallow and the yawn 1, a pose its
+  own `jaw`). The lower jaw swings down from a hinge under the eye
+  by up to 0.6 rad; the dark of the mouth opens as a wedge between it
+  and the snout, and once the mouth gapes 2 px the pink tongue lies on
+  its floor (along the middle and out between the lips while the
+  tongue is out). Past a bite's opening the snout lifts too, up to
+  2 px. The tongue is drawn from between the jaws (`_mouth_drawn`); its
+  reach and the swallow still use `_mouth`, so the tongue's play is as
+  it was.
   With rock in reach of the bites the walk slows to 45 px/s, so a
   tunnel is eaten through at about a third of walking speed, slower
   through hard rock (each bite takes two fifths of it) and not at all
@@ -514,10 +549,9 @@ yawn, so none repeats for long and all turn up. The head keeps
 following the cursor meanwhile. A blink shuts the eye to its lower row
 for a tenth of a second. A lick runs the tongue from the mouth round
 the snout's tip to the eye (shut while the tongue is on it) and back,
-as 2 px marks along a curve with a 4 px tip. A yawn lifts the snout,
-drops a jaw blob below it and opens the dark inside of the mouth
-between them, quick to open, held a quarter second, quick to close,
-the eye shut while it gapes. A key or a button interrupts any of them
+as 2 px marks along a curve with a 4 px tip. A yawn opens the jaw all
+the way, quick to open, held a quarter second, quick to close, the eye
+shut while it gapes. A key or a button interrupts any of them
 at its closing phase. The face has its own random generator, seeded
 from `GECKO_SEED`, so the suite's seeded bites and steps are untouched
 and a seeded run repeats.
@@ -587,7 +621,8 @@ version a minute while there are edits (the last ten kept) and on
 leaving, and Save writes a saved version and the head
 `poses/<name>.json`, what the game plays; New and Load as the map
 editor's. The file named `wake` is the wake-up; `GECKO_POSE=name`
-opens another. Ctrl+Z and Ctrl+Y undo and redo, ? lists the keys.
+opens another. A
+frame's jaw is the Jaw open row or the pink handle at the chin. Ctrl+Z and Ctrl+Y undo and redo, ? lists the keys.
 
 ## The first cave
 

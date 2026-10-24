@@ -52,7 +52,10 @@ const CHEW_R := 11.0           # Mean radius of one bite; each bite varies aroun
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const CHEW_PERIOD := 0.4       # Seconds per bite: the jaw opens through the cycle and the bite lands as it shuts
 const CHEW_SNAP := 0.25        # The last part of the cycle, over which the jaw shuts
-const CHEW_MOUTH := 3.0        # Px the mouth mark opens per bite: the lips part, the head keeps its shape
+const CHEW_JAW := 0.3          # The jaw at a bite's widest (PoseAnim jaw): the lips part, the head keeps its shape
+const TONGUE_JAW := 0.45       # The jaw while the tongue is out: the mouth a little open round it
+const TONGUE_SHOW := 2.0       # Px the mouth must gape before the tongue on its floor shows
+const TONGUE_THICK := 2.0      # Px deep the tongue lies on the floor of the mouth at most
 const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
 # The surfaces that will not be held (_surface_rules): off a floor
 # (up.y above SLICK_UP) a planted foot on moss drops the gecko, a
@@ -94,6 +97,15 @@ const BRIDGE_HOLD := 4         # Ticks the gap test may fail before bridging end
 const BRIDGE_LEVEL := 6.0      # Px the far side of a bridged gap may sit below ride height
 const JUMP_SPEED := 340.0
 const GRAVITY := 900.0
+const LAND_FACE_MIN := 20.0    # Px/s along the surface at a landing that turns the gecko that way
+const LAND_EPS := 0.01         # Px/s into the surface still read as not going in (rounding)
+const LAND_PLANT := 5.0        # Px from rock a front foot may be at touchdown to plant where it is
+const REACH_TIME := 0.2        # Seconds before the snout meets rock that the front feet start reaching for it
+const REACH_LEG := 24.0        # Farthest a front foot reaches from its hip for the rock
+const REACH_AHEAD := 4.0       # Px past the snout's touch point, along the fall, the front feet reach for
+const REACH_PLANT := 0.1       # Seconds before the snout meets rock that the stretched front feet come down onto it
+const REACH_EASE := 50.0       # Per-second rate a reaching front foot closes on its mark (an idle air foot's is 30)
+const REACH_BELOW := 14.0      # Px under the snout, toward the rock it will meet, the stretched front feet reach for
 const AIR_ACCEL := 600.0
 const AIR_MAX := 220.0
 const NO_CLING_TIME := 0.18    # Grace after a jump or a drop before clinging again
@@ -219,6 +231,7 @@ const BLINK_TICKS := [2, 6, 2]   # Lid closing, shut, opening
 const LICK_TICKS := [6, 6, 6]    # Tongue out to the eye, on it, back
 const YAWN_TICKS := [5, 16, 4]   # Mouth opening, agape, closing
 const YAWN_GAPE := 6.0           # Px the jaw drops at the widest
+const SNOUT_LIFT := 2.0          # Px the snout lifts at jaw 1, from a bite's opening on
 const LICK_SAMPLES := 20         # Marks along the tongue's curve at full stretch
 const THIN_RELEASE := 1.0        # Most a point whose drawn radius is still growing back from a thinning is pushed off rock in one tick
 const SETTLE_REV := 2          # Reversals of a drawn point's or a foot's motion at rest before the body is held still (the settle latch): a rattle may go back and forth twice
@@ -275,6 +288,10 @@ var _pose_base := Vector2.ZERO # The frame the poses are set in: the surface poi
 var _pose_up := Vector2.UP
 var _pose_facing := 1.0
 var _pose_lid := 1.0           # How far the pose shown has the eye open: 0 shut (asleep) to 1 (PoseAnim lid)
+var _pose_jaw := 0.0           # How far the pose shown has the jaw open (PoseAnim jaw)
+var _jaw_tongue := 0.0         # The tongue's share of the jaw, eased open and shut with it
+var _jaw_now := 0.0            # The jaw as last drawn (_face)
+var _touch := {}               # Where the snout will meet rock: {t (s), at (the rock), n, fwd}, empty when not falling onto anything near
 var _pose_eye := Vector2.ZERO  # The pose's eye as a world offset from the head (a pose places it; otherwise it rides with the look)
 var _pose_eye_on := false
 var jump_override := false
@@ -462,6 +479,8 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_gulp = 0.0
 	_gape = 0.0
 	_gape_chew = false
+	_jaw_tongue = 0.0
+	_touch = {}
 	_agape = 0.0
 	_chew_t = 0.0
 	_digging = false
@@ -1209,7 +1228,10 @@ func _update_airborne(inp: Vector2, dt: float) -> void:
 		var into := vel.dot(n)
 		if into < 0.0:
 			vel -= n * into
-	if no_cling <= 0.0 and p.dist <= RIDE_H + 2.0 and vel.dot(n) <= 0.0:
+	# Blocked, the speed into the rock was taken off above, which can
+	# leave a rounding's worth going in; read as going in, the body
+	# stopped on the floor a tick before it landed.
+	if no_cling <= 0.0 and p.dist <= RIDE_H + 2.0 and vel.dot(n) <= LAND_EPS:
 		_land(n)
 		return
 	var min_d := RIDE_H * 0.8
@@ -1586,6 +1608,10 @@ func _update_gape(dt: float) -> void:
 		if want or _gape <= 0.0:
 			_gape_chew = false
 	_gape_want = false
+	# The tongue opens the mouth as fast as a swallow does and shuts it
+	# once the tip is home.
+	var tj := TONGUE_JAW if tongue_out else 0.0
+	_jaw_tongue = move_toward(_jaw_tongue, tj, TONGUE_JAW / (EAT_OPEN if tongue_out else EAT_CLOSE) * dt)
 
 
 # Reeling in: the body flies at the anchor and clings where it arrives.
@@ -1628,14 +1654,28 @@ func _land(n: Vector2) -> void:
 	_end_squeeze()
 	# Feet re-seat under the body at once; their airborne positions were
 	# relative to the old up and would stick out until the first step.
+	# A front foot that reached the rock (_reach_spot) plants where it
+	# touched, so the front feet are down first. A foot is drawn
+	# FOOT_LIFT over its anchor once clinging.
 	var t := _tangent()
 	for f in feet:
 		f.planted = false
 		f.stepping = false
-		f.pos = chain.points[f.hip] + t * f.end * _chain_facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
 		f.up = up
+		var hip: Vector2 = chain.points[f.hip]
+		var q: Dictionary = map.nearest_solid(f.pos - up * FOOT_LIFT, LAND_PLANT) if f.end > 0.0 else {"found": false}
+		if q.found and not map.is_solid_world(f.pos) and q.nearest.distance_to(hip) < MAX_LEG and not map.thorn_world(q.nearest):
+			f.planted = true
+			f.anchor = q.nearest
+			f.pos = q.nearest
+		else:
+			f.pos = hip + t * f.end * _chain_facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
+	_touch = {}
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
-	if absf(speed_along) > 1.0:
+	# Only a real slide along the surface turns the gecko: met head on,
+	# a wall's tilt left a few px/s either way, and the facing it picked
+	# at random flipped back a few ticks on, the tail whipping round.
+	if absf(speed_along) > LAND_FACE_MIN:
 		facing = signf(speed_along)
 	_chain_facing = facing
 	vel = Vector2.ZERO
@@ -3100,6 +3140,8 @@ func _diagonal(f: Foot) -> Foot:
 func _update_feet(dt: float) -> void:
 	var tangent := _tangent()
 	_switch_hold = maxi(_switch_hold - 1, 0)
+	if not clinging:
+		_update_touch()
 	var stepping := 0
 	for f in feet:
 		if f.stepping:
@@ -3153,10 +3195,18 @@ func _update_feet(dt: float) -> void:
 		if not clinging:
 			f.planted = false
 			var hang := hip - up * 6.0 + tangent * f.end * _chain_facing * 4.0
+			# Falling onto rock, the front feet reach out past the snout
+			# for it over the last REACH_TIME.
+			# Reaching, the foot keeps close to its mark, so it is on the
+			# rock when the body lands and plants there.
+			var ease := 30.0
+			if f.end > 0.0 and not _touch.is_empty():
+				hang = hang.lerp(_reach_spot(f, hip), clampf(1.0 - float(_touch.t) / REACH_TIME, 0.0, 1.0))
+				ease = REACH_EASE
 			if f.pos.distance_to(hang) > 20.0:
 				f.pos = hang
 			else:
-				f.pos = f.pos.lerp(hang, minf(1.0, 30.0 * dt))
+				f.pos = f.pos.lerp(hang, minf(1.0, ease * dt))
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
 		var rest := hip + tangent * (f.end * _chain_facing * FOOT_SPREAD + lead) - up * RIDE_H
@@ -3178,6 +3228,13 @@ func _update_feet(dt: float) -> void:
 		var threshold := STEP_LEN * (0.5 if _diagonal(f).stepping else 1.0)
 		if f.planted and f.anchor.distance_to(q.nearest) <= threshold:
 			continue
+		# The foot of the pair left farther from the spot steps first: the
+		# threshold halved while the diagonal steps let a front foot step
+		# twice running while its partner, planted, was dragged out behind
+		# the hip (after a landing, 23 px).
+		var g := _partner(f)
+		if f.planted and g.planted and g.anchor.distance_to(q.nearest) > f.anchor.distance_to(q.nearest):
+			continue
 		if _partner(f).stepping or (f.planted and stepping >= 2):
 			# This foot waits its turn in the trot. One that is not planted
 			# does not hang where it was left (a cliff top the body has
@@ -3192,6 +3249,66 @@ func _update_feet(dt: float) -> void:
 		f.step_t = 0.0
 		f.up = up
 		stepping += 1
+
+
+# Where a front foot reaches as the fall nears rock: under the chin,
+# toward the rock it will meet and a little ahead of the snout, then in
+# the last REACH_PLANT down onto the spot past the snout's touch point,
+# drawn FOOT_LIFT over the rock; as far as the leg goes and never into
+# rock. Aimed at the spot alone, a leg in a dive pointed down the body
+# line and hid behind the head; stretched along the rock, it came out
+# over the head, the hip being above the snout.
+func _reach_spot(f: Foot, hip: Vector2) -> Vector2:
+	var at: Vector2 = _touch.at
+	var n: Vector2 = _touch.n
+	var fwd: Vector2 = _touch.fwd
+	var snout := chain.head() + look * SNOUT
+	var out := hip + (snout - n * REACH_BELOW + fwd * (REACH_AHEAD + f.side) - hip).limit_length(REACH_LEG)
+	var spot := hip + (at + n * FOOT_LIFT + fwd * (REACH_AHEAD + f.side) - hip).limit_length(REACH_LEG)
+	var want := out.lerp(spot, clampf(1.0 - float(_touch.t) / REACH_PLANT, 0.0, 1.0))
+	var reach := want - hip
+	var len := reach.length()
+	if len > 0.001 and map.is_solid_world(want):
+		var free := 0.0
+		while free + 2.0 < len and not map.is_solid_world(hip + reach * ((free + 2.0) / len)):
+			free += 2.0
+		want = hip + reach * (free / len)
+	return want
+
+
+# Looks ahead along the fall for the rock the snout will meet, the arc
+# run on with the same gravity and no steering, a tick at a time up to
+# REACH_TIME.
+func _update_touch() -> void:
+	_touch = {}
+	# A fall that may not cling yet (off thorns) lands nowhere to reach for.
+	if swimming or vel.y <= 0.0 or no_cling > REACH_TIME:
+		return
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	var p := chain.head() + look * SNOUT
+	var v := vel
+	for i in range(1, ceili(REACH_TIME / dt) + 1):
+		v.y += GRAVITY * dt
+		p += v * dt
+		if map.solid_within(p, 3.0):
+			var pr: Dictionary = map.probe(p, PROBE_R)
+			if not pr.found:
+				return
+			var n: Vector2 = pr.normal
+			if n == Vector2.ZERO:
+				n = (p - pr.nearest).normalized()
+			if v.dot(n) > 0.0:
+				return
+			# Forward along that rock: the way the fall goes along it, or the
+			# way the gecko faces when it comes straight down.
+			var tn := Vector2(-n.y, n.x)
+			var along := tn.dot(v)
+			var fwd := tn * signf(along)
+			if absf(along) <= 1.0:
+				var face := tn.dot(_tangent() * _chain_facing)
+				fwd = tn * (signf(face) if absf(face) > 0.1 else 1.0)
+			_touch = {"t": i * dt, "at": pr.nearest, "n": n, "fwd": fwd}
+			return
 
 
 # How much the body is thinned at a foot's hip, 1 at full size: in a
@@ -3372,24 +3489,27 @@ func _face(list: Array) -> Array:
 		"yawn":
 			gape = YAWN_GAPE * swell
 			shut = ph == 1
-	# A swallow opens the mouth as the yawn does (_update_gape). A bite
-	# only parts the lips: the snout stays put and no jaw blob drops,
-	# so the head keeps its shape through the chew (the yawn's lifted
-	# snout and dropped jaw swelled it with every bite, which read as a
-	# swallow's bulge); the bite shows as the mouth mark opening and
-	# shutting, to CHEW_MOUTH at the widest.
-	var chew := _gape_chew and _gape >= gape
-	gape = maxf(gape, _gape)
-	list.append([chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, BODY_COLOR])
-	if gape > 0.0:
-		# The mouth goes under the eye: at its widest its top row can
-		# share the eye's row on the pixel grid.
-		if not chew:
-			list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
-		var h := minf(gape, CHEW_MOUTH) if chew else gape
-		var size := along * 6.0 + across * (h + 1.0)
-		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
-	# Rows of the eye showing under the lid, from its lower side: a
+	# One jaw for all of it (PoseAnim jaw, 0 shut to 1 the yawn's
+	# widest): a swallow and the yawn open it all the way, a bite to
+	# CHEW_JAW, the tongue to TONGUE_JAW, a pose to its own. The lower
+	# jaw swings down from a hinge under the eye and the dark of the
+	# mouth opens as a wedge between it and the snout. Past a bite's
+	# opening the snout lifts too. A bite never lifts it and its jaw stays
+	# inside the head's outline: the yawn's lifted snout and dropped
+	# jaw, once used for the bite, swelled the head with every bite,
+	# which read as a swallow's bulge.
+	var jaw := _jaw_open(gape)
+	var g := _jaw_geom(jaw)
+	var lift := SNOUT_LIFT * clampf((jaw - CHEW_JAW) / (1.0 - CHEW_JAW), 0.0, 1.0)
+	list.append([chain.head() + look * SNOUT - g.chin * lift, 5.0, BODY_COLOR])
+	if jaw > 0.0:
+		var hinge: Vector2 = g.hinge
+		var d: Vector2 = g.dir
+		var grow := clampf(jaw / CHEW_JAW, 0.0, 1.0)
+		list.append([hinge + d * 3.0, 3.5 * grow, BODY_COLOR])
+		list.append([hinge + d * (PoseAnim.JAW_LEN - 2.0), 2.5 * grow, BODY_COLOR])
+		marks.append_array(_mouth_marks(g, lift))
+		# Rows of the eye showing under the lid, from its lower side: a
 	# blink's 2, a pose's lid 1 to 4 (4 the whole disc).
 	var rows := 2 if shut else 1 + roundi(clampf(_pose_lid, 0.0, 1.0) * 3.0)
 	if rows < 4:
@@ -3408,6 +3528,83 @@ func _face(list: Array) -> Array:
 		var tip := m.lerp(ctrl, lick).lerp(ctrl.lerp(eye, lick), lick)
 		marks.append([tip - Vector2(2.0, 2.0), 4.0, TONGUE_COLOR])
 	return marks
+
+
+# The jaw this tick, 0 shut to 1: the most any of its users asks for.
+# yawn_gape is the idle yawn's drop in px.
+func _jaw_open(yawn_gape: float) -> float:
+	var j := yawn_gape / YAWN_GAPE
+	if _gape > 0.0:
+		j = maxf(j, _gape / YAWN_GAPE * (CHEW_JAW if _gape_chew else 1.0))
+	j = maxf(j, maxf(_jaw_tongue, _pose_jaw))
+	_jaw_now = clampf(j, 0.0, 1.0)
+	return _jaw_now
+
+
+# The jaw in the world: its hinge, the lower jaw's direction from it,
+# and the chin's side of the look (PoseAnim's jaw, set in the drawn
+# body's frame).
+func _jaw_geom(jaw: float) -> Dictionary:
+	var t := _tangent() * _chain_facing
+	var dn := -up
+	var ll := Vector2(look.dot(t), look.dot(dn))
+	ll = ll.normalized() if ll.length() > 0.001 else Vector2.RIGHT
+	var h := PoseAnim.jaw_hinge(ll)
+	var d := PoseAnim.jaw_dir(ll, jaw)
+	var c := PoseAnim.chin_side(ll)
+	return {"hinge": chain.head() + t * h.x + dn * h.y, "dir": t * d.x + dn * d.y, "chin": t * c.x + dn * c.y}
+
+
+# The open mouth as pixels: the dark between the snout's underside
+# (lifted by lift at the snout) and the lower jaw, from the hinge to the
+# lips, with the pink tongue lying on the lower jaw's floor where the
+# mouth is open wide enough to show it; while the tongue is out it runs
+# along the middle instead, out between the lips.
+func _mouth_marks(g: Dictionary, lift: float) -> Array:
+	var dark := {}
+	var pink := {}
+	var hinge: Vector2 = g.hinge
+	var d: Vector2 = g.dir
+	var chin: Vector2 = g.chin
+	var n_s := int(PoseAnim.JAW_LEN * 2.0)
+	for k in range(2, n_s):
+		var s := k * 0.5
+		var upper := hinge + look * s - chin * lift * (s / SNOUT)
+		var lower := hinge + d * s
+		var gap := upper.distance_to(lower)
+		if gap < 0.6:
+			continue
+		var n := ceili(gap / 0.5)
+		for i in range(n + 1):
+			var q := upper.lerp(lower, float(i) / n)
+			dark[Vector2i(q.floor())] = q
+		if tongue_out:
+			if s >= 3.0:
+				var mid := (upper + lower) * 0.5
+				pink[Vector2i(mid.floor())] = mid
+		elif gap >= TONGUE_SHOW and s >= 2.5 and s <= PoseAnim.JAW_LEN - 1.0:
+			# The tongue on the floor of the mouth: the lower part of the
+			# gap over a pixel up from the jaw, at most TONGUE_THICK deep.
+			var t_hi := minf(TONGUE_THICK, gap * 0.4) / gap
+			var m := maxi(ceili(gap * t_hi / 0.5), 1)
+			for i in range(m + 1):
+				var q := lower.lerp(upper, 0.5 / gap + t_hi * float(i) / m)
+				pink[Vector2i(q.floor())] = q
+	var out: Array = []
+	for key in dark:
+		if not pink.has(key):
+			out.append([dark[key], 1.0, MOUTH_COLOR])
+	for key in pink:
+		out.append([pink[key], 1.0, TONGUE_COLOR])
+	return out
+
+
+# Where the tongue leaves the mouth as drawn: between the jaws, near
+# the lips. The tongue's own reach and swallow use _mouth.
+func _mouth_drawn() -> Vector2:
+	var g := _jaw_geom(_jaw_now)
+	var mid: Vector2 = (look + g.dir).normalized()
+	return g.hinge + mid * (PoseAnim.JAW_LEN - 1.0)
 
 
 func _anim_ticks() -> Array:
@@ -3535,6 +3732,7 @@ func stop_pose() -> void:
 	posing = false
 	_pose_done = false
 	_pose_lid = 1.0
+	_pose_jaw = 0.0
 	_pose_eye_on = false
 	_path.clear()
 	_fold_at = -1
@@ -3604,6 +3802,7 @@ func pose_apply(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float
 		f.stepping = false
 	look = PoseAnim.dir_to_world(p.look, up_dir, facing_dir)
 	_pose_lid = float(p.get("lid", 1.0))
+	_pose_jaw = float(p.get("jaw", 0.0))
 	_pose_eye = PoseAnim.vec_to_world(p.get("eye", PoseAnim.eye_for(p.look)), up_dir, facing_dir)
 	_pose_eye_on = true
 
@@ -3633,7 +3832,7 @@ func _draw() -> void:
 # The tongue tapers from the mouth to its tip.
 func _draw_under() -> void:
 	if tongue_out:
-		var mouth := _mouth()
+		var mouth := _mouth_drawn()
 		var mid := mouth.lerp(tongue_tip, 0.5)
 		_under.draw_line(mouth, mid, TONGUE_COLOR, 3.0)
 		_under.draw_line(mid, tongue_tip, TONGUE_COLOR, 2.0)
