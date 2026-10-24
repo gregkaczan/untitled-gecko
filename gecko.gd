@@ -52,7 +52,10 @@ const CHEW_R := 11.0           # Mean radius of one bite; each bite varies aroun
 const CHEW_REACH := 19.0       # Bite centre distance ahead of the body centre
 const CHEW_PERIOD := 0.4       # Seconds per bite: the jaw opens through the cycle and the bite lands as it shuts
 const CHEW_SNAP := 0.25        # The last part of the cycle, over which the jaw shuts
-const CHEW_MOUTH := 3.0        # Px the mouth mark opens per bite: the lips part, the head keeps its shape
+const CHEW_JAW := 0.3          # The jaw at a bite's widest (PoseAnim jaw): the lips part, the head keeps its shape
+const TONGUE_JAW := 0.45       # The jaw while the tongue is out: the mouth a little open round it
+const TONGUE_SHOW := 2.0       # Px the mouth must gape before the tongue on its floor shows
+const TONGUE_THICK := 2.0      # Px deep the tongue lies on the floor of the mouth at most
 const DIG_SPEED := 45.0        # Walking speed while chewing, so a tunnel is eaten through, not run through
 # The surfaces that will not be held (_surface_rules): off a floor
 # (up.y above SLICK_UP) a planted foot on moss drops the gecko, a
@@ -94,6 +97,34 @@ const BRIDGE_HOLD := 4         # Ticks the gap test may fail before bridging end
 const BRIDGE_LEVEL := 6.0      # Px the far side of a bridged gap may sit below ride height
 const JUMP_SPEED := 340.0
 const GRAVITY := 900.0
+const FALL_GRAVITY := 1.5      # Gravity's share coming down: a throw's arc, quicker down than up
+const APEX_V := 40.0           # Px/s of vertical speed under which the top of the arc hangs...
+const APEX_GRAVITY := 0.6      # ...on this share of gravity (with FALL_GRAVITY the flat jump keeps its 0.75 s and its height)
+const JUMP_FWD := 100.0        # Least speed along the surface a jump leaves with when a way is held: a curve, not straight up
+const TAKEOFF_TICKS := 3       # Ticks the back feet keep to the take-off spot as the body leaves
+const LAND_BACK_HOLD := 4      # Ticks the back feet wait after a landing, so the front ones touch first
+const LAND_FACE_MIN := 20.0    # Px/s along the surface at a landing that turns the gecko that way
+const LAND_EPS := 0.01         # Px/s into the surface still read as not going in (rounding)
+const LAND_PLANT := 5.0        # Px from rock a front foot may be at touchdown to plant where it is
+const AIR_FOOT_SPEED := 240.0  # Px/s a foot moves toward its place in the air: never in one tick
+const AIR_LEG := 16.0          # Farthest a foot reaches from its hip in the air
+const AIR_PHASE_V := 250.0     # Px/s of vertical speed at which the rise or fall pose is held in full
+const FLARE_TIME := 0.3        # Seconds before the touchdown the head starts to come up
+const TOUCH_FOOT := 17.0       # Px ahead of the body centre a front foot touches down: where it stands (PoseAnim STANDING_FEET)
+const FLARE_UP := 0.7          # How far off the landing surface the flared head looks (its tangent plus this much of its normal)
+const REACH_TIME := 0.2        # Seconds before the touchdown the front feet start reaching for it
+const LAND_SQUASH := 3.0       # Px the body dips into the hardest landing
+const SQUASH_FULL := 600.0     # Px/s into the surface that gives the full dip
+const SQUASH_TICKS := 9        # Ticks the dip lasts, down and back up
+# The legs in the air, per phase (rising, the top, falling): each foot
+# as an offset from its hip, along the body toward the head and toward
+# the belly, in the order of feet (front near, front far, back near,
+# back far). poses/jump.json, made in the pose editor, replaces them:
+# its first three frames are the three phases, read for the feet alone.
+const AIR_POSES := [
+	[Vector2(-5.0, 6.0), Vector2(-7.0, 5.0), Vector2(-13.0, 4.0), Vector2(-15.0, 3.0)],
+	[Vector2(6.0, 9.0), Vector2(4.0, 9.0), Vector2(-6.0, 9.0), Vector2(-8.0, 9.0)],
+	[Vector2(12.0, 9.0), Vector2(10.0, 10.0), Vector2(-3.0, 10.0), Vector2(-5.0, 10.0)]]
 const AIR_ACCEL := 600.0
 const AIR_MAX := 220.0
 const NO_CLING_TIME := 0.18    # Grace after a jump or a drop before clinging again
@@ -219,6 +250,7 @@ const BLINK_TICKS := [2, 6, 2]   # Lid closing, shut, opening
 const LICK_TICKS := [6, 6, 6]    # Tongue out to the eye, on it, back
 const YAWN_TICKS := [5, 16, 4]   # Mouth opening, agape, closing
 const YAWN_GAPE := 6.0           # Px the jaw drops at the widest
+const SNOUT_LIFT := 2.0          # Px the snout lifts at jaw 1, from a bite's opening on
 const LICK_SAMPLES := 20         # Marks along the tongue's curve at full stretch
 const THIN_RELEASE := 1.0        # Most a point whose drawn radius is still growing back from a thinning is pushed off rock in one tick
 const SETTLE_REV := 2          # Reversals of a drawn point's or a foot's motion at rest before the body is held still (the settle latch): a rattle may go back and forth twice
@@ -275,6 +307,15 @@ var _pose_base := Vector2.ZERO # The frame the poses are set in: the surface poi
 var _pose_up := Vector2.UP
 var _pose_facing := 1.0
 var _pose_lid := 1.0           # How far the pose shown has the eye open: 0 shut (asleep) to 1 (PoseAnim lid)
+var _pose_jaw := 0.0           # How far the pose shown has the jaw open (PoseAnim jaw)
+var _jaw_tongue := 0.0         # The tongue's share of the jaw, eased open and shut with it
+var _jaw_now := 0.0            # The jaw as last drawn (_face)
+var _takeoff_ticks := 0        # Ticks left of the back feet's push off a jump
+var _land_back := 0            # Ticks left the back feet wait after a landing
+var _touch := {}               # Where the fall will meet rock: {t (s), at (body centre), n}, empty when not falling onto anything near
+var _squash_amp := 0.0         # Px of the landing's dip
+var _squash_tick := 0          # Ticks into it
+var _air_poses: Array = AIR_POSES
 var _pose_eye := Vector2.ZERO  # The pose's eye as a world offset from the head (a pose places it; otherwise it rides with the look)
 var _pose_eye_on := false
 var jump_override := false
@@ -410,6 +451,7 @@ var _sag := PackedVector2Array()     # Per chain point: its eased offset off the
 
 func _ready() -> void:
 	z_index = 6
+	_load_air_poses()
 	chain = Chain.new(Vector2.ZERO, RADII, LINK, MAX_BEND)
 	_draw_r = PackedFloat32Array(RADII)
 	_thin_on.resize(RADII.size())
@@ -462,6 +504,12 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_gulp = 0.0
 	_gape = 0.0
 	_gape_chew = false
+	_jaw_tongue = 0.0
+	_takeoff_ticks = 0
+	_land_back = 0
+	_touch = {}
+	_squash_amp = 0.0
+	_squash_tick = SQUASH_TICKS
 	_agape = 0.0
 	_chew_t = 0.0
 	_digging = false
@@ -1172,7 +1220,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# the body shot out of passages.
 	if jump and not _squeeze:
 		_jumped = true
-		_jump()
+		_jump(inp)
 		return
 	var planted := 0
 	for f in feet:
@@ -1193,7 +1241,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 
 
 func _update_airborne(inp: Vector2, dt: float) -> void:
-	vel.y += GRAVITY * dt
+	vel.y += GRAVITY * _gravity_share(vel.y) * dt
 	_pricked_t = maxf(_pricked_t - dt, 0.0)
 	if absf(inp.x) > 0.2 and _pricked_t <= 0.0:
 		vel.x = move_toward(vel.x, inp.x * AIR_MAX, AIR_ACCEL * dt)
@@ -1209,7 +1257,10 @@ func _update_airborne(inp: Vector2, dt: float) -> void:
 		var into := vel.dot(n)
 		if into < 0.0:
 			vel -= n * into
-	if no_cling <= 0.0 and p.dist <= RIDE_H + 2.0 and vel.dot(n) <= 0.0:
+	# Blocked, the speed into the rock was taken off above, which can
+	# leave a rounding's worth going in; read as going in, the body
+	# stopped on the floor a tick before it landed.
+	if no_cling <= 0.0 and p.dist <= RIDE_H + 2.0 and vel.dot(n) <= LAND_EPS:
 		_land(n)
 		return
 	var min_d := RIDE_H * 0.8
@@ -1586,6 +1637,10 @@ func _update_gape(dt: float) -> void:
 		if want or _gape <= 0.0:
 			_gape_chew = false
 	_gape_want = false
+	# The tongue opens the mouth as fast as a swallow does and shuts it
+	# once the tip is home.
+	var tj := TONGUE_JAW if tongue_out else 0.0
+	_jaw_tongue = move_toward(_jaw_tongue, tj, TONGUE_JAW / (EAT_OPEN if tongue_out else EAT_CLOSE) * dt)
 
 
 # Reeling in: the body flies at the anchor and clings where it arrives.
@@ -1626,16 +1681,35 @@ func _land(n: Vector2) -> void:
 	_n_target = n
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
-	# Feet re-seat under the body at once; their airborne positions were
-	# relative to the old up and would stick out until the first step.
-	var t := _tangent()
+	# The feet stay where the air put them, never moved in one tick: a
+	# front foot that reached the rock plants where it touched, the rest
+	# step down onto it from where they are, the back feet a few ticks
+	# after the front. A foot is drawn FOOT_LIFT over its anchor once
+	# clinging, so the ones not planted are set that much lower to be
+	# drawn where they were.
 	for f in feet:
-		f.planted = false
 		f.stepping = false
-		f.pos = chain.points[f.hip] + t * f.end * _chain_facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
+		f.planted = false
 		f.up = up
+		var q: Dictionary = map.nearest_solid(f.pos - up * FOOT_LIFT, LAND_PLANT) if f.end > 0.0 else {"found": false}
+		if q.found and not map.is_solid_world(f.pos) and q.nearest.distance_to(chain.points[f.hip]) < MAX_LEG and not map.thorn_world(q.nearest):
+			f.planted = true
+			f.anchor = q.nearest
+			f.pos = q.nearest
+		else:
+			f.pos -= up * FOOT_LIFT
+	_land_back = LAND_BACK_HOLD
+	_takeoff_ticks = 0
+	_touch = {}
+	# The body dips into the landing and comes back up, deeper the
+	# faster it came down.
+	_squash_amp = clampf(vel.dot(-n) / SQUASH_FULL, 0.0, 1.0) * LAND_SQUASH
+	_squash_tick = 0
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
-	if absf(speed_along) > 1.0:
+	# Only a real slide along the surface turns the gecko: met head on,
+	# a wall's tilt left a few px/s either way, and the facing it picked
+	# at random flipped back a few ticks on, the tail whipping round.
+	if absf(speed_along) > LAND_FACE_MIN:
 		facing = signf(speed_along)
 	_chain_facing = facing
 	vel = Vector2.ZERO
@@ -1667,15 +1741,36 @@ func _drop(no_cling_for := NO_CLING_TIME) -> void:
 	_unplant()
 
 
-func _jump() -> void:
+func _jump(inp := Vector2.ZERO) -> void:
 	jumped.emit()
 	clinging = false
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
+	# A way held at the press sends the jump off along it at once, even
+	# from a standstill, so it curves away instead of going straight up
+	# and only then drifting over.
+	var held := inp.dot(_tangent())
+	if absf(held) > 0.2 and speed_along * signf(held) < JUMP_FWD:
+		speed_along = signf(held) * JUMP_FWD
 	vel = up * JUMP_SPEED * (SLIME_JUMP if in_slime else 1.0) + _tangent() * speed_along + jump_boost
 	speed_along = 0.0
 	no_cling = NO_CLING_TIME
-	_unplant()
+	# The back feet push off: they stay on the take-off spot for a few
+	# ticks as the body leaves, the legs stretching after it.
+	for f in feet:
+		f.stepping = false
+		if f.end > 0.0:
+			f.planted = false
+	_takeoff_ticks = TAKEOFF_TICKS
+	_touch = {}
+
+
+# Gravity's share at a vertical speed (y down): less at the top of the
+# arc, more coming down.
+func _gravity_share(vy: float) -> float:
+	if absf(vy) < APEX_V:
+		return APEX_GRAVITY
+	return FALL_GRAVITY if vy > 0.0 else 1.0
 
 
 # The ground under the body moved by d (a shroom's cap dipping, a vine
@@ -2478,7 +2573,7 @@ func _update_chain(dt: float) -> void:
 			# own middle into the floor at the mouth.
 			want_lift = (_sq_line - _pos_s).dot(up)
 		_lift = move_toward(_lift, want_lift, LIFT_EASE)
-		base = _pos_s + up * _lift
+		base = _pos_s + up * (_lift - _squash())
 		# The snout stops at rock ahead. In a passage the walls beside it are
 		# always within the body's clearance, so the test there is the
 		# squeeze's own, or the head would draw in the whole way through.
@@ -2504,6 +2599,14 @@ func _update_chain(dt: float) -> void:
 			target = pos + _free_heading() * HEAD_LEAD
 		else:
 			var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
+			# The flare: in the last REACH_TIME before the rock the head
+			# comes up off the dive to look along the surface it lands on,
+			# so the front feet reach it before the snout does.
+			if not _touch.is_empty():
+				var w := smoothstep(0.0, 1.0, 1.0 - float(_touch.t) / FLARE_TIME)
+				if w > 0.0:
+					var n: Vector2 = _touch.n
+					dir = dir.lerp((_touch_fwd() + n * FLARE_UP).normalized(), w).normalized()
 			target = pos + dir * HEAD_LEAD
 	var head := chain.head()
 	var to := target - head
@@ -3100,6 +3203,13 @@ func _diagonal(f: Foot) -> Foot:
 func _update_feet(dt: float) -> void:
 	var tangent := _tangent()
 	_switch_hold = maxi(_switch_hold - 1, 0)
+	if clinging:
+		_takeoff_ticks = 0
+		_land_back = maxi(_land_back - 1, 0)
+	else:
+		_takeoff_ticks = maxi(_takeoff_ticks - 1, 0)
+		_land_back = 0
+		_update_touch()
 	var stepping := 0
 	for f in feet:
 		if f.stepping:
@@ -3127,8 +3237,8 @@ func _update_feet(dt: float) -> void:
 				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * arc * sin(PI * f.step_t)
 			continue
 		# After a switch the back feet wait, so the front legs reach the
-		# new surface first.
-		if _switch_hold > 0 and f.end < 0.0:
+		# new surface first; so they do after a landing.
+		if (_switch_hold > 0 or _land_back > 0) and f.end < 0.0:
 			continue
 		if f.planted:
 			if map.solid_near(f.anchor, _cells(4.0)) and f.anchor.distance_to(hip) < MAX_LEG:
@@ -3151,12 +3261,13 @@ func _update_feet(dt: float) -> void:
 			f.pos = f.pos.lerp(tucked.lerp(extended, k), minf(1.0, 25.0 * dt))
 			continue
 		if not clinging:
+			# The push off a jump: a back foot holds the take-off spot while
+			# the leg can still reach it.
+			if f.planted and _takeoff_ticks > 0 and f.end < 0.0 and f.anchor.distance_to(hip) < MAX_LEG:
+				f.pos = f.anchor + f.up * FOOT_LIFT
+				continue
 			f.planted = false
-			var hang := hip - up * 6.0 + tangent * f.end * _chain_facing * 4.0
-			if f.pos.distance_to(hang) > 20.0:
-				f.pos = hang
-			else:
-				f.pos = f.pos.lerp(hang, minf(1.0, 30.0 * dt))
+			f.pos = f.pos.move_toward(_air_foot(f), AIR_FOOT_SPEED * dt)
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
 		var rest := hip + tangent * (f.end * _chain_facing * FOOT_SPREAD + lead) - up * RIDE_H
@@ -3192,6 +3303,129 @@ func _update_feet(dt: float) -> void:
 		f.step_t = 0.0
 		f.up = up
 		stepping += 1
+
+
+# The air poses from poses/jump.json when there is one: its first three
+# frames, rising, the top and falling, each foot read as an offset from
+# its hip along the body's line there and toward the belly.
+func _load_air_poses() -> void:
+	if not FileAccess.file_exists(PoseAnim.DIR + "jump.json"):
+		return
+	var frames := PoseAnim.load_head("jump")
+	if frames.size() < 3:
+		return
+	var poses: Array = []
+	for j in 3:
+		var fr: Dictionary = frames[j]
+		var pts: PackedVector2Array = fr.points
+		var fp: PackedVector2Array = fr.feet
+		var row: Array = []
+		for k in fp.size():
+			var h := PoseAnim.hip_of(k)
+			var ax := (pts[h - 1] - pts[h + 1]).normalized()
+			var belly := Vector2(-ax.y, ax.x)
+			var o := fp[k] - pts[h]
+			row.append(Vector2(o.dot(ax), o.dot(belly)))
+		poses.append(row)
+	_air_poses = poses
+
+
+# Where a foot goes in the air: its phase pose (rising, the top,
+# falling, blended by the vertical speed) set on the body's own line at
+# its hip, so the legs turn with the body as it streams head first;
+# falling onto rock within REACH_TIME, a front foot reaches for the
+# spot it will stand on.
+func _air_foot(f: Foot) -> Vector2:
+	var hip: Vector2 = chain.points[f.hip]
+	var ax: Vector2 = chain.points[f.hip - 1] - chain.points[f.hip + 1]
+	ax = ax.normalized() if ax.length() > 0.001 else _tangent() * _chain_facing
+	# The belly's side of the body line: the line turned a quarter the
+	# way the gecko's own frame turns its facing into its down.
+	var t := _tangent() * _chain_facing
+	var dn := -up
+	var al := Vector2(ax.dot(t), ax.dot(dn))
+	var belly := t * -al.y + dn * al.x
+	var k := feet.find(f)
+	var s := clampf(vel.y / AIR_PHASE_V, -1.0, 1.0)
+	var top: Vector2 = _air_poses[1][k]
+	var off: Vector2 = top.lerp(_air_poses[0][k], -s) if s < 0.0 else top.lerp(_air_poses[2][k], s)
+	var want := hip + (ax * off.x + belly * off.y).limit_length(AIR_LEG)
+	if f.end > 0.0 and not _touch.is_empty():
+		var w := clampf(1.0 - float(_touch.t) / REACH_TIME, 0.0, 1.0)
+		if w > 0.0:
+			want = want.lerp(hip + (_touch_spot(f) - hip).limit_length(AIR_LEG + 4.0), w)
+	# Never into rock: the leg stops where the rock begins.
+	var reach := want - hip
+	var len := reach.length()
+	if len > 0.001 and map.is_solid_world(want):
+		var free := 0.0
+		while free + 2.0 < len and not map.is_solid_world(hip + reach * ((free + 2.0) / len)):
+			free += 2.0
+		want = hip + reach * (free / len)
+	return want
+
+
+# The spot a front foot will stand on when the fall lands: where the
+# standing pose has it, ahead of the body centre's landing place, on
+# the nearest rock there, drawn FOOT_LIFT over it.
+func _touch_spot(f: Foot) -> Vector2:
+	if _touch.has("spot%d" % feet.find(f)):
+		return _touch["spot%d" % feet.find(f)]
+	var n: Vector2 = _touch.n
+	var at: Vector2 = _touch.at
+	var rest := at - n * RIDE_H + _touch_fwd() * (TOUCH_FOOT + f.side)
+	var q: Dictionary = map.nearest_solid(rest, LEG_REACH)
+	var spot: Vector2 = (q.nearest + n * FOOT_LIFT) if q.found else rest
+	_touch["spot%d" % feet.find(f)] = spot
+	return spot
+
+
+# Forward along the surface the fall lands on: the way the flight
+# goes along it, or the way the gecko faces when it comes straight down.
+func _touch_fwd() -> Vector2:
+	var n: Vector2 = _touch.n
+	var tn := Vector2(-n.y, n.x)
+	var along := tn.dot(vel)
+	if absf(along) > 1.0:
+		return tn * signf(along)
+	var face := tn.dot(_tangent() * _chain_facing)
+	return tn * (signf(face) if absf(face) > 0.1 else 1.0)
+
+
+# Looks ahead along the fall for the rock it will meet, the arc run on
+# with the same gravity and no steering, a tick at a time up to
+# REACH_TIME and a little more.
+func _update_touch() -> void:
+	_touch = {}
+	# A fall that may not cling yet (off thorns) lands nowhere to reach for.
+	if swimming or vel.y <= 0.0 or no_cling > maxf(REACH_TIME, FLARE_TIME):
+		return
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	var p := pos
+	var v := vel
+	var steps := ceili(maxf(REACH_TIME, FLARE_TIME) / dt) + 2
+	for i in range(1, steps + 1):
+		v.y += GRAVITY * _gravity_share(v.y) * dt
+		p += v * dt
+		if map.solid_within(p, RIDE_H + 2.0):
+			var pr: Dictionary = map.probe(p, PROBE_R)
+			if not pr.found:
+				return
+			var n: Vector2 = pr.normal
+			if n == Vector2.ZERO:
+				n = (p - pr.nearest).normalized()
+			if v.dot(n) > 0.0:
+				return
+			_touch = {"t": i * dt, "at": p, "n": n}
+			return
+
+
+# The landing's dip: down and back up over SQUASH_TICKS, never a jump.
+func _squash() -> float:
+	if _squash_tick >= SQUASH_TICKS or _squash_amp <= 0.0:
+		return 0.0
+	_squash_tick += 1
+	return _squash_amp * sin(PI * float(_squash_tick) / SQUASH_TICKS)
 
 
 # How much the body is thinned at a foot's hip, 1 at full size: in a
@@ -3372,24 +3606,27 @@ func _face(list: Array) -> Array:
 		"yawn":
 			gape = YAWN_GAPE * swell
 			shut = ph == 1
-	# A swallow opens the mouth as the yawn does (_update_gape). A bite
-	# only parts the lips: the snout stays put and no jaw blob drops,
-	# so the head keeps its shape through the chew (the yawn's lifted
-	# snout and dropped jaw swelled it with every bite, which read as a
-	# swallow's bulge); the bite shows as the mouth mark opening and
-	# shutting, to CHEW_MOUTH at the widest.
-	var chew := _gape_chew and _gape >= gape
-	gape = maxf(gape, _gape)
-	list.append([chain.head() + look * SNOUT + up * (0.0 if chew else gape * 0.5), 5.0, BODY_COLOR])
-	if gape > 0.0:
-		# The mouth goes under the eye: at its widest its top row can
-		# share the eye's row on the pixel grid.
-		if not chew:
-			list.append([chain.head() + look * (SNOUT + 0.5) - up * (3.0 + gape * 0.5), 3.5, BODY_COLOR])
-		var h := minf(gape, CHEW_MOUTH) if chew else gape
-		var size := along * 6.0 + across * (h + 1.0)
-		marks.append([chain.head() + look * (SNOUT + 1.5) - up * 2.5 - size * 0.5, size, MOUTH_COLOR])
-	# Rows of the eye showing under the lid, from its lower side: a
+	# One jaw for all of it (PoseAnim jaw, 0 shut to 1 the yawn's
+	# widest): a swallow and the yawn open it all the way, a bite to
+	# CHEW_JAW, the tongue to TONGUE_JAW, a pose to its own. The lower
+	# jaw swings down from a hinge under the eye and the dark of the
+	# mouth opens as a wedge between it and the snout. Past a bite's
+	# opening the snout lifts too. A bite never lifts it and its jaw stays
+	# inside the head's outline: the yawn's lifted snout and dropped
+	# jaw, once used for the bite, swelled the head with every bite,
+	# which read as a swallow's bulge.
+	var jaw := _jaw_open(gape)
+	var g := _jaw_geom(jaw)
+	var lift := SNOUT_LIFT * clampf((jaw - CHEW_JAW) / (1.0 - CHEW_JAW), 0.0, 1.0)
+	list.append([chain.head() + look * SNOUT - g.chin * lift, 5.0, BODY_COLOR])
+	if jaw > 0.0:
+		var hinge: Vector2 = g.hinge
+		var d: Vector2 = g.dir
+		var grow := clampf(jaw / CHEW_JAW, 0.0, 1.0)
+		list.append([hinge + d * 3.0, 3.5 * grow, BODY_COLOR])
+		list.append([hinge + d * (PoseAnim.JAW_LEN - 2.0), 2.5 * grow, BODY_COLOR])
+		marks.append_array(_mouth_marks(g, lift))
+		# Rows of the eye showing under the lid, from its lower side: a
 	# blink's 2, a pose's lid 1 to 4 (4 the whole disc).
 	var rows := 2 if shut else 1 + roundi(clampf(_pose_lid, 0.0, 1.0) * 3.0)
 	if rows < 4:
@@ -3408,6 +3645,83 @@ func _face(list: Array) -> Array:
 		var tip := m.lerp(ctrl, lick).lerp(ctrl.lerp(eye, lick), lick)
 		marks.append([tip - Vector2(2.0, 2.0), 4.0, TONGUE_COLOR])
 	return marks
+
+
+# The jaw this tick, 0 shut to 1: the most any of its users asks for.
+# yawn_gape is the idle yawn's drop in px.
+func _jaw_open(yawn_gape: float) -> float:
+	var j := yawn_gape / YAWN_GAPE
+	if _gape > 0.0:
+		j = maxf(j, _gape / YAWN_GAPE * (CHEW_JAW if _gape_chew else 1.0))
+	j = maxf(j, maxf(_jaw_tongue, _pose_jaw))
+	_jaw_now = clampf(j, 0.0, 1.0)
+	return _jaw_now
+
+
+# The jaw in the world: its hinge, the lower jaw's direction from it,
+# and the chin's side of the look (PoseAnim's jaw, set in the drawn
+# body's frame).
+func _jaw_geom(jaw: float) -> Dictionary:
+	var t := _tangent() * _chain_facing
+	var dn := -up
+	var ll := Vector2(look.dot(t), look.dot(dn))
+	ll = ll.normalized() if ll.length() > 0.001 else Vector2.RIGHT
+	var h := PoseAnim.jaw_hinge(ll)
+	var d := PoseAnim.jaw_dir(ll, jaw)
+	var c := PoseAnim.chin_side(ll)
+	return {"hinge": chain.head() + t * h.x + dn * h.y, "dir": t * d.x + dn * d.y, "chin": t * c.x + dn * c.y}
+
+
+# The open mouth as pixels: the dark between the snout's underside
+# (lifted by lift at the snout) and the lower jaw, from the hinge to the
+# lips, with the pink tongue lying on the lower jaw's floor where the
+# mouth is open wide enough to show it; while the tongue is out it runs
+# along the middle instead, out between the lips.
+func _mouth_marks(g: Dictionary, lift: float) -> Array:
+	var dark := {}
+	var pink := {}
+	var hinge: Vector2 = g.hinge
+	var d: Vector2 = g.dir
+	var chin: Vector2 = g.chin
+	var n_s := int(PoseAnim.JAW_LEN * 2.0)
+	for k in range(2, n_s):
+		var s := k * 0.5
+		var upper := hinge + look * s - chin * lift * (s / SNOUT)
+		var lower := hinge + d * s
+		var gap := upper.distance_to(lower)
+		if gap < 0.6:
+			continue
+		var n := ceili(gap / 0.5)
+		for i in range(n + 1):
+			var q := upper.lerp(lower, float(i) / n)
+			dark[Vector2i(q.floor())] = q
+		if tongue_out:
+			if s >= 3.0:
+				var mid := (upper + lower) * 0.5
+				pink[Vector2i(mid.floor())] = mid
+		elif gap >= TONGUE_SHOW and s >= 2.5 and s <= PoseAnim.JAW_LEN - 1.0:
+			# The tongue on the floor of the mouth: the lower part of the
+			# gap over a pixel up from the jaw, at most TONGUE_THICK deep.
+			var t_hi := minf(TONGUE_THICK, gap * 0.4) / gap
+			var m := maxi(ceili(gap * t_hi / 0.5), 1)
+			for i in range(m + 1):
+				var q := lower.lerp(upper, 0.5 / gap + t_hi * float(i) / m)
+				pink[Vector2i(q.floor())] = q
+	var out: Array = []
+	for key in dark:
+		if not pink.has(key):
+			out.append([dark[key], 1.0, MOUTH_COLOR])
+	for key in pink:
+		out.append([pink[key], 1.0, TONGUE_COLOR])
+	return out
+
+
+# Where the tongue leaves the mouth as drawn: between the jaws, near
+# the lips. The tongue's own reach and swallow use _mouth.
+func _mouth_drawn() -> Vector2:
+	var g := _jaw_geom(_jaw_now)
+	var mid: Vector2 = (look + g.dir).normalized()
+	return g.hinge + mid * (PoseAnim.JAW_LEN - 1.0)
 
 
 func _anim_ticks() -> Array:
@@ -3535,6 +3849,7 @@ func stop_pose() -> void:
 	posing = false
 	_pose_done = false
 	_pose_lid = 1.0
+	_pose_jaw = 0.0
 	_pose_eye_on = false
 	_path.clear()
 	_fold_at = -1
@@ -3604,6 +3919,7 @@ func pose_apply(p: Dictionary, base: Vector2, up_dir: Vector2, facing_dir: float
 		f.stepping = false
 	look = PoseAnim.dir_to_world(p.look, up_dir, facing_dir)
 	_pose_lid = float(p.get("lid", 1.0))
+	_pose_jaw = float(p.get("jaw", 0.0))
 	_pose_eye = PoseAnim.vec_to_world(p.get("eye", PoseAnim.eye_for(p.look)), up_dir, facing_dir)
 	_pose_eye_on = true
 
@@ -3633,7 +3949,7 @@ func _draw() -> void:
 # The tongue tapers from the mouth to its tip.
 func _draw_under() -> void:
 	if tongue_out:
-		var mouth := _mouth()
+		var mouth := _mouth_drawn()
 		var mid := mouth.lerp(tongue_tip, 0.5)
 		_under.draw_line(mouth, mid, TONGUE_COLOR, 3.0)
 		_under.draw_line(mid, tongue_tip, TONGUE_COLOR, 2.0)

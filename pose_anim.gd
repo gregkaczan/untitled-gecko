@@ -6,7 +6,8 @@
 # editor places it by hand; with the seconds to the next frame, a
 # tension and a bias, and how far the eye is open (lid: 0 shut to a
 # line a pixel high, 1 the open disc, the pixels between a lid half
-# down; a file's old shut flag reads as 0 or 1). Playback
+# down; a file's old shut flag reads as 0 or 1), and how far the jaw is
+# open (jaw: 0 shut, 1 the yawn's widest; gecko.gd _jaw_geom). Playback
 # runs a spline through the frames in link space, each link's angle and
 # length, so a curled body unrolls instead of shrinking as blended
 # points would; the head, the feet, the look and the eye run on the same
@@ -41,6 +42,7 @@ const EYE_LOOK := 3.5          # The eye's place along the look when it rides wi
 const EYE_UP := Vector2(0.0, -1.0)   # and a pixel up
 const EYE_MAX := 5.0           # Farthest the eye's centre may sit from the head's (its 4 px disc stays on the 7 px head)
 const LID_OPEN := 1.0
+const JAW_SHUT := 0.0
 const SPINE_LAST := 4          # The rump: points 1 to 4 are the spine the editor's lock holds still
 const STEP_LIFT := 3.0         # Most a foot lifts stepping along the floor between two frames
 const STEP_FLOOR := -5.0       # A foot drawn lower than this (y down) stands on the floor
@@ -57,13 +59,13 @@ const STANDING_FEET := [[18.0, -4.5], [16.0, -4.5], [-22.0, -4.5], [-18.0, -4.5]
 
 
 static func standing() -> Dictionary:
-	return from_json_frame({"points": STANDING_POINTS, "feet": STANDING_FEET, "look": [1.0, 0.0], "dur": DUR_DEFAULT, "tension": TENSION_DEFAULT, "lid": LID_OPEN})
+	return from_json_frame({"points": STANDING_POINTS, "feet": STANDING_FEET, "look": [1.0, 0.0], "dur": DUR_DEFAULT, "tension": TENSION_DEFAULT, "lid": LID_OPEN, "jaw": JAW_SHUT})
 
 
 static func dup(f: Dictionary) -> Dictionary:
 	var pts: PackedVector2Array = f.points
 	var feet: PackedVector2Array = f.feet
-	return {"points": pts.duplicate(), "feet": feet.duplicate(), "look": f.look, "eye": f.get("eye", eye_for(f.look)), "eye_free": f.get("eye_free", false), "dur": f.dur, "tension": f.tension, "bias": f.get("bias", 0.0), "lid": f.get("lid", LID_OPEN)}
+	return {"points": pts.duplicate(), "feet": feet.duplicate(), "look": f.look, "eye": f.get("eye", eye_for(f.look)), "eye_free": f.get("eye_free", false), "dur": f.dur, "tension": f.tension, "bias": f.get("bias", 0.0), "lid": f.get("lid", LID_OPEN), "jaw": f.get("jaw", JAW_SHUT)}
 
 
 # Where the eye sits when it rides with the look.
@@ -238,6 +240,11 @@ static func between(frames: Array, i: int, k: float, loop := false) -> Dictionar
 	var db := float(b.get("lid", LID_OPEN))
 	var dq := float(q.get("lid", LID_OPEN))
 	out.lid = clampf(da + (da - dp) * c_in + (db - da) * c_ab + (dq - db) * c_out, 0.0, 1.0)
+	var jp := float(p.get("jaw", JAW_SHUT))
+	var ja := float(a.get("jaw", JAW_SHUT))
+	var jb := float(b.get("jaw", JAW_SHUT))
+	var jq := float(q.get("jaw", JAW_SHUT))
+	out.jaw = clampf(ja + (ja - jp) * c_in + (jb - ja) * c_ab + (jq - jb) * c_out, 0.0, 1.0)
 	return out
 
 
@@ -255,6 +262,38 @@ static func _low(v: Vector2, a: Vector2, b: Vector2) -> Vector2:
 static func to_world(local: Vector2, base: Vector2, up: Vector2, facing: float) -> Vector2:
 	var t := Vector2(-up.y, up.x)
 	return base + t * (local.x * facing) - up * local.y
+
+
+# The jaw, in the gecko's frame with the head at the origin: it hinges
+# at the mouth's corner under the eye and swings down from the look,
+# toward the chin's side (the look turned a quarter toward +y: under the
+# snout looking ahead, forward looking up), by up to JAW_MAX at jaw 1.
+const JAW_HINGE_ALONG := -0.5  # The hinge's place along the look from the head's centre
+const JAW_HINGE_DOWN := 4.0    # and toward the chin
+const JAW_LEN := 9.5           # Hinge to the lips' front: the shut mouth's tip at the snout's (gecko.gd _mouth)
+const JAW_MAX := 0.6           # Radians the jaw turns at jaw 1 (about 34 degrees)
+
+
+static func chin_side(look: Vector2) -> Vector2:
+	return Vector2(-look.y, look.x)
+
+
+static func jaw_hinge(look: Vector2) -> Vector2:
+	return look * JAW_HINGE_ALONG + chin_side(look) * JAW_HINGE_DOWN
+
+
+# The lower jaw's direction from the hinge.
+static func jaw_dir(look: Vector2, jaw: float) -> Vector2:
+	var a := clampf(jaw, 0.0, 1.0) * JAW_MAX
+	return look * cos(a) + chin_side(look) * sin(a)
+
+
+# The jaw a point dragged to from the hinge asks for (the editor's chin handle).
+static func jaw_for(look: Vector2, hinge_to: Vector2) -> float:
+	if hinge_to.length() < 0.5:
+		return 0.0
+	var a := atan2(hinge_to.dot(chin_side(look)), hinge_to.dot(look))
+	return clampf(a / JAW_MAX, 0.0, 1.0)
 
 
 # An offset (not normalised) in the gecko's frame as a world vector.
@@ -508,7 +547,7 @@ static func from_json_frame(d: Dictionary) -> Dictionary:
 		eye = Vector2(float(ey[0]), float(ey[1])).limit_length(EYE_MAX)
 		eye_free = true
 	var lid := float(d.get("lid", 0.0 if bool(d.get("shut", false)) else LID_OPEN))
-	return {"points": pts, "feet": feet, "look": look, "eye": eye, "eye_free": eye_free, "dur": maxf(float(d.get("dur", DUR_DEFAULT)), 0.0), "tension": clampf(float(d.get("tension", TENSION_OLD)), 0.0, 1.0), "bias": clampf(float(d.get("bias", 0.0)), -1.0, 1.0), "lid": clampf(lid, 0.0, 1.0)}
+	return {"points": pts, "feet": feet, "look": look, "eye": eye, "eye_free": eye_free, "dur": maxf(float(d.get("dur", DUR_DEFAULT)), 0.0), "tension": clampf(float(d.get("tension", TENSION_OLD)), 0.0, 1.0), "bias": clampf(float(d.get("bias", 0.0)), -1.0, 1.0), "lid": clampf(lid, 0.0, 1.0), "jaw": clampf(float(d.get("jaw", JAW_SHUT)), 0.0, 1.0)}
 
 
 static func to_json(frames: Array) -> Array:
@@ -521,7 +560,7 @@ static func to_json(frames: Array) -> Array:
 		for p in f.feet:
 			feet.append([snappedf(p.x, 0.01), snappedf(p.y, 0.01)])
 		var look: Vector2 = f.look
-		var item := {"points": pts, "feet": feet, "look": [snappedf(look.x, 0.001), snappedf(look.y, 0.001)], "dur": snappedf(float(f.dur), 0.001), "tension": snappedf(float(f.tension), 0.01), "bias": snappedf(float(f.get("bias", 0.0)), 0.01), "lid": snappedf(float(f.get("lid", LID_OPEN)), 0.01)}
+		var item := {"points": pts, "feet": feet, "look": [snappedf(look.x, 0.001), snappedf(look.y, 0.001)], "dur": snappedf(float(f.dur), 0.001), "tension": snappedf(float(f.tension), 0.01), "bias": snappedf(float(f.get("bias", 0.0)), 0.01), "lid": snappedf(float(f.get("lid", LID_OPEN)), 0.01), "jaw": snappedf(float(f.get("jaw", JAW_SHUT)), 0.01)}
 		if f.get("eye_free", false):
 			var eye: Vector2 = f.eye
 			item["eye"] = [snappedf(eye.x, 0.01), snappedf(eye.y, 0.01)]

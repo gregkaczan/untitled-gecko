@@ -228,7 +228,10 @@ def camera_metrics(ev, ticks, frames):
             pinned = (c2 == 0.0 and abs(w2) > 0.5) or (c1 == 0.0 and abs(w1) > 0.5)
             if abs(c2 - c1) >= CAM_JERK and abs(w2 - w1) < CAM_STEADY and not pinned:
                 ev["cam_jerk"].append((t, round(abs(c2 - c1), 1), axis))
-            if b1 * b2 < 0 and min(abs(b1), abs(b2)) >= SHAKE_MIN and w1 * w2 >= 0:
+            # Only while the body's own step is steady: a body stopped dead by
+            # rock (a fall onto a floor it may not hold yet) leaves the camera
+            # to catch up, which is no shake.
+            if b1 * b2 < 0 and min(abs(b1), abs(b2)) >= SHAKE_MIN and w1 * w2 >= 0 and abs(w2 - w1) < CAM_STEADY:
                 ev["shake"].append((t, round(abs(b2 - b1), 1), axis))
             if still > CREEP_WIN and abs(c2) >= 1.0:
                 ev["cam_creep"].append((t, round(abs(c2), 1), axis))
