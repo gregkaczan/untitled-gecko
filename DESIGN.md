@@ -185,44 +185,36 @@ is untouched; the scenes lay them as rects (`sand`, `clay`, `lava`,
   turn-around on a floor left the tail zigzagging into it for good. A
   point in rock is no longer in a passage outside a squeeze.
 - Input is projected onto the surface tangent: the key pressed moves the
-  gecko that way on screen. Jump pushes away along the normal, and a way
-  held at the press adds at least JUMP_FWD (100 px/s) along the surface,
-  so a jump from a standstill curves off instead of going straight up
-  and drifting over. The arc is a throw's: gravity is 1.5 times as
-  strong coming down as going up, and the top hangs on 0.6 of it while
-  the vertical speed is under 40 px/s; together they keep the flat
-  jump's height (62 px) and time in the air (0.75 s) as they were with
-  one gravity. Steering in the air is unchanged.
-- The legs in the air: the back feet keep to the take-off spot for 3
-  ticks as the body leaves (the push). Then each foot heads for its
-  phase pose, rising (front legs folded back, back legs trailing),
-  the top (spread) or falling (front legs forward), blended by the
-  vertical speed and set on the body's own line at its hip, so the legs
-  turn with the body as it streams head first; at AIR_FOOT_SPEED, never
-  in one tick, and never into rock. The poses come from
-  `poses/jump.json` (its first three frames, the feet only, each read
-  as an offset from its hip along the body's line and toward the
-  belly), made in the pose editor; AIR_POSES in gecko.gd is the same
-  set for when the file is missing. Falling, the arc is run on a tick
-  at a time (`_update_touch`); within 0.2 s of the rock it will meet,
-  the front feet reach for the spots they will stand on.
-- Landing: a front foot within 5 px of rock plants where it touched;
-  the others are left where the air put them and step down from there,
-  the back feet 4 ticks after the front. The feet used to be set under
-  the body in the landing tick, all four at once. The drawn body dips
-  into the landing and back up over 9 ticks (`_squash`), up to 3 px,
-  deeper the faster it came down. Only a slide of more than 20 px/s
-  along the surface turns the gecko at a landing: met head on, a
-  wall's tilt left a few px/s either way and a facing picked at random,
-  which flipped back a few ticks on with the tail whipping round
-  (clutch_leap). A blocked fall leaves a rounding's worth of speed into
-  the rock; read as going in, it held the landing off a tick with the
-  body already stopped on the floor (LAND_EPS).
+  gecko that way on screen. Jump pushes away along the normal.
+- Falling onto rock, the front feet reach for it. The arc is run on a
+  tick at a time from the snout (`_update_touch`); within 0.2 s of the
+  rock it will meet, the front legs reach out under the chin, 14 px
+  below the snout toward that rock and a little ahead of it, and in
+  the last 0.1 s come down onto the spot just past the snout's touch
+  point. Aimed at the spot alone, a leg in a dive pointed down the
+  body line and hid behind the head; stretched along the rock, it came
+  out over the head, the hip being above the snout. A front
+  foot within 5 px of rock at the landing plants where it touched, so
+  the front feet are down first; the rest are set under the body as
+  before. Only a slide of more than 20 px/s along the surface turns
+  the gecko at a landing: met head on, a wall's tilt left a few px/s
+  either way and a facing picked at random, which flipped back a few
+  ticks on with the tail whipping round (clutch_leap). A blocked fall
+  leaves a rounding's worth of speed into the rock; read as going in,
+  it held the landing off a tick with the body already stopped on the
+  floor (LAND_EPS). A jump with a throw's arc (faster down than up, a
+  hang at the top), a push along the surface, air leg poses and a
+  head flare were tried on 2026-10-24 and taken out: the hang read as
+  gliding and the flare as the body correcting itself in the air.
 - Four feet, two per end, hold anchors on the rock; a trot keeps two
   planted. Fewer than two for 0.2 s and the gecko drops, unless the
   surface is right under it, in which case the feet step again. An
   unplanted foot closes on its rest spot at a set speed, never in one
   snap, and a stretched leg keeps enough blobs along it to stay one limb.
+  Of a pair due to step, the one farther from the spot goes first: the
+  step threshold, halved while the diagonal foot steps, let a front
+  foot step twice running while its partner was dragged out behind the
+  hip (after a landing, 23 px).
 - Chewing is eating: a bite every 0.4 s, the mouth opening through the
   cycle and the bite (a circle of about 11 px, a little off and a
   little different each time) landing as it shuts, toward the cursor.
@@ -628,9 +620,8 @@ Reverse for the curl, a speed), the slider scrubs. Files live under
 version a minute while there are edits (the last ten kept) and on
 leaving, and Save writes a saved version and the head
 `poses/<name>.json`, what the game plays; New and Load as the map
-editor's. The file named `wake` is the wake-up, the one named `jump`
-the legs in the air (its first three frames, rising, the top and
-falling; only the feet are read); `GECKO_POSE=name` opens another. A
+editor's. The file named `wake` is the wake-up; `GECKO_POSE=name`
+opens another. A
 frame's jaw is the Jaw open row or the pink handle at the chin. Ctrl+Z and Ctrl+Y undo and redo, ? lists the keys.
 
 ## The first cave

@@ -97,34 +97,15 @@ const BRIDGE_HOLD := 4         # Ticks the gap test may fail before bridging end
 const BRIDGE_LEVEL := 6.0      # Px the far side of a bridged gap may sit below ride height
 const JUMP_SPEED := 340.0
 const GRAVITY := 900.0
-const FALL_GRAVITY := 1.5      # Gravity's share coming down: a throw's arc, quicker down than up
-const APEX_V := 40.0           # Px/s of vertical speed under which the top of the arc hangs...
-const APEX_GRAVITY := 0.6      # ...on this share of gravity (with FALL_GRAVITY the flat jump keeps its 0.75 s and its height)
-const JUMP_FWD := 100.0        # Least speed along the surface a jump leaves with when a way is held: a curve, not straight up
-const TAKEOFF_TICKS := 3       # Ticks the back feet keep to the take-off spot as the body leaves
-const LAND_BACK_HOLD := 4      # Ticks the back feet wait after a landing, so the front ones touch first
 const LAND_FACE_MIN := 20.0    # Px/s along the surface at a landing that turns the gecko that way
 const LAND_EPS := 0.01         # Px/s into the surface still read as not going in (rounding)
 const LAND_PLANT := 5.0        # Px from rock a front foot may be at touchdown to plant where it is
-const AIR_FOOT_SPEED := 240.0  # Px/s a foot moves toward its place in the air: never in one tick
-const AIR_LEG := 16.0          # Farthest a foot reaches from its hip in the air
-const AIR_PHASE_V := 250.0     # Px/s of vertical speed at which the rise or fall pose is held in full
-const FLARE_TIME := 0.3        # Seconds before the touchdown the head starts to come up
-const TOUCH_FOOT := 17.0       # Px ahead of the body centre a front foot touches down: where it stands (PoseAnim STANDING_FEET)
-const FLARE_UP := 0.7          # How far off the landing surface the flared head looks (its tangent plus this much of its normal)
-const REACH_TIME := 0.2        # Seconds before the touchdown the front feet start reaching for it
-const LAND_SQUASH := 3.0       # Px the body dips into the hardest landing
-const SQUASH_FULL := 600.0     # Px/s into the surface that gives the full dip
-const SQUASH_TICKS := 9        # Ticks the dip lasts, down and back up
-# The legs in the air, per phase (rising, the top, falling): each foot
-# as an offset from its hip, along the body toward the head and toward
-# the belly, in the order of feet (front near, front far, back near,
-# back far). poses/jump.json, made in the pose editor, replaces them:
-# its first three frames are the three phases, read for the feet alone.
-const AIR_POSES := [
-	[Vector2(-5.0, 6.0), Vector2(-7.0, 5.0), Vector2(-13.0, 4.0), Vector2(-15.0, 3.0)],
-	[Vector2(6.0, 9.0), Vector2(4.0, 9.0), Vector2(-6.0, 9.0), Vector2(-8.0, 9.0)],
-	[Vector2(12.0, 9.0), Vector2(10.0, 10.0), Vector2(-3.0, 10.0), Vector2(-5.0, 10.0)]]
+const REACH_TIME := 0.2        # Seconds before the snout meets rock that the front feet start reaching for it
+const REACH_LEG := 24.0        # Farthest a front foot reaches from its hip for the rock
+const REACH_AHEAD := 4.0       # Px past the snout's touch point, along the fall, the front feet reach for
+const REACH_PLANT := 0.1       # Seconds before the snout meets rock that the stretched front feet come down onto it
+const REACH_EASE := 50.0       # Per-second rate a reaching front foot closes on its mark (an idle air foot's is 30)
+const REACH_BELOW := 14.0      # Px under the snout, toward the rock it will meet, the stretched front feet reach for
 const AIR_ACCEL := 600.0
 const AIR_MAX := 220.0
 const NO_CLING_TIME := 0.18    # Grace after a jump or a drop before clinging again
@@ -310,12 +291,7 @@ var _pose_lid := 1.0           # How far the pose shown has the eye open: 0 shut
 var _pose_jaw := 0.0           # How far the pose shown has the jaw open (PoseAnim jaw)
 var _jaw_tongue := 0.0         # The tongue's share of the jaw, eased open and shut with it
 var _jaw_now := 0.0            # The jaw as last drawn (_face)
-var _takeoff_ticks := 0        # Ticks left of the back feet's push off a jump
-var _land_back := 0            # Ticks left the back feet wait after a landing
-var _touch := {}               # Where the fall will meet rock: {t (s), at (body centre), n}, empty when not falling onto anything near
-var _squash_amp := 0.0         # Px of the landing's dip
-var _squash_tick := 0          # Ticks into it
-var _air_poses: Array = AIR_POSES
+var _touch := {}               # Where the snout will meet rock: {t (s), at (the rock), n, fwd}, empty when not falling onto anything near
 var _pose_eye := Vector2.ZERO  # The pose's eye as a world offset from the head (a pose places it; otherwise it rides with the look)
 var _pose_eye_on := false
 var jump_override := false
@@ -451,7 +427,6 @@ var _sag := PackedVector2Array()     # Per chain point: its eased offset off the
 
 func _ready() -> void:
 	z_index = 6
-	_load_air_poses()
 	chain = Chain.new(Vector2.ZERO, RADII, LINK, MAX_BEND)
 	_draw_r = PackedFloat32Array(RADII)
 	_thin_on.resize(RADII.size())
@@ -505,11 +480,7 @@ func spawn(at: Vector2, up_dir := Vector2.UP) -> void:
 	_gape = 0.0
 	_gape_chew = false
 	_jaw_tongue = 0.0
-	_takeoff_ticks = 0
-	_land_back = 0
 	_touch = {}
-	_squash_amp = 0.0
-	_squash_tick = SQUASH_TICKS
 	_agape = 0.0
 	_chew_t = 0.0
 	_digging = false
@@ -1220,7 +1191,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 	# the body shot out of passages.
 	if jump and not _squeeze:
 		_jumped = true
-		_jump(inp)
+		_jump()
 		return
 	var planted := 0
 	for f in feet:
@@ -1241,7 +1212,7 @@ func _cling_step(inp: Vector2, jump: bool, dt: float) -> void:
 
 
 func _update_airborne(inp: Vector2, dt: float) -> void:
-	vel.y += GRAVITY * _gravity_share(vel.y) * dt
+	vel.y += GRAVITY * dt
 	_pricked_t = maxf(_pricked_t - dt, 0.0)
 	if absf(inp.x) > 0.2 and _pricked_t <= 0.0:
 		vel.x = move_toward(vel.x, inp.x * AIR_MAX, AIR_ACCEL * dt)
@@ -1681,30 +1652,25 @@ func _land(n: Vector2) -> void:
 	_n_target = n
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
-	# The feet stay where the air put them, never moved in one tick: a
-	# front foot that reached the rock plants where it touched, the rest
-	# step down onto it from where they are, the back feet a few ticks
-	# after the front. A foot is drawn FOOT_LIFT over its anchor once
-	# clinging, so the ones not planted are set that much lower to be
-	# drawn where they were.
+	# Feet re-seat under the body at once; their airborne positions were
+	# relative to the old up and would stick out until the first step.
+	# A front foot that reached the rock (_reach_spot) plants where it
+	# touched, so the front feet are down first. A foot is drawn
+	# FOOT_LIFT over its anchor once clinging.
+	var t := _tangent()
 	for f in feet:
-		f.stepping = false
 		f.planted = false
+		f.stepping = false
 		f.up = up
+		var hip: Vector2 = chain.points[f.hip]
 		var q: Dictionary = map.nearest_solid(f.pos - up * FOOT_LIFT, LAND_PLANT) if f.end > 0.0 else {"found": false}
-		if q.found and not map.is_solid_world(f.pos) and q.nearest.distance_to(chain.points[f.hip]) < MAX_LEG and not map.thorn_world(q.nearest):
+		if q.found and not map.is_solid_world(f.pos) and q.nearest.distance_to(hip) < MAX_LEG and not map.thorn_world(q.nearest):
 			f.planted = true
 			f.anchor = q.nearest
 			f.pos = q.nearest
 		else:
-			f.pos -= up * FOOT_LIFT
-	_land_back = LAND_BACK_HOLD
-	_takeoff_ticks = 0
+			f.pos = hip + t * f.end * _chain_facing * FOOT_SPREAD - up * (RIDE_H - 3.0)
 	_touch = {}
-	# The body dips into the landing and comes back up, deeper the
-	# faster it came down.
-	_squash_amp = clampf(vel.dot(-n) / SQUASH_FULL, 0.0, 1.0) * LAND_SQUASH
-	_squash_tick = 0
 	speed_along = clampf(vel.dot(_tangent()), -WALK_SPEED, WALK_SPEED)
 	# Only a real slide along the surface turns the gecko: met head on,
 	# a wall's tilt left a few px/s either way, and the facing it picked
@@ -1741,36 +1707,15 @@ func _drop(no_cling_for := NO_CLING_TIME) -> void:
 	_unplant()
 
 
-func _jump(inp := Vector2.ZERO) -> void:
+func _jump() -> void:
 	jumped.emit()
 	clinging = false
 	_grab_n = Vector2.ZERO
 	_end_squeeze()
-	# A way held at the press sends the jump off along it at once, even
-	# from a standstill, so it curves away instead of going straight up
-	# and only then drifting over.
-	var held := inp.dot(_tangent())
-	if absf(held) > 0.2 and speed_along * signf(held) < JUMP_FWD:
-		speed_along = signf(held) * JUMP_FWD
 	vel = up * JUMP_SPEED * (SLIME_JUMP if in_slime else 1.0) + _tangent() * speed_along + jump_boost
 	speed_along = 0.0
 	no_cling = NO_CLING_TIME
-	# The back feet push off: they stay on the take-off spot for a few
-	# ticks as the body leaves, the legs stretching after it.
-	for f in feet:
-		f.stepping = false
-		if f.end > 0.0:
-			f.planted = false
-	_takeoff_ticks = TAKEOFF_TICKS
-	_touch = {}
-
-
-# Gravity's share at a vertical speed (y down): less at the top of the
-# arc, more coming down.
-func _gravity_share(vy: float) -> float:
-	if absf(vy) < APEX_V:
-		return APEX_GRAVITY
-	return FALL_GRAVITY if vy > 0.0 else 1.0
+	_unplant()
 
 
 # The ground under the body moved by d (a shroom's cap dipping, a vine
@@ -2573,7 +2518,7 @@ func _update_chain(dt: float) -> void:
 			# own middle into the floor at the mouth.
 			want_lift = (_sq_line - _pos_s).dot(up)
 		_lift = move_toward(_lift, want_lift, LIFT_EASE)
-		base = _pos_s + up * (_lift - _squash())
+		base = _pos_s + up * _lift
 		# The snout stops at rock ahead. In a passage the walls beside it are
 		# always within the body's clearance, so the test there is the
 		# squeeze's own, or the head would draw in the whole way through.
@@ -2599,14 +2544,6 @@ func _update_chain(dt: float) -> void:
 			target = pos + _free_heading() * HEAD_LEAD
 		else:
 			var dir := vel.normalized() if vel.length() > 20.0 else Vector2(facing, 0.0)
-			# The flare: in the last REACH_TIME before the rock the head
-			# comes up off the dive to look along the surface it lands on,
-			# so the front feet reach it before the snout does.
-			if not _touch.is_empty():
-				var w := smoothstep(0.0, 1.0, 1.0 - float(_touch.t) / FLARE_TIME)
-				if w > 0.0:
-					var n: Vector2 = _touch.n
-					dir = dir.lerp((_touch_fwd() + n * FLARE_UP).normalized(), w).normalized()
 			target = pos + dir * HEAD_LEAD
 	var head := chain.head()
 	var to := target - head
@@ -3203,12 +3140,7 @@ func _diagonal(f: Foot) -> Foot:
 func _update_feet(dt: float) -> void:
 	var tangent := _tangent()
 	_switch_hold = maxi(_switch_hold - 1, 0)
-	if clinging:
-		_takeoff_ticks = 0
-		_land_back = maxi(_land_back - 1, 0)
-	else:
-		_takeoff_ticks = maxi(_takeoff_ticks - 1, 0)
-		_land_back = 0
+	if not clinging:
 		_update_touch()
 	var stepping := 0
 	for f in feet:
@@ -3237,8 +3169,8 @@ func _update_feet(dt: float) -> void:
 				f.pos = f.step_from.lerp(f.step_to, f.step_t) + up * arc * sin(PI * f.step_t)
 			continue
 		# After a switch the back feet wait, so the front legs reach the
-		# new surface first; so they do after a landing.
-		if (_switch_hold > 0 or _land_back > 0) and f.end < 0.0:
+		# new surface first.
+		if _switch_hold > 0 and f.end < 0.0:
 			continue
 		if f.planted:
 			if map.solid_near(f.anchor, _cells(4.0)) and f.anchor.distance_to(hip) < MAX_LEG:
@@ -3261,13 +3193,20 @@ func _update_feet(dt: float) -> void:
 			f.pos = f.pos.lerp(tucked.lerp(extended, k), minf(1.0, 25.0 * dt))
 			continue
 		if not clinging:
-			# The push off a jump: a back foot holds the take-off spot while
-			# the leg can still reach it.
-			if f.planted and _takeoff_ticks > 0 and f.end < 0.0 and f.anchor.distance_to(hip) < MAX_LEG:
-				f.pos = f.anchor + f.up * FOOT_LIFT
-				continue
 			f.planted = false
-			f.pos = f.pos.move_toward(_air_foot(f), AIR_FOOT_SPEED * dt)
+			var hang := hip - up * 6.0 + tangent * f.end * _chain_facing * 4.0
+			# Falling onto rock, the front feet reach out past the snout
+			# for it over the last REACH_TIME.
+			# Reaching, the foot keeps close to its mark, so it is on the
+			# rock when the body lands and plants there.
+			var ease := 30.0
+			if f.end > 0.0 and not _touch.is_empty():
+				hang = hang.lerp(_reach_spot(f, hip), clampf(1.0 - float(_touch.t) / REACH_TIME, 0.0, 1.0))
+				ease = REACH_EASE
+			if f.pos.distance_to(hang) > 20.0:
+				f.pos = hang
+			else:
+				f.pos = f.pos.lerp(hang, minf(1.0, ease * dt))
 			continue
 		var lead := speed_along / WALK_SPEED * FOOT_LEAD
 		var rest := hip + tangent * (f.end * _chain_facing * FOOT_SPREAD + lead) - up * RIDE_H
@@ -3289,6 +3228,13 @@ func _update_feet(dt: float) -> void:
 		var threshold := STEP_LEN * (0.5 if _diagonal(f).stepping else 1.0)
 		if f.planted and f.anchor.distance_to(q.nearest) <= threshold:
 			continue
+		# The foot of the pair left farther from the spot steps first: the
+		# threshold halved while the diagonal steps let a front foot step
+		# twice running while its partner, planted, was dragged out behind
+		# the hip (after a landing, 23 px).
+		var g := _partner(f)
+		if f.planted and g.planted and g.anchor.distance_to(q.nearest) > f.anchor.distance_to(q.nearest):
+			continue
 		if _partner(f).stepping or (f.planted and stepping >= 2):
 			# This foot waits its turn in the trot. One that is not planted
 			# does not hang where it was left (a cliff top the body has
@@ -3305,56 +3251,21 @@ func _update_feet(dt: float) -> void:
 		stepping += 1
 
 
-# The air poses from poses/jump.json when there is one: its first three
-# frames, rising, the top and falling, each foot read as an offset from
-# its hip along the body's line there and toward the belly.
-func _load_air_poses() -> void:
-	if not FileAccess.file_exists(PoseAnim.DIR + "jump.json"):
-		return
-	var frames := PoseAnim.load_head("jump")
-	if frames.size() < 3:
-		return
-	var poses: Array = []
-	for j in 3:
-		var fr: Dictionary = frames[j]
-		var pts: PackedVector2Array = fr.points
-		var fp: PackedVector2Array = fr.feet
-		var row: Array = []
-		for k in fp.size():
-			var h := PoseAnim.hip_of(k)
-			var ax := (pts[h - 1] - pts[h + 1]).normalized()
-			var belly := Vector2(-ax.y, ax.x)
-			var o := fp[k] - pts[h]
-			row.append(Vector2(o.dot(ax), o.dot(belly)))
-		poses.append(row)
-	_air_poses = poses
-
-
-# Where a foot goes in the air: its phase pose (rising, the top,
-# falling, blended by the vertical speed) set on the body's own line at
-# its hip, so the legs turn with the body as it streams head first;
-# falling onto rock within REACH_TIME, a front foot reaches for the
-# spot it will stand on.
-func _air_foot(f: Foot) -> Vector2:
-	var hip: Vector2 = chain.points[f.hip]
-	var ax: Vector2 = chain.points[f.hip - 1] - chain.points[f.hip + 1]
-	ax = ax.normalized() if ax.length() > 0.001 else _tangent() * _chain_facing
-	# The belly's side of the body line: the line turned a quarter the
-	# way the gecko's own frame turns its facing into its down.
-	var t := _tangent() * _chain_facing
-	var dn := -up
-	var al := Vector2(ax.dot(t), ax.dot(dn))
-	var belly := t * -al.y + dn * al.x
-	var k := feet.find(f)
-	var s := clampf(vel.y / AIR_PHASE_V, -1.0, 1.0)
-	var top: Vector2 = _air_poses[1][k]
-	var off: Vector2 = top.lerp(_air_poses[0][k], -s) if s < 0.0 else top.lerp(_air_poses[2][k], s)
-	var want := hip + (ax * off.x + belly * off.y).limit_length(AIR_LEG)
-	if f.end > 0.0 and not _touch.is_empty():
-		var w := clampf(1.0 - float(_touch.t) / REACH_TIME, 0.0, 1.0)
-		if w > 0.0:
-			want = want.lerp(hip + (_touch_spot(f) - hip).limit_length(AIR_LEG + 4.0), w)
-	# Never into rock: the leg stops where the rock begins.
+# Where a front foot reaches as the fall nears rock: under the chin,
+# toward the rock it will meet and a little ahead of the snout, then in
+# the last REACH_PLANT down onto the spot past the snout's touch point,
+# drawn FOOT_LIFT over the rock; as far as the leg goes and never into
+# rock. Aimed at the spot alone, a leg in a dive pointed down the body
+# line and hid behind the head; stretched along the rock, it came out
+# over the head, the hip being above the snout.
+func _reach_spot(f: Foot, hip: Vector2) -> Vector2:
+	var at: Vector2 = _touch.at
+	var n: Vector2 = _touch.n
+	var fwd: Vector2 = _touch.fwd
+	var snout := chain.head() + look * SNOUT
+	var out := hip + (snout - n * REACH_BELOW + fwd * (REACH_AHEAD + f.side) - hip).limit_length(REACH_LEG)
+	var spot := hip + (at + n * FOOT_LIFT + fwd * (REACH_AHEAD + f.side) - hip).limit_length(REACH_LEG)
+	var want := out.lerp(spot, clampf(1.0 - float(_touch.t) / REACH_PLANT, 0.0, 1.0))
 	var reach := want - hip
 	var len := reach.length()
 	if len > 0.001 and map.is_solid_world(want):
@@ -3365,49 +3276,21 @@ func _air_foot(f: Foot) -> Vector2:
 	return want
 
 
-# The spot a front foot will stand on when the fall lands: where the
-# standing pose has it, ahead of the body centre's landing place, on
-# the nearest rock there, drawn FOOT_LIFT over it.
-func _touch_spot(f: Foot) -> Vector2:
-	if _touch.has("spot%d" % feet.find(f)):
-		return _touch["spot%d" % feet.find(f)]
-	var n: Vector2 = _touch.n
-	var at: Vector2 = _touch.at
-	var rest := at - n * RIDE_H + _touch_fwd() * (TOUCH_FOOT + f.side)
-	var q: Dictionary = map.nearest_solid(rest, LEG_REACH)
-	var spot: Vector2 = (q.nearest + n * FOOT_LIFT) if q.found else rest
-	_touch["spot%d" % feet.find(f)] = spot
-	return spot
-
-
-# Forward along the surface the fall lands on: the way the flight
-# goes along it, or the way the gecko faces when it comes straight down.
-func _touch_fwd() -> Vector2:
-	var n: Vector2 = _touch.n
-	var tn := Vector2(-n.y, n.x)
-	var along := tn.dot(vel)
-	if absf(along) > 1.0:
-		return tn * signf(along)
-	var face := tn.dot(_tangent() * _chain_facing)
-	return tn * (signf(face) if absf(face) > 0.1 else 1.0)
-
-
-# Looks ahead along the fall for the rock it will meet, the arc run on
-# with the same gravity and no steering, a tick at a time up to
-# REACH_TIME and a little more.
+# Looks ahead along the fall for the rock the snout will meet, the arc
+# run on with the same gravity and no steering, a tick at a time up to
+# REACH_TIME.
 func _update_touch() -> void:
 	_touch = {}
 	# A fall that may not cling yet (off thorns) lands nowhere to reach for.
-	if swimming or vel.y <= 0.0 or no_cling > maxf(REACH_TIME, FLARE_TIME):
+	if swimming or vel.y <= 0.0 or no_cling > REACH_TIME:
 		return
 	var dt := 1.0 / Engine.physics_ticks_per_second
-	var p := pos
+	var p := chain.head() + look * SNOUT
 	var v := vel
-	var steps := ceili(maxf(REACH_TIME, FLARE_TIME) / dt) + 2
-	for i in range(1, steps + 1):
-		v.y += GRAVITY * _gravity_share(v.y) * dt
+	for i in range(1, ceili(REACH_TIME / dt) + 1):
+		v.y += GRAVITY * dt
 		p += v * dt
-		if map.solid_within(p, RIDE_H + 2.0):
+		if map.solid_within(p, 3.0):
 			var pr: Dictionary = map.probe(p, PROBE_R)
 			if not pr.found:
 				return
@@ -3416,16 +3299,16 @@ func _update_touch() -> void:
 				n = (p - pr.nearest).normalized()
 			if v.dot(n) > 0.0:
 				return
-			_touch = {"t": i * dt, "at": p, "n": n}
+			# Forward along that rock: the way the fall goes along it, or the
+			# way the gecko faces when it comes straight down.
+			var tn := Vector2(-n.y, n.x)
+			var along := tn.dot(v)
+			var fwd := tn * signf(along)
+			if absf(along) <= 1.0:
+				var face := tn.dot(_tangent() * _chain_facing)
+				fwd = tn * (signf(face) if absf(face) > 0.1 else 1.0)
+			_touch = {"t": i * dt, "at": pr.nearest, "n": n, "fwd": fwd}
 			return
-
-
-# The landing's dip: down and back up over SQUASH_TICKS, never a jump.
-func _squash() -> float:
-	if _squash_tick >= SQUASH_TICKS or _squash_amp <= 0.0:
-		return 0.0
-	_squash_tick += 1
-	return _squash_amp * sin(PI * float(_squash_tick) / SQUASH_TICKS)
 
 
 # How much the body is thinned at a foot's hip, 1 at full size: in a
