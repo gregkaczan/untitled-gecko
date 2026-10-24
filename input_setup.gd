@@ -11,7 +11,7 @@
 # instead, Left and Right still walk,
 # and F or the right Ctrl is the tongue.
 # B, C and N drop a boulder, a clump of clay or a heap of sand at the
-# cursor. In the map editor Ctrl+Z and Ctrl+Y undo and redo, Home
+# cursor. Q listens, G and J make sound waves (waves.gd). In the map editor Ctrl+Z and Ctrl+Y undo and redo, Home
 # brings the camera back, [ and ] size the brush. The mouse is
 # the gecko's tongue and chew (see gecko.gd), with the brush on Ctrl and
 # the middle button.
@@ -47,6 +47,13 @@ static func ensure_actions() -> void:
 	_add("edit_home", [_key(KEY_HOME)])
 	_add("brush_up", [_key(KEY_BRACKETRIGHT)])
 	_add("brush_down", [_key(KEY_BRACKETLEFT)])
+	# The sound mockup (waves.gd): Q held listens (the meerkat stand, the
+	# hum shown), G a chew wave at the cursor, J the hum from the cursor,
+	# Shift+J from the exit again.
+	_add("listen", [_key(KEY_Q)])
+	_add("wave_chew", [_key(KEY_G)])
+	_add("wave_hum", [_key(KEY_J)])
+	_add("wave_hum_exit", [_key(KEY_J, true)])
 
 
 # Up and Down move the gecko (off: they only aim, gecko.gd liero_aim).

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://b3cb5hkhywq87"
+path="res://.godot/imported/sound_field.glsl-a25a61e222822cc64beed44d0449dc58.res"
+
+[deps]
+
+source_file="res://shaders/sound_field.glsl"
+dest_files=["res://.godot/imported/sound_field.glsl-a25a61e222822cc64beed44d0449dc58.res"]
+
+[params]
+

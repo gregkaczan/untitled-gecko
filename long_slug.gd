@@ -23,6 +23,9 @@ const TURN_MAX := 20.0
 const GRAVITY := 900.0
 const FLINCH_T := 1.2          # s of a flinch
 const CATCH_R := 6.0           # The tongue tip this near a point is a touch
+const LURE_T := 8.0            # s a heard sound holds its way toward it, no turns of its own
+const LURE_PULSE := 1.7        # Of PULSE while lured: the surges come quicker
+const HEARD_T := 0.6           # s its glow flares on hearing
 const COLOR := Color(0.86, 0.62, 0.74)
 const GLOW := Color(0.75, 0.45, 0.7)
 
@@ -35,6 +38,8 @@ var dir := 1.0
 var phase := 0.0
 var clinging := false
 var flinch := 0.0
+var _lure := 0.0               # s left of hurrying toward a heard sound
+var _heard := 0.0              # s left of the flare
 var travelled := 0.0           # px the head has crept (the test reads it)
 var _track := PackedVector2Array()   # The head's places, newest last, LINK / 2 apart
 var _vel := Vector2.ZERO
@@ -95,9 +100,27 @@ func _crawl(dist: float) -> bool:
 	return true
 
 
+# Where it hears from (waves.gd).
+func ear() -> Vector2:
+	return head
+
+
+# A sound reached it (waves.gd): it flares, turns to lead with the end
+# nearer the sound's side and surges quicker for LURE_T.
+func hear(at: Vector2) -> void:
+	_heard = HEARD_T
+	var tangent := Vector2(-up.y, up.x) * dir
+	if tangent.dot(at - head) < 0.0:
+		_turn()
+	_lure = LURE_T
+	_turn_t = maxf(_turn_t, LURE_T)
+
+
 func tick(dt: float, gecko: Node2D) -> void:
 	flinch = maxf(flinch - dt, 0.0)
-	phase += dt * PULSE * (3.0 if flinch > 0.0 else 1.0)
+	_lure = maxf(_lure - dt, 0.0)
+	_heard = maxf(_heard - dt, 0.0)
+	phase += dt * PULSE * (3.0 if flinch > 0.0 else (LURE_PULSE if _lure > 0.0 else 1.0))
 	if gecko.tongue_out and not gecko.tongue_anchored and flinch <= 0.0:
 		for p in points:
 			if gecko.tongue_tip.distance_to(p) <= CATCH_R:
@@ -198,5 +221,5 @@ func blobs() -> Array:
 
 
 func glow() -> Array:
-	var k := 0.55 + 0.15 * sin(phase) + (0.4 if flinch > 0.0 else 0.0)
+	var k := 0.55 + 0.15 * sin(phase) + (0.4 if flinch > 0.0 else 0.0) + 0.6 * _heard / HEARD_T
 	return [points[points.size() / 3], GLOW * k, 10.0]
